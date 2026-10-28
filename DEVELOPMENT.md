@@ -47,6 +47,8 @@ The app checks the repo's GitHub releases when it starts and every 4 hours (`Ser
    .\release.ps1 -Publish
    ```
 
+4. The **Readme version** workflow (`.github\workflows\readme-version.yml`) then puts the new version on the readme's download links and commits that to `main`. Pull before your next push. It can also be run by hand from the repo's Actions tab.
+
 To try an update before publishing, set `REPONLAUNCHER_UPDATE_FEED` to a folder of releases (such as `release\out`) before starting the installed app. It then updates from there instead of GitHub.
 
 The installers aren't signed, so Windows SmartScreen warns before the first install. `vpk pack` can sign them with `--signParams` or `--azureTrustedSignFile`.
