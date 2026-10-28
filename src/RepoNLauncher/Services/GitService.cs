@@ -22,6 +22,12 @@ public interface IGitService
     /// <summary>Switches to a local branch, or with <paramref name="remote"/> makes a local branch that tracks the remote one.</summary>
     Task<GitPullResult> SwitchBranchAsync(string path, string branch, string? remote, CancellationToken ct = default);
 
+    /// <summary>Makes a branch starting at <paramref name="startPoint"/> (a branch, or a remote's as origin/main), and switches to it when asked.</summary>
+    Task<GitPullResult> CreateBranchAsync(string path, string name, string startPoint, bool switchTo, CancellationToken ct = default);
+
+    /// <summary>Whether git accepts <paramref name="name"/> as a branch name.</summary>
+    Task<bool> IsValidBranchNameAsync(string path, string name, CancellationToken ct = default);
+
     /// <summary>What to merge to take in <paramref name="branch"/>: the remote's copy when there is one, else the local branch.</summary>
     Task<string> MergeRefForAsync(string path, string branch, CancellationToken ct = default);
 
@@ -125,6 +131,19 @@ public class GitService : IGitService
         var command = remote == null ? $"git switch \"{branch}\"" : $"git switch --track \"{remote}/{branch}\"";
         return BuildResult(await _runner.RunCaptureAsync(path, command, ct));
     }
+
+    // --no-track: a branch started from origin/main would otherwise pull from main and push nowhere it could.
+    // It gets its own remote branch when it's first pushed (Create Pull Request does that).
+    public async Task<GitPullResult> CreateBranchAsync(string path, string name, string startPoint, bool switchTo, CancellationToken ct = default)
+    {
+        var command = switchTo
+            ? $"git switch --no-track -c \"{name}\" \"{startPoint}\""
+            : $"git branch --no-track \"{name}\" \"{startPoint}\"";
+        return BuildResult(await _runner.RunCaptureAsync(path, command, ct));
+    }
+
+    public async Task<bool> IsValidBranchNameAsync(string path, string name, CancellationToken ct = default) =>
+        (await _runner.RunCaptureAsync(path, $"git check-ref-format --branch \"{name}\"", ct)).ExitCode == 0;
 
     public async Task<string> MergeRefForAsync(string path, string branch, CancellationToken ct = default)
     {

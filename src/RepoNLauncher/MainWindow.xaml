@@ -471,9 +471,11 @@
                                                 </DataTemplate>
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>
-                                        <Button Content="Switch" Style="{StaticResource Button.Primary}" Margin="8,0,0,0"
+                                        <Button Content="Switch" Style="{StaticResource Button.Primary}" Margin="8,0,8,0"
                                                 Command="{Binding SwitchBranchCommand}"
                                                 ToolTip="Switch to the picked branch. Uncommitted changes come along when they don't clash."/>
+                                        <Button Content="New branch…" Style="{StaticResource Button.Secondary}" Margin="0"
+                                                Click="NewBranch_Click" ToolTip="Make a new branch, from this one or another"/>
                                     </StackPanel>
                                     <!-- The default is saved per branch and used by Fetch Latest; Merge now merges the pick just once -->
                                     <TextBlock Grid.Row="3" Grid.Column="0" Text="MERGE FROM" Style="{StaticResource SectionLabel}"

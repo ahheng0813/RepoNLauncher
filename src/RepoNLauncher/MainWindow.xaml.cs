@@ -141,6 +141,14 @@ public partial class MainWindow : Window
         _agentChatWindow.Show();
     }
 
+    private async void NewBranch_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm || vm.SelectedProject is not { } project) return;
+
+        var dialog = new NewBranchWindow(project.NewBranch()) { Owner = this };
+        if (dialog.ShowDialog() == true && dialog.ViewModel.Result is { } message) await project.BranchCreatedAsync(message);
+    }
+
     // From the selected project's current branch. Creating one needs the GitHub sign-in; the dialog asks for it.
     private void CreatePullRequest_Click(object sender, RoutedEventArgs e)
     {

@@ -26,6 +26,9 @@ public sealed class BranchOption(string name, string? remote, bool isCurrent)
     public string? Remote { get; } = remote;
     public bool IsCurrent { get; } = isCurrent;
     public string Note => IsCurrent ? "  current" : Remote == null ? string.Empty : $"  on {Remote}";
+
+    /// <summary>What git calls it: main, or origin/main for the remote's.</summary>
+    public string Ref => Remote == null ? Name : $"{Remote}/{Name}";
     public override string ToString() => Name;
 }
 
@@ -869,6 +872,18 @@ public partial class ProjectViewModel : ObservableObject
         {
             StatusMessage = $"Could not open {app.Name}: {ex.Message}";
         }
+    }
+
+    /// <summary>The New branch dialog's view model, starting from this project's current branch.</summary>
+    public NewBranchViewModel NewBranch() => new(Path, Branch, IsDirty, _git);
+
+    /// <summary>After the New branch dialog made one: says so and shows where things stand now.</summary>
+    public async Task BranchCreatedAsync(string message)
+    {
+        await RefreshStatusAsync();
+        StatusMessage = message;
+        await LoadChangesAsync();
+        await LoadCommitsAsync();
     }
 
     /// <summary>The Create pull request dialog's view model, for this project's current branch.</summary>
