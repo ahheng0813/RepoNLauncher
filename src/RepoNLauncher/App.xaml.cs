@@ -22,8 +22,9 @@ public partial class App : System.Windows.Application
         var scrcpy = new ScrcpyService();
         var gitHub = new GitHubService();
         var aiUsage = new AiUsageViewModel(new ClaudeUsageService(), new CodexUsageService());
+        var updates = new UpdateViewModel(new UpdateService());
 
-        var mainViewModel = new MainViewModel(configService, scanner, git, flutter, dotNet, envParser, processRunner, ports, ides, scrcpy, gitHub, aiUsage);
+        var mainViewModel = new MainViewModel(configService, scanner, git, flutter, dotNet, envParser, processRunner, ports, ides, scrcpy, gitHub, aiUsage, updates);
 
         var mainWindow = new MainWindow { DataContext = mainViewModel };
         mainWindow.Show();

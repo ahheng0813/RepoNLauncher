@@ -39,6 +39,8 @@ public partial class MainViewModel : ObservableObject
 
     public AgentChatViewModel AgentChat { get; }
 
+    public UpdateViewModel Updates { get; }
+
     [ObservableProperty] private ProjectViewModel? _selectedProject;
     [ObservableProperty] private bool _isFetchingAll;
     [ObservableProperty] private string _globalStatus = string.Empty;
@@ -68,7 +70,8 @@ public partial class MainViewModel : ObservableObject
         IIdeService ides,
         IScrcpyService scrcpy,
         IGitHubService gitHub,
-        AiUsageViewModel aiUsage)
+        AiUsageViewModel aiUsage,
+        UpdateViewModel updates)
     {
         _configService = configService;
         _scanner = scanner;
@@ -83,6 +86,7 @@ public partial class MainViewModel : ObservableObject
         GitHub = new GitHubAccountViewModel(gitHub);
         PcRepos = new PcReposViewModel(GitHub, IsOnDashboard, AddProjectsFromPc);
         AiUsage = aiUsage;
+        Updates = updates;
         AgentChat = new AgentChatViewModel(() => Projects.Select(p => new ProjectOption(p.Name, p.Path)), () => SelectedProject?.Path);
 
         _config = _configService.Load();

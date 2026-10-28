@@ -36,6 +36,8 @@ public partial class MainWindow : Window
             vm.PhoneScreen.PropertyChanged += OnPhoneScreenPropertyChanged;
 
             _ = vm.AiUsage.RefreshAsync(checkLimits: true);
+            vm.Updates.RestartRequested += () => RestartToUpdate(vm);
+            vm.Updates.Start();
             _usageTimer.Tick += (_, _) =>
             {
                 if (WindowState != WindowState.Minimized) _ = vm.AiUsage.RefreshAsync();
@@ -50,6 +52,18 @@ public partial class MainWindow : Window
             vm.PhoneScreen.Shutdown();
             vm.PhoneScreen.IsPoppedOut = false; // closes the pop-out window so the app can exit
         };
+    }
+
+    // The updater waits for the app to close; closing the window stops chats and the phone mirror on the way out.
+    private void RestartToUpdate(MainViewModel vm)
+    {
+        if (vm.AgentChat.HasRunningChats && System.Windows.MessageBox.Show(this,
+                "A chat is still running. Restarting stops it.\n\nRestart and update now?", "Restart to update",
+                MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            return;
+
+        vm.Updates.ApplyOnExit();
+        Close();
     }
 
     private void OnPhoneScreenPropertyChanged(object? sender, PropertyChangedEventArgs e)

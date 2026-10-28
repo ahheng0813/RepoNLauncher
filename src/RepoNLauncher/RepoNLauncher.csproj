@@ -10,13 +10,17 @@
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <AssemblyTitle>Repo'N'Launcher</AssemblyTitle>
     <Product>Repo'N'Launcher</Product>
+    <!-- Raise for each release; release.ps1 builds the installers with it, and installed copies update to a higher one. -->
     <Version>1.0.0</Version>
+    <!-- Program.Main, not the one WPF generates: Velopack's install and update steps run before the app starts. -->
+    <StartupObject>RepoNLauncher.Program</StartupObject>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="Markdig" Version="1.5.0" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+    <PackageReference Include="Velopack" Version="1.2.161" />
   </ItemGroup>
 
 </Project>

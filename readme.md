@@ -71,6 +71,38 @@ To build the single-file exe (`publish\RepoNLauncher.exe`), add a desktop shortc
 .\publish.ps1 -NoShortcut -NoLaunch
 ```
 
+That exe doesn't update itself; the installed app does (below).
+
+## Install and updates
+
+[Velopack](https://velopack.io) builds the installers. Both put the same app on the PC, and the installed app updates itself:
+
+- `RepoNLauncher-win-Setup.exe` installs for the current user, with no admin needed, and adds Desktop and Start menu shortcuts.
+- `RepoNLauncher-win.msi` is an install wizard, for the current user or for everyone on the PC.
+
+The installed app checks the repo's GitHub releases when it starts and every 4 hours. It downloads a newer version in the background, then shows **Restart to update** in the status bar. If you don't restart, the update is applied the next time the app starts. The status bar also shows the version and has **Check for updates**.
+
+Checking needs the releases to be public. While the repo is private, the status bar says it couldn't check.
+
+The installers aren't signed, so Windows SmartScreen warns before the first install (More info → Run anyway). `vpk pack` can sign them with `--signParams` or `--azureTrustedSignFile`.
+
+### Making a release
+
+1. Raise `<Version>` in `src\RepoNLauncher\RepoNLauncher.csproj`. Installed copies only update to a higher version.
+2. Build the installers into `release\out`:
+
+   ```powershell
+   .\release.ps1
+   ```
+
+3. Publish them as a GitHub release (tag `v<version>`), which installed copies then update to. This needs the GitHub CLI signed in (`gh auth login`):
+
+   ```powershell
+   .\release.ps1 -Publish
+   ```
+
+`vpk` is pinned in `.config\dotnet-tools.json`; the script restores it. To try an update before publishing, set `REPONLAUNCHER_UPDATE_FEED` to a folder of releases (such as `release\out`) before starting the installed app; it then updates from there instead of GitHub.
+
 ## Where settings live
 
 - `%APPDATA%\RepoNLauncher\config.json` holds your projects, scan folders, section states and Open-in apps.
