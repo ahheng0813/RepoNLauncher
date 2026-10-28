@@ -812,9 +812,40 @@
                                             Command="{Binding StopCommand}" IsEnabled="{Binding IsRunning}"/>
                                 </StackPanel>
 
+                                <!-- The running app's input, as if typed in its terminal: answers to its prompts, flutter run's keys -->
+                                <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                        <Button Content="Send" Style="{StaticResource Button.Secondary}" Margin="8,0,0,0"
+                                                Command="{Binding SendInputCommand}"
+                                                ToolTip="Send the line to the app, as if typed in its terminal and Enter pressed"/>
+                                        <StackPanel Orientation="Horizontal"
+                                                    Visibility="{Binding Kind, Converter={StaticResource EnumToVisibility}, ConverterParameter=Flutter}">
+                                            <Button Content="Hot reload" Style="{StaticResource Button.Secondary}" Margin="8,0,0,0"
+                                                    Command="{Binding SendKeyCommand}" CommandParameter="r"
+                                                    ToolTip="Sends r to flutter run: loads your code changes and keeps the app's state"/>
+                                            <Button Content="Hot restart" Style="{StaticResource Button.Secondary}" Margin="8,0,0,0"
+                                                    Command="{Binding SendKeyCommand}" CommandParameter="R"
+                                                    ToolTip="Sends R to flutter run: loads your code changes and restarts the app"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <Grid>
+                                        <TextBox x:Name="ConsoleInputBox" FontFamily="Cascadia Mono, Consolas"
+                                                 Text="{Binding ConsoleInput, UpdateSourceTrigger=PropertyChanged}"
+                                                 IsEnabled="{Binding IsRunning}" AutomationProperties.Name="Input for the app">
+                                            <TextBox.InputBindings>
+                                                <KeyBinding Key="Return" Command="{Binding SendInputCommand}"/>
+                                            </TextBox.InputBindings>
+                                        </TextBox>
+                                        <TextBlock Text="{Binding ConsoleInputHint}" Foreground="{StaticResource Text.Muted}" FontSize="12.5"
+                                                   VerticalAlignment="Center" Margin="11,0,0,0" IsHitTestVisible="False"
+                                                   Visibility="{Binding Text, ElementName=ConsoleInputBox, Converter={StaticResource StringNotEmptyToVisibility}, ConverterParameter=Invert}"/>
+                                    </Grid>
+                                </DockPanel>
+
                                 <Border Background="{StaticResource Bg.Console}" CornerRadius="8" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
                                     <ListBox ItemsSource="{Binding ConsoleOutput}" Background="Transparent" Padding="10"
-                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                             ScrollViewer.ScrollChanged="Console_ScrollChanged" AutomationProperties.Name="Console output">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
                                                 <TextBlock Text="{Binding}" Style="{StaticResource ConsoleLine}"/>

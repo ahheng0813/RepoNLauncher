@@ -19,6 +19,10 @@ Built with WPF on .NET 8.
 - **Run.**
   - Starts the project with its live console: `flutter run` on a chosen device, `dotnet run`, or your own start command.
   - **Choose file…** builds the command from a script, e.g. `python app.py`, using the project's `.venv` when it has one.
+  - **Input:** type in the box under the console and press Enter (or **Send**) to answer the app's prompts, as in a terminal; an empty line is just Enter. A prompt shows in the console while it waits, and your answer appears after it.
+  - **Hot reload** and **Hot restart** (Flutter projects) send `r` and `R` to `flutter run`. Its other keys can be typed too: `q` quits, `h` lists them all.
+  - The console follows new output while it's scrolled to the bottom. Scroll up to read, and it stays put.
+  - The input is a pipe, not a real terminal, so a program that reads keys straight from its console window, such as a password prompt, still can't be answered here.
   - Shows a button for any local URL the app prints.
   - Warns when the app's ports are already in use.
 - **Environment.** Lists the values from `.env` and `appsettings*.json`.

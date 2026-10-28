@@ -98,6 +98,15 @@ public partial class MainWindow : Window
             vm.SelectedProject = project;
     }
 
+    // Like a terminal, the Run console follows new output while it's scrolled to the bottom, so a prompt is in view
+    // when it asks; scrolled up to read, it stays put.
+    private void Console_ScrollChanged(object sender, System.Windows.Controls.ScrollChangedEventArgs e)
+    {
+        if (e.ExtentHeightChange <= 0 || e.OriginalSource is not System.Windows.Controls.ScrollViewer viewer) return;
+        var wasAtBottom = e.VerticalOffset + e.ViewportHeight >= e.ExtentHeight - e.ExtentHeightChange - 1;
+        if (wasAtBottom) viewer.ScrollToEnd();
+    }
+
     private void EditOpenWithApps_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not MainViewModel vm) return;

@@ -135,7 +135,10 @@ public partial class ProjectViewModel : ObservableObject
     [ObservableProperty] private int _behind;
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string _statusMessage = string.Empty;
-    [ObservableProperty] private bool _isRunning;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConsoleInputHint))]
+    [NotifyCanExecuteChangedFor(nameof(SendInputCommand), nameof(SendKeyCommand))]
+    private bool _isRunning;
     [ObservableProperty] private DeviceInfo? _selectedDevice;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSelectedFileConflicted))]
@@ -184,6 +187,16 @@ public partial class ProjectViewModel : ObservableObject
     public bool IsMergePickUnsaved => SelectedMergeSource != null && SelectedMergeSource.Branch != MergeSourceFor(Branch);
 
     private RunningProcessHandle? _runningProcess;
+
+    // The console's last line is the start of one still being written, such as a prompt waiting for an answer.
+    private bool _lastLineIsPartial;
+
+    /// <summary>The Run tab's input box: what's typed here goes to the running app when Enter is pressed.</summary>
+    [ObservableProperty] private string _consoleInput = string.Empty;
+
+    public string ConsoleInputHint => IsRunning
+        ? "Type here and press Enter to send it to the app, e.g. an answer to its prompt"
+        : "Input for the app, once it's running";
 
     /// <summary>Raised when a Flutter app is launched on a device, so the dashboard can show that device's screen.</summary>
     public event Action<DeviceInfo>? RunStartedOnDevice;
@@ -709,6 +722,7 @@ public partial class ProjectViewModel : ObservableObject
         }
 
         ConsoleOutput.Clear();
+        _lastLineIsPartial = false;
         if (!EnsurePortsFree(ports)) return;
         ConsoleOutput.Add($"[dashboard] {command}");
         DetectedUrls.Clear();
@@ -717,9 +731,10 @@ public partial class ProjectViewModel : ObservableObject
         _runningProcess = _processRunner.StartStreaming(
             Path,
             command,
-            onOutputLine: line => Application.Current.Dispatcher.Invoke(() =>
+            onOutput: (line, partial) => Application.Current.Dispatcher.Invoke(() =>
             {
-                ConsoleOutput.Add(line);
+                ShowOutput(line, partial);
+                if (partial) return;
                 // Flutter prints VM-service and DevTools addresses, which aren't the app; leave those out.
                 var url = Kind switch
                 {
@@ -732,6 +747,7 @@ public partial class ProjectViewModel : ObservableObject
             onExit: code => Application.Current.Dispatcher.Invoke(() =>
             {
                 ConsoleOutput.Add($"[dashboard] process exited with code {code}");
+                _lastLineIsPartial = false;
                 IsRunning = false;
             }));
 
@@ -812,6 +828,42 @@ public partial class ProjectViewModel : ObservableObject
     {
         _runningProcess?.Stop();
         IsRunning = false;
+    }
+
+    /// <summary>Sends the input box's line to the running app, as if typed in its terminal. An empty line is just Enter.</summary>
+    [RelayCommand(CanExecute = nameof(IsRunning))]
+    private void SendInput()
+    {
+        if (SendToApp(ConsoleInput)) ConsoleInput = string.Empty;
+    }
+
+    /// <summary>A one-key command for the running app, such as flutter run's r (hot reload) and R (hot restart).</summary>
+    [RelayCommand(CanExecute = nameof(IsRunning))]
+    private void SendKey(string key) => SendToApp(key);
+
+    private bool SendToApp(string text)
+    {
+        if (_runningProcess == null) return false;
+        if (!_runningProcess.SendInput(text))
+        {
+            ConsoleOutput.Add("[dashboard] The app isn't reading input any more.");
+            _lastLineIsPartial = false;
+            return false;
+        }
+
+        // Shown as a terminal echoes it: after the prompt it answers, else on its own line.
+        if (_lastLineIsPartial) ConsoleOutput[ConsoleOutput.Count - 1] += text;
+        else ConsoleOutput.Add(text);
+        _lastLineIsPartial = false;
+        return true;
+    }
+
+    // A partial line stays the console's last line, and the next output replaces it with more of the same line.
+    private void ShowOutput(string line, bool partial)
+    {
+        if (_lastLineIsPartial) ConsoleOutput[ConsoleOutput.Count - 1] = line;
+        else ConsoleOutput.Add(line);
+        _lastLineIsPartial = partial;
     }
 
     [RelayCommand]
