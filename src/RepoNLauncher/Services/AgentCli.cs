@@ -57,6 +57,35 @@ public static class AgentCli
         return info;
     }
 
+    /// <summary>Runs <paramref name="program"/> to the end and returns what it printed; null if it couldn't start, failed or ran past <paramref name="timeout"/>.</summary>
+    public static string? Run(string program, IEnumerable<string> arguments, string workingDirectory, TimeSpan timeout)
+    {
+        try
+        {
+            using var process = Process.Start(StartInfo(program, arguments, workingDirectory));
+            if (process == null) return null;
+            process.StandardInput.Close();
+            var output = process.StandardOutput.ReadToEndAsync();
+            _ = process.StandardError.ReadToEndAsync(); // drained, or a chatty program stalls on a full pipe
+            if (!process.WaitForExit(timeout))
+            {
+                Kill(process);
+                return null;
+            }
+            return process.ExitCode == 0 ? output.Result : null;
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
+        {
+            return null;
+        }
+    }
+
+    public static void Kill(Process process)
+    {
+        try { process.Kill(entireProcessTree: true); }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception) { }
+    }
+
     /// <summary>A command line that runs <paramref name="program"/> in a console window, e.g. for signing in.</summary>
     public static string ConsoleCommand(string program, string arguments) => $"{Quote(program)} {arguments}";
 

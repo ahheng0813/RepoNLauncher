@@ -7,8 +7,8 @@ namespace RepoNLauncher.Services;
 
 /// <summary>
 /// Claude Code usage, read from what Claude Code itself stores on this PC: the account and the plan limits it last
-/// fetched (~/.claude.json), and the token counts in its session transcripts (~/.claude/projects). Claude Code's
-/// sign-in is never read or used.
+/// fetched (~/.claude.json), and the token counts in its session transcripts (~/.claude/projects). To bring the limits
+/// up to date, the installed claude program is asked to fetch them. Claude Code's sign-in is never read or used.
 /// </summary>
 public class ClaudeUsageService
 {
@@ -24,13 +24,19 @@ public class ClaudeUsageService
     private static readonly byte[] UsageMarker = "\"usage\""u8.ToArray();
     private static readonly byte[] AssistantMarker = "\"assistant\""u8.ToArray();
 
+    private static readonly TimeSpan FetchTimeout = TimeSpan.FromSeconds(30);
+
     private readonly JsonlTail<ClaudeResponse> _transcripts = new(ParseLine);
+    private bool _usageCommandWorks = true;
 
     public string UsagePageUrl => "https://claude.ai/settings/usage";
 
-    public AiToolUsage Read()
+    /// <param name="program">The claude program, to have it fetch the plan limits first; null to show what it last saved.</param>
+    public AiToolUsage Read(string? program = null)
     {
         var usage = ReadState(AgentPaths.ClaudeStatePath);
+        if (program != null && usage.IsSignedIn && !(usage.LimitsAsOf > DateTimeOffset.Now.AddMinutes(-1)) && FetchLimits(program))
+            usage = ReadState(AgentPaths.ClaudeStatePath);
         var records = ReadTranscripts(AgentPaths.ClaudeProjectsDir);
         var (periods, models) = UsageSummary.Summarize(records);
         return usage with { HasLocalSessions = records.Count > 0, Periods = periods, Models = models };
@@ -80,6 +86,35 @@ public class ClaudeUsageService
             ? DateTimeOffset.FromUnixTimeMilliseconds(ms)
             : (DateTimeOffset?)null;
         return usage with { Limits = limits, LimitsAsOf = asOf };
+    }
+
+    // Claude Code saves the limits only while it's in use. Its /usage command fetches them and saves them to
+    // ~/.claude.json; run with -p it's handled on this PC with no model call, and nothing is kept as a chat.
+    private bool FetchLimits(string program)
+    {
+        if (!_usageCommandWorks) return false;
+        // Always the same folder: Claude Code makes an empty notes folder for each folder it runs in.
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var output = AgentCli.Run(program,
+            ["-p", "/usage", "--output-format", "json", "--no-session-persistence", "--strict-mcp-config", "--tools", ""],
+            home, FetchTimeout);
+        if (output == null) return false;
+        try
+        {
+            using var document = JsonDocument.Parse(output);
+            var result = document.RootElement;
+            // Should a Claude Code version pass "/usage" to the model instead, stop: that would use up the plan it's checking.
+            if (String(result, "local_command") != "usage")
+            {
+                _usageCommandWorks = false;
+                return false;
+            }
+            return !(result.TryGetProperty("is_error", out var error) && error.ValueKind == JsonValueKind.True);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     private List<UsageRecord> ReadTranscripts(string projectsDir)

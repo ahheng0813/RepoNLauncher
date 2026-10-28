@@ -6,7 +6,7 @@ using RepoNLauncher.ViewModels;
 
 namespace RepoNLauncher;
 
-/// <summary>Shows Claude Code and Codex usage, refreshing every minute while open.</summary>
+/// <summary>Shows Claude Code and Codex usage, refreshing every minute while open and checking plan limits every few minutes.</summary>
 public partial class AiUsageWindow : Window
 {
     private readonly DispatcherTimer _refreshTimer = new() { Interval = TimeSpan.FromMinutes(1) };
@@ -20,7 +20,7 @@ public partial class AiUsageWindow : Window
         _refreshTimer.Tick += (_, _) => _ = viewModel.RefreshAsync();
         Loaded += (_, _) =>
         {
-            _ = viewModel.RefreshAsync();
+            _ = viewModel.RefreshAsync(checkLimits: true);
             _refreshTimer.Start();
         };
         Closed += (_, _) => _refreshTimer.Stop();

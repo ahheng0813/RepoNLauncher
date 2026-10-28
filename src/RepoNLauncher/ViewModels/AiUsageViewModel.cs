@@ -10,6 +10,7 @@ public partial class AiUsageViewModel : ObservableObject
 {
     private readonly ClaudeUsageService _claude;
     private readonly CodexUsageService _codex;
+    private DateTime _limitsCheckedAt = DateTime.MinValue;
 
     public AiUsageViewModel(ClaudeUsageService claude, CodexUsageService codex)
     {
@@ -23,23 +24,40 @@ public partial class AiUsageViewModel : ObservableObject
     [ObservableProperty] private string _status = "Reading usage…";
 
     [RelayCommand]
-    public async Task RefreshAsync()
+    private Task Refresh() => RefreshAsync(checkLimits: true);
+
+    /// <summary>
+    /// Reads the usage files again. Every few minutes, or when <paramref name="checkLimits"/>, Claude Code and Codex are
+    /// also asked for the plan limits: they only save new ones while in use, and plans are shared with their websites and apps.
+    /// </summary>
+    public async Task RefreshAsync(bool checkLimits = false)
     {
         // The readers keep what they've parsed between calls and aren't thread-safe, so one refresh at a time.
         if (IsRefreshing) return;
         IsRefreshing = true;
         try
         {
-            var (claude, codex, claudeCli, codexCli) = await Task.Run(() =>
-                (_claude.Read(), _codex.Read(), AgentCli.FindClaude(), AgentCli.FindCodex()));
-            ClaudeCard = AiToolCardViewModel.ForClaude(claude, _claude.UsagePageUrl, claudeCli);
-            CodexCard = AiToolCardViewModel.ForCodex(codex, _codex.UsagePageUrl, codexCli);
+            checkLimits |= DateTime.Now - _limitsCheckedAt >= AiToolCardViewModel.CheckLimitsEvery;
+            // Asking takes a few seconds; the first time, show what's saved meanwhile.
+            if (checkLimits && ClaudeCard == null) await ReadAsync(checkLimits: false);
+            if (checkLimits) Status = "Checking plan limits with Claude Code and Codex…";
+            await ReadAsync(checkLimits);
+            if (checkLimits) _limitsCheckedAt = DateTime.Now;
             Status = $"Updated {DateTime.Now:t}. Refreshes every minute while this window is open.";
         }
         finally
         {
             IsRefreshing = false;
         }
+    }
+
+    private async Task ReadAsync(bool checkLimits)
+    {
+        var (claudeCli, codexCli) = await Task.Run(() => (AgentCli.FindClaude(), AgentCli.FindCodex()));
+        var claude = Task.Run(() => _claude.Read(checkLimits ? claudeCli : null));
+        var codex = Task.Run(() => _codex.Read(checkLimits ? codexCli : null));
+        ClaudeCard = AiToolCardViewModel.ForClaude(await claude, _claude.UsagePageUrl, claudeCli);
+        CodexCard = AiToolCardViewModel.ForCodex(await codex, _codex.UsagePageUrl, codexCli);
     }
 }
 
@@ -90,9 +108,11 @@ public class AiToolCardViewModel
         SignInHint = usage.IsSignedIn ? null
             : cliPath == null ? "Claude Code isn't installed on this PC. Install it to chat with Claude and see its plan limits here."
             : "Sign in to Claude Code to see its plan limits here.",
-        LimitsNote = usage.LimitsAsOf is { } asOf
-            ? $"Saved by Claude Code {Ago(asOf)}. It refreshes them when you use the claude CLI; the usage page always has the latest."
-            : "Claude Code hasn't saved your plan limits yet. They show here after you use the claude CLI.",
+        LimitsNote = usage.LimitsAsOf is not { } asOf
+            ? "Claude Code hasn't fetched your plan limits yet. The usage page has them."
+            : cliPath != null
+                ? $"Checked with Claude Code {Ago(asOf)}. {CheckedAgainText} The usage page always has the latest."
+                : $"Saved by Claude Code {Ago(asOf)}. The usage page always has the latest.",
         NoSessionsText = "No Claude Code sessions on this PC in the last 30 days.",
     };
 
@@ -103,11 +123,16 @@ public class AiToolCardViewModel
         SignInHint = usage.IsSignedIn ? null
             : cliPath == null ? "Codex isn't installed on this PC. Install the Codex app or Codex CLI to chat with Codex and see its use here."
             : "Sign in to Codex to see its plan limits here.",
-        LimitsNote = usage.LimitsAsOf is { } asOf
-            ? $"From your last Codex CLI or IDE session, {Ago(asOf)}. The usage page always has the latest."
-            : "No plan limits saved on this PC yet. They show here after you use Codex CLI or the IDE extension.",
-        NoSessionsText = "No Codex CLI or IDE sessions on this PC in the last 30 days. The Codex app keeps its sessions in the cloud, so its use shows on the usage page.",
+        LimitsNote = usage.LimitsAsOf is not { } asOf
+            ? "Codex hasn't reported your plan limits yet. The usage page has them."
+            : cliPath != null
+                ? $"Checked with Codex {Ago(asOf)}. {CheckedAgainText} The usage page always has the latest."
+                : $"From your last Codex session, {Ago(asOf)}. The usage page always has the latest.",
+        NoSessionsText = "No Codex sessions on this PC in the last 30 days.",
     };
+
+    public static readonly TimeSpan CheckLimitsEvery = TimeSpan.FromMinutes(5);
+    private static string CheckedAgainText => $"Checked again every {CheckLimitsEvery.TotalMinutes:0} minutes while this window is open.";
 
     public static string Ago(DateTimeOffset time)
     {

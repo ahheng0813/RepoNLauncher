@@ -30,9 +30,9 @@ Built with WPF on .NET 8.
   - **History:** every saved Claude Code and Codex chat on this PC is listed, with search. Open one to read it or carry on.
   - A chat keeps running when the window is closed. Closing the dashboard stops it.
   - Codex is found on PATH, in npm, or inside the Codex app.
-- **AI Usage.** Shows Claude Code and Codex usage, read only from what each tool stores on this PC. Neither tool's sign-in is used, and nothing is sent anywhere.
+- **AI Usage.** Shows Claude Code and Codex usage. The dashboard never reads either tool's sign-in.
   - **Sign-in and plan:** whether each tool is installed and signed in, and on which plan.
-  - **Plan limits:** the 5-hour and weekly limits each tool last saved, with when they reset and how old the figures are.
+  - **Plan limits:** the 5-hour, weekly or monthly limits, with when they reset. They're checked with the installed tools when the window opens, every 5 minutes, and on Refresh: Claude Code's `/usage` command (run locally, no model call, no saved chat) and Codex's app server. Each tool fetches them with its own sign-in. Without the tool, the last saved figures show.
   - **Token use:** today, the last 7 and 30 days, and per model, from the session files.
   - Codex use is counted from the sessions saved on this PC, which come from Codex CLI, the IDE extension and AI Chat.
 

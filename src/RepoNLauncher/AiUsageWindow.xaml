@@ -225,7 +225,7 @@
             <StackPanel>
                 <TextBlock Text="AI usage" FontSize="17" FontWeight="SemiBold"/>
                 <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="12.5" TextWrapping="Wrap" Margin="0,6,0,0"
-                           Text="Your Claude Code and Codex plans and token use, read from what each tool stores on this PC. Their sign-ins aren't used, and nothing is sent anywhere."/>
+                           Text="Your Claude Code and Codex plans and token use. Token use is read from each tool's files on this PC; for plan limits, the tool itself is asked. Their sign-ins are never read."/>
                 <TextBlock x:Name="StatusText" Text="{Binding Status}" Style="{StaticResource Muted}" Margin="0,4,0,0"/>
             </StackPanel>
         </DockPanel>
