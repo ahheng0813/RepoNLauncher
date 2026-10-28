@@ -24,7 +24,8 @@ public partial class App : System.Windows.Application
         var aiUsage = new AiUsageViewModel(new ClaudeUsageService(), new CodexUsageService());
         var updates = new UpdateViewModel(new UpdateService());
 
-        var mainViewModel = new MainViewModel(configService, scanner, git, flutter, dotNet, envParser, processRunner, ports, ides, scrcpy, gitHub, aiUsage, updates);
+        var mainViewModel = new MainViewModel(configService, scanner, git, flutter, dotNet, envParser, processRunner, ports, ides, scrcpy, gitHub, aiUsage, updates,
+            new EmulatorService());
 
         var mainWindow = new MainWindow { DataContext = mainViewModel };
         mainWindow.Show();

@@ -98,7 +98,7 @@ public partial class PhoneScreenViewModel : ObservableObject
             ? "Pick a device and press Show."
             : unauthorized != null
                 ? $"{unauthorized.Serial} is waiting for you to allow USB debugging on the phone."
-                : "No Android device found. Connect a phone with USB debugging on, or start an emulator.";
+                : "No Android device found. Connect a phone with USB debugging on, or start an emulator with the phone button above.";
     }
 
     [RelayCommand]

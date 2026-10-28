@@ -806,6 +806,8 @@
                                                 Visibility="{Binding Kind, Converter={StaticResource EnumToVisibility}, ConverterParameter=Flutter}">
                                         <ComboBox Width="240" Height="32" ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" Margin="0,0,8,0"/>
                                         <Button Content="Refresh Devices" Style="{StaticResource Button.Secondary}" Command="{Binding LoadDevicesCommand}"/>
+                                        <Button Content="Emulators…" Style="{StaticResource Button.Secondary}" Margin="8,0,0,0"
+                                                ToolTip="Start an Android emulator to run on, or create one" Click="OpenEmulators_Click"/>
                                     </StackPanel>
 
                                     <!-- Addresses the running server printed (dotnet, or any dev server's localhost URL) -->
@@ -931,6 +933,8 @@
                 <DockPanel>
                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Content="&#xE8EA;" ToolTip="Android emulators: start one, or create one" Style="{StaticResource Button.Ghost}"
+                                    AutomationProperties.Name="Android emulators" Click="OpenEmulators_Click"/>
                             <Button Command="{Binding ToggleAudioCommand}">
                                 <Button.Style>
                                     <Style TargetType="Button" BasedOn="{StaticResource Button.Ghost}">

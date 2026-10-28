@@ -1,0 +1,140 @@
+<Window x:Class="RepoNLauncher.EmulatorsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="clr-namespace:RepoNLauncher.Converters"
+        Title="Android emulators - Repo'N'Launcher" Width="620" Height="660" MinWidth="500" MinHeight="480"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource Bg.App}"
+        FontFamily="Segoe UI">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+        <conv:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibility"/>
+        <conv:NullToVisibilityConverter x:Key="NullToVisibility"/>
+
+        <Style x:Key="SectionLabel" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <Style x:Key="Note" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel Margin="24,20,24,18">
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,14">
+            <Button DockPanel.Dock="Right" Content="&#xE72C;" Style="{StaticResource Button.Ghost}" Margin="0"
+                    ToolTip="Refresh" AutomationProperties.Name="Refresh emulators" Click="Refresh_Click"/>
+            <TextBlock Text="Android emulators" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        </DockPanel>
+
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Foreground="{StaticResource Text.Secondary}" FontSize="12"
+                   TextWrapping="Wrap" Margin="0,12,0,0" x:Name="StatusText"
+                   Visibility="{Binding Status, Converter={StaticResource StringNotEmptyToVisibility}}"/>
+
+        <!-- What's missing before emulators can be used -->
+        <Border DockPanel.Dock="Top" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"
+                BorderThickness="1" CornerRadius="10" Padding="16,14"
+                Visibility="{Binding SetupNote, Converter={StaticResource StringNotEmptyToVisibility}}">
+            <TextBlock Text="{Binding SetupNote}" TextWrapping="Wrap"/>
+        </Border>
+
+        <!-- Create -->
+        <Border DockPanel.Dock="Bottom" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"
+                BorderThickness="1" CornerRadius="10" Padding="16,14" Margin="0,14,0,0"
+                Visibility="{Binding CanUseEmulators, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel>
+                <TextBlock Text="CREATE AN EMULATOR" Style="{StaticResource SectionLabel}"/>
+
+                <TextBlock Style="{StaticResource Note}" FontSize="12" Margin="0,10,0,0"
+                           Visibility="{Binding SelectedImage, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}"
+                           Text="It needs an Android system image, and none is installed. In Android Studio, open SDK Manager, then SDK Platforms, tick Show Package Details, and tick a Google Play x86_64 system image. Then press Refresh above."/>
+
+                <Grid Margin="0,12,0,0" Visibility="{Binding SelectedImage, Converter={StaticResource NullToVisibility}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="Name" VerticalAlignment="Center" Margin="0,0,16,0" Foreground="{StaticResource Text.Secondary}"/>
+                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}"
+                             AutomationProperties.Name="Emulator name"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding NameError}" Foreground="{StaticResource Danger}" FontSize="12"
+                               TextWrapping="Wrap" Margin="0,5,0,0"
+                               Visibility="{Binding NameError, Converter={StaticResource StringNotEmptyToVisibility}}"/>
+
+                    <TextBlock Grid.Row="2" Text="Device" VerticalAlignment="Center" Margin="0,10,16,0" Foreground="{StaticResource Text.Secondary}"/>
+                    <ComboBox Grid.Row="2" Grid.Column="1" Height="32" Margin="0,10,0,0" ItemsSource="{Binding Devices}"
+                              SelectedItem="{Binding SelectedDevice}" DisplayMemberPath="Label" AutomationProperties.Name="Device"/>
+
+                    <TextBlock Grid.Row="3" Text="Android" VerticalAlignment="Center" Margin="0,10,16,0" Foreground="{StaticResource Text.Secondary}"/>
+                    <ComboBox Grid.Row="3" Grid.Column="1" Height="32" Margin="0,10,0,0" ItemsSource="{Binding Images}"
+                              SelectedItem="{Binding SelectedImage}" DisplayMemberPath="Label" AutomationProperties.Name="System image"/>
+                </Grid>
+
+                <DockPanel Margin="0,14,0,0">
+                    <Button DockPanel.Dock="Right" Content="Create emulator" Style="{StaticResource Button.Primary}" Margin="0"
+                            Command="{Binding CreateCommand}"/>
+                    <CheckBox Content="Start it now" IsChecked="{Binding StartAfterCreate}" VerticalAlignment="Center"/>
+                </DockPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- The emulators on this PC -->
+        <DockPanel Visibility="{Binding CanUseEmulators, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock DockPanel.Dock="Top" Text="ON THIS PC" Style="{StaticResource SectionLabel}" Margin="0,0,0,8"/>
+            <TextBlock DockPanel.Dock="Top" FontSize="12" Text="None yet. Create one below.">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource Note}">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Emulators.Count}" Value="0">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding Emulators}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
+                                    CornerRadius="8" Padding="14,10" Margin="0,0,0,8">
+                                <DockPanel>
+                                    <Grid DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0">
+                                        <Button Content="Start" Style="{StaticResource Button.Secondary}" Margin="0"
+                                                Command="{Binding DataContext.StartCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}" AutomationProperties.Name="{Binding DisplayName, StringFormat=Start {0}}"
+                                                Visibility="{Binding CanStart, Converter={StaticResource BoolToVisibility}}"/>
+                                        <TextBlock Text="Starting…" Foreground="{StaticResource Text.Secondary}" VerticalAlignment="Center"
+                                                   Visibility="{Binding IsStarting, Converter={StaticResource BoolToVisibility}}"/>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                                    Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}">
+                                            <Ellipse Width="7" Height="7" Fill="{StaticResource Success}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                            <TextBlock Text="Running" Foreground="{StaticResource Text.Secondary}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Details}" Style="{StaticResource Note}" Margin="0,3,0,0"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </DockPanel>
+    </DockPanel>
+</Window>

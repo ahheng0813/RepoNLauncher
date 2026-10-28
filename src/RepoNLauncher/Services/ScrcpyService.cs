@@ -328,15 +328,8 @@ public class ScrcpyService : IScrcpyService
         var fromEnv = Environment.GetEnvironmentVariable("ADB");
         if (!string.IsNullOrEmpty(fromEnv) && File.Exists(fromEnv)) return fromEnv;
 
-        var sdkRoots = new[]
-        {
-            Environment.GetEnvironmentVariable("ANDROID_HOME"),
-            Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Android", "Sdk"),
-        };
-        var fromSdk = sdkRoots
-            .Where(root => !string.IsNullOrEmpty(root))
-            .Select(root => Path.Combine(root!, "platform-tools", "adb.exe"))
+        var fromSdk = AndroidSdk.CandidateRoots
+            .Select(root => Path.Combine(root, "platform-tools", "adb.exe"))
             .FirstOrDefault(File.Exists);
         if (fromSdk != null) return fromSdk;
 

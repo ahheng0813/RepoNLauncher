@@ -41,6 +41,8 @@ public partial class MainViewModel : ObservableObject
 
     public UpdateViewModel Updates { get; }
 
+    public EmulatorsViewModel Emulators { get; }
+
     [ObservableProperty] private ProjectViewModel? _selectedProject;
     [ObservableProperty] private bool _isFetchingAll;
     [ObservableProperty] private string _globalStatus = string.Empty;
@@ -71,7 +73,8 @@ public partial class MainViewModel : ObservableObject
         IScrcpyService scrcpy,
         IGitHubService gitHub,
         AiUsageViewModel aiUsage,
-        UpdateViewModel updates)
+        UpdateViewModel updates,
+        IEmulatorService emulators)
     {
         _configService = configService;
         _scanner = scanner;
@@ -87,6 +90,8 @@ public partial class MainViewModel : ObservableObject
         PcRepos = new PcReposViewModel(GitHub, IsOnDashboard, AddProjectsFromPc);
         AiUsage = aiUsage;
         Updates = updates;
+        Emulators = new EmulatorsViewModel(emulators);
+        Emulators.EmulatorStarted += OnEmulatorStarted;
         AgentChat = new AgentChatViewModel(() => Projects.Select(p => new ProjectOption(p.Name, p.Path)), () => SelectedProject?.Path);
 
         _config = _configService.Load();
@@ -94,6 +99,13 @@ public partial class MainViewModel : ObservableObject
         foreach (var app in _config.OpenWithApps) OpenWithApps.Add(app);
 
         _ = gitHub.VerifySavedSignInAsync();
+    }
+
+    // A started emulator is a new device: the phone screen can mirror it, and a Flutter project can run on it.
+    private void OnEmulatorStarted()
+    {
+        _ = PhoneScreen.RefreshDevicesAsync();
+        if (SelectedProject?.Kind == ProjectKind.Flutter) _ = SelectedProject.LoadDevicesAsync();
     }
 
     /// <summary>

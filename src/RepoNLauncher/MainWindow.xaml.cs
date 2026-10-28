@@ -14,6 +14,7 @@ public partial class MainWindow : Window
     private PcReposWindow? _pcReposWindow;
     private AiUsageWindow? _aiUsageWindow;
     private AgentChatWindow? _agentChatWindow;
+    private EmulatorsWindow? _emulatorsWindow;
 
     // Keeps the AI usage bar current while the dashboard is open; plan limits are checked again every few minutes.
     private readonly DispatcherTimer _usageTimer = new() { Interval = TimeSpan.FromMinutes(1) };
@@ -155,6 +156,19 @@ public partial class MainWindow : Window
         _pcReposWindow = new PcReposWindow(vm.PcRepos) { Owner = this };
         _pcReposWindow.Closed += (_, _) => _pcReposWindow = null;
         _pcReposWindow.Show();
+    }
+
+    private void OpenEmulators_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm) return;
+        if (_emulatorsWindow != null)
+        {
+            _emulatorsWindow.Activate();
+            return;
+        }
+        _emulatorsWindow = new EmulatorsWindow(vm.Emulators) { Owner = this };
+        _emulatorsWindow.Closed += (_, _) => _emulatorsWindow = null;
+        _emulatorsWindow.Show();
     }
 
     private void OpenAiUsage_Click(object sender, RoutedEventArgs e)

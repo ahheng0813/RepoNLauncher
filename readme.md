@@ -24,6 +24,7 @@ The files aren't code-signed yet, so Windows may warn before the first run: choo
 - To run a project from the dashboard, the tools it runs with: Flutter, the .NET SDK, Node.js or Python.
 - For **AI Chat** and the AI usage bar, Claude Code or Codex installed and signed in.
 - For **Phone screen**, an Android phone with USB debugging on, or an emulator. The app downloads scrcpy for you.
+- For **Android emulators**, Android Studio's SDK with the Android Emulator and at least one system image (SDK Manager in Android Studio).
 
 ## Features
 
@@ -39,6 +40,7 @@ The files aren't code-signed yet, so Windows may warn before the first run: choo
   - A button opens any local URL the app prints, and you're warned when its ports are already in use.
 - **Environment.** The values from `.env` and `appsettings*.json`.
 - **Phone screen.** Mirrors an Android phone or emulator beside the dashboard through [scrcpy](https://github.com/Genymobile/scrcpy).
+- **Android emulators.** The phone button in the Phone screen's header, or **Emulators…** in a Flutter project's Run tab, lists the emulators on this PC to start. You can also create one: pick a name, a size (small phone, medium phone or tablet) and an installed Android version. A started emulator joins the Phone screen and Flutter device lists.
 - **Repos on this PC.** Finds every git repo on your drives and sorts them into **Mine** and **Others** by GitHub owner, so you can add them to the dashboard.
 - **AI Chat.** Chat with Claude Code or Codex about a project, using the one installed on this PC.
   - Type `@` to mention a file, and paste or drop images and files.
