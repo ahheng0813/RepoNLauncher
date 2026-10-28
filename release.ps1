@@ -8,8 +8,10 @@
 #                                        Needs the GitHub CLI signed in (gh auth login) and a public repo for others.
 #         .\release.ps1 -Bump patch      raise the version (patch 1.0.0 -> 1.0.1, minor -> 1.1.0, major -> 2.0.0), commit
 #                                        and push just that, and stop. Add -Publish to release it straight after.
-# Nothing here asks a question, so it also runs as a saved start command in the dashboard's Run tab.
-param([string]$Version, [ValidateSet('patch', 'minor', 'major')][string]$Bump, [switch]$Publish)
+#         .\release.ps1 -Bump 1.2.0      the same, to the version given
+#         .\release.ps1 -Bump ask        the same, asking for the version first
+# It also runs as a saved start command in the dashboard's Run tab; -Bump ask is answered in the box under the console.
+param([string]$Version, [string]$Bump, [switch]$Publish)
 
 $ErrorActionPreference = 'Stop'
 $root    = $PSScriptRoot
@@ -19,8 +21,24 @@ $appDir  = Join-Path $root 'release\app'
 $outDir  = Join-Path $root 'release\out'
 $repoUrl = 'https://github.com/ahheng0813/RepoNLauncher'
 
+# Asks on the console, which also works from the dashboard's Run tab. The answer is read straight from the input rather
+# than with Read-Host, which prints it back when the input is a pipe, as the dashboard's is. Enter takes the suggested one.
+function Read-NewVersion([string]$Current, [string]$Suggested) {
+    while ($true) {
+        Write-Host -NoNewline "The version is $Current. New version [$Suggested]: "
+        $answer = [Console]::In.ReadLine()
+        if ($null -eq $answer) { throw 'No version was entered.' }
+        $answer = $answer.Trim().TrimStart('v', 'V')
+        if ($answer -eq '') { return $Suggested }
+        if ($answer -notmatch '^\d+\.\d+\.\d+$') { Write-Host "Type it as three numbers, like $Suggested."; continue }
+        if ([version]$answer -le [version]$Current) { Write-Host "It has to be higher than ${Current}: installed copies only update to a higher version."; continue }
+        return $answer
+    }
+}
+
 # Raises <Version>, commits just that and pushes it, so the release is built from, and tagged at, what's on GitHub.
 if ($Bump) {
+    if ($Bump -notmatch '^(patch|minor|major|ask|\d+\.\d+\.\d+)$') { throw "-Bump takes patch, minor, major, ask, or a version like 1.2.0." }
     if ($Version) { throw 'Use -Bump or -Version, not both.' }
     Push-Location $root
     try {
@@ -47,11 +65,15 @@ if ($Bump) {
         $match = [regex]::Match($text, '<Version>(\d+)\.(\d+)\.(\d+)</Version>')
         if (-not $match.Success) { throw "There's no <Version>x.y.z</Version> in $proj." }
         $major, $minor, $patch = 1..3 | ForEach-Object { [int]$match.Groups[$_].Value }
+        $current = "$major.$minor.$patch"
         $Version = switch ($Bump) {
             'major' { "$($major + 1).0.0" }
             'minor' { "$major.$($minor + 1).0" }
             'patch' { "$major.$minor.$($patch + 1)" }
+            'ask' { Read-NewVersion $current "$major.$minor.$($patch + 1)" }
+            default { $Bump }
         }
+        if ([version]$Version -le [version]$current) { throw "$Version isn't higher than ${current}: installed copies only update to a higher version." }
         $text = $text.Remove($match.Index, $match.Length).Insert($match.Index, "<Version>$Version</Version>")
         [IO.File]::WriteAllText($proj, $text, (New-Object Text.UTF8Encoding($hasBom)))
 
