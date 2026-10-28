@@ -7,7 +7,12 @@ Built with WPF on .NET 8.
 ## Features
 
 - **Project list in folder sections.** Add a project folder, or scan a folder for every git repo in it. Repos are grouped into collapsible sections by folder: a subfolder with two or more repos gets its own nested section. A section's checkbox ticks all of its repos for **Fetch Selected**.
-- **Overview.** Shows the branch and status, with Fetch Latest. You can change the project type (Flutter, .NET, Node, Python) if it was detected wrong. **Open in** has Explorer, Visual Studio, Android Studio and VS Code, plus any apps you add yourself.
+- **Overview.** Shows the status, with Fetch Latest. You can change the project type (Flutter, .NET, Node, Python) if it was detected wrong. **Open in** has Explorer, Visual Studio, Android Studio and VS Code, plus any apps you add yourself.
+  - **Branch:** the branch checked out now. To change it, pick one under **Switch to** and press **Switch**; picking alone does nothing. A branch only the remote has gets a local copy that tracks it. Uncommitted changes come along unless they clash; then the switch stops and says so.
+  - **Merge from:** shows the current branch's default: the branch Fetch Latest merges in after pulling (the remote's copy). It's none at first, so Fetch Latest just pulls, except `heng_main`, which merges `development`.
+    - Pick a branch and press **Update default** to have Fetch Latest merge it from now on. Defaults are saved per branch.
+    - Or press **Merge now** to merge the picked branch just once; the default stays as it is.
+  - **Create Pull Request:** from the current branch into a branch you pick on GitHub, with a title, description and draft option filled in from the commits. The branch is pushed first if GitHub doesn't have all of it. Creating it here needs the GitHub sign-in; **Finish on GitHub** opens GitHub's own page instead.
 - **Changes.** Changed files with diffs. Commit, discard, stash, and resolve merge conflicts (ours / theirs / mark resolved).
 - **Commits.** Recent history.
 - **Run.**
@@ -30,15 +35,16 @@ Built with WPF on .NET 8.
   - **History:** every saved Claude Code and Codex chat on this PC is listed, with search. Open one to read it or carry on.
   - A chat keeps running when the window is closed. Closing the dashboard stops it.
   - Codex is found on PATH, in npm, or inside the Codex app.
-- **AI Usage.** Shows Claude Code and Codex usage. The dashboard never reads either tool's sign-in.
+- **AI Usage.** Claude Code and Codex usage. The dashboard never reads either tool's sign-in.
+  - **Usage bar:** under the header, always in view: each tool's plan and its session and weekly (or monthly) limits. It refreshes every minute while the dashboard is open, except when minimized. **View details** opens the full window.
   - **Sign-in and plan:** whether each tool is installed and signed in, and on which plan.
-  - **Plan limits:** the 5-hour, weekly or monthly limits, with when they reset. They're checked with the installed tools when the window opens, every 5 minutes, and on Refresh: Claude Code's `/usage` command (run locally, no model call, no saved chat) and Codex's app server. Each tool fetches them with its own sign-in. Without the tool, the last saved figures show.
+  - **Plan limits:** the 5-hour, weekly or monthly limits, with when they reset. They're checked with the installed tools when the dashboard starts, every 5 minutes, when the details window opens, and on Refresh: Claude Code's `/usage` command (run locally, no model call, no saved chat) and Codex's app server. Each tool fetches them with its own sign-in. Without the tool, the last saved figures show.
   - **Token use:** today, the last 7 and 30 days, and per model, from the session files.
   - Codex use is counted from the sessions saved on this PC, which come from Codex CLI, the IDE extension and AI Chat.
 
 ## GitHub sign-in
 
-GitHub sign-in is optional; only **Repos on this PC** uses it. You can sign in in two ways:
+GitHub sign-in is optional; **Repos on this PC** and creating a pull request from the dashboard use it. You can sign in in two ways:
 
 - **Sign in with browser** uses the GitHub sign-in Git already has (Git Credential Manager). If Git isn't signed in yet, GitHub opens in your browser.
 - **Token:** paste a personal access token with the `repo` scope.

@@ -1,29 +1,23 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Interop;
-using System.Windows.Threading;
 using RepoNLauncher.ViewModels;
 
 namespace RepoNLauncher;
 
-/// <summary>Shows Claude Code and Codex usage, refreshing every minute while open and checking plan limits every few minutes.</summary>
+/// <summary>
+/// Claude Code and Codex usage in full. The dashboard keeps the figures refreshed for its usage bar, so opening this
+/// only checks the plan limits again.
+/// </summary>
 public partial class AiUsageWindow : Window
 {
-    private readonly DispatcherTimer _refreshTimer = new() { Interval = TimeSpan.FromMinutes(1) };
-
     public AiUsageWindow(AiUsageViewModel viewModel)
     {
         InitializeComponent();
         DataContext = viewModel;
 
         SourceInitialized += (_, _) => NativeMethods.UseImmersiveDarkMode(new WindowInteropHelper(this).Handle);
-        _refreshTimer.Tick += (_, _) => _ = viewModel.RefreshAsync();
-        Loaded += (_, _) =>
-        {
-            _ = viewModel.RefreshAsync(checkLimits: true);
-            _refreshTimer.Start();
-        };
-        Closed += (_, _) => _refreshTimer.Stop();
+        Loaded += (_, _) => _ = viewModel.RefreshAsync(checkLimits: true);
     }
 
     private void OpenLink_Click(object sender, RoutedEventArgs e)

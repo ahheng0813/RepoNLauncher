@@ -10,7 +10,26 @@ public interface IGitService
     bool HasMergeConflict(string path);
     Task<GitPullResult> PullAsync(string path, CancellationToken ct = default);
     Task<GitPullResult> MergeAsync(string path, string branch, CancellationToken ct = default);
+    Task<GitPullResult> FetchAsync(string path, CancellationToken ct = default);
+    Task<GitPullResult> PushAsync(string path, string remote, string branch, CancellationToken ct = default);
     Task<string> GetCurrentBranchAsync(string path, CancellationToken ct = default);
+
+    /// <summary>The branch the current one pulls from, such as origin/main; null when it has none.</summary>
+    Task<string?> GetUpstreamAsync(string path, CancellationToken ct = default);
+
+    Task<GitBranches> GetBranchesAsync(string path, CancellationToken ct = default);
+
+    /// <summary>Switches to a local branch, or with <paramref name="remote"/> makes a local branch that tracks the remote one.</summary>
+    Task<GitPullResult> SwitchBranchAsync(string path, string branch, string? remote, CancellationToken ct = default);
+
+    /// <summary>What to merge to take in <paramref name="branch"/>: the remote's copy when there is one, else the local branch.</summary>
+    Task<string> MergeRefForAsync(string path, string branch, CancellationToken ct = default);
+
+    /// <summary>The remote's default branch (what origin/HEAD points at), or null when git doesn't know it.</summary>
+    Task<string?> GetRemoteDefaultBranchAsync(string path, string remote, CancellationToken ct = default);
+
+    /// <summary>Subjects of the commits in a range such as origin/main..HEAD, newest first, at most <paramref name="max"/>.</summary>
+    Task<List<string>> GetCommitSubjectsAsync(string path, string range, int max, CancellationToken ct = default);
     Task<GitStatusSummary> GetStatusAsync(string path, CancellationToken ct = default);
     Task<List<CommitInfo>> GetRecentCommitsAsync(string path, int count = 30, CancellationToken ct = default);
 
@@ -57,13 +76,75 @@ public class GitService : IGitService
     public async Task<GitPullResult> PullAsync(string path, CancellationToken ct = default) =>
         BuildResult(await _runner.RunCaptureAsync(path, "git pull --ff-only", ct));
 
+    // Commands go through cmd.exe, so branch names are quoted: git allows & ( ) and the like in them.
     public async Task<GitPullResult> MergeAsync(string path, string branch, CancellationToken ct = default) =>
-        BuildResult(await _runner.RunCaptureAsync(path, $"git merge --no-edit {branch}", ct));
+        BuildResult(await _runner.RunCaptureAsync(path, $"git merge --no-edit \"{branch}\"", ct));
+
+    public async Task<GitPullResult> FetchAsync(string path, CancellationToken ct = default) =>
+        BuildResult(await _runner.RunCaptureAsync(path, "git fetch", ct));
+
+    public async Task<GitPullResult> PushAsync(string path, string remote, string branch, CancellationToken ct = default) =>
+        BuildResult(await _runner.RunCaptureAsync(path, $"git push -u \"{remote}\" \"{branch}\"", ct));
 
     public async Task<string> GetCurrentBranchAsync(string path, CancellationToken ct = default)
     {
         var result = await _runner.RunCaptureAsync(path, "git rev-parse --abbrev-ref HEAD", ct);
         return result.StdOut.Trim();
+    }
+
+    public async Task<string?> GetUpstreamAsync(string path, CancellationToken ct = default)
+    {
+        var result = await _runner.RunCaptureAsync(path, "git rev-parse --abbrev-ref --symbolic-full-name @{u}", ct);
+        var upstream = result.StdOut.Trim();
+        return result.ExitCode == 0 && upstream.Length > 0 ? upstream : null;
+    }
+
+    public async Task<GitBranches> GetBranchesAsync(string path, CancellationToken ct = default)
+    {
+        var result = await _runner.RunCaptureAsync(path, "git for-each-ref --format=%(refname) refs/heads refs/remotes", ct);
+        var local = new List<string>();
+        var remote = new List<RemoteBranch>();
+        foreach (var line in result.StdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (line.StartsWith("refs/heads/", StringComparison.Ordinal))
+            {
+                local.Add(line["refs/heads/".Length..]);
+            }
+            else if (line.StartsWith("refs/remotes/", StringComparison.Ordinal))
+            {
+                // refs/remotes/origin/feature/login: the remote is the first part, the rest is the branch.
+                var parts = line["refs/remotes/".Length..].Split('/', 2);
+                if (parts.Length == 2 && parts[1] != "HEAD") remote.Add(new RemoteBranch(parts[0], parts[1]));
+            }
+        }
+        return new GitBranches(local, remote);
+    }
+
+    public async Task<GitPullResult> SwitchBranchAsync(string path, string branch, string? remote, CancellationToken ct = default)
+    {
+        var command = remote == null ? $"git switch \"{branch}\"" : $"git switch --track \"{remote}/{branch}\"";
+        return BuildResult(await _runner.RunCaptureAsync(path, command, ct));
+    }
+
+    public async Task<string> MergeRefForAsync(string path, string branch, CancellationToken ct = default)
+    {
+        var upstream = await _runner.RunCaptureAsync(path, $"git rev-parse --verify --quiet \"refs/remotes/origin/{branch}\"", ct);
+        return upstream.ExitCode == 0 ? $"origin/{branch}" : branch;
+    }
+
+    public async Task<string?> GetRemoteDefaultBranchAsync(string path, string remote, CancellationToken ct = default)
+    {
+        var result = await _runner.RunCaptureAsync(path, $"git symbolic-ref --short \"refs/remotes/{remote}/HEAD\"", ct);
+        var head = result.StdOut.Trim();
+        return result.ExitCode == 0 && head.StartsWith(remote + "/", StringComparison.Ordinal) ? head[(remote.Length + 1)..] : null;
+    }
+
+    public async Task<List<string>> GetCommitSubjectsAsync(string path, string range, int max, CancellationToken ct = default)
+    {
+        var result = await _runner.RunCaptureAsync(path, $"git log -n {max} --format=%s \"{range}\"", ct);
+        return result.ExitCode == 0
+            ? result.StdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()
+            : [];
     }
 
     public async Task<GitStatusSummary> GetStatusAsync(string path, CancellationToken ct = default)

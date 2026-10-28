@@ -1,6 +1,9 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Threading;
+using RepoNLauncher.Services;
 using RepoNLauncher.ViewModels;
 
 namespace RepoNLauncher;
@@ -11,6 +14,9 @@ public partial class MainWindow : Window
     private PcReposWindow? _pcReposWindow;
     private AiUsageWindow? _aiUsageWindow;
     private AgentChatWindow? _agentChatWindow;
+
+    // Keeps the AI usage bar current while the dashboard is open; plan limits are checked again every few minutes.
+    private readonly DispatcherTimer _usageTimer = new() { Interval = TimeSpan.FromMinutes(1) };
 
     public MainWindow()
     {
@@ -26,10 +32,19 @@ public partial class MainWindow : Window
         };
         Loaded += (_, _) =>
         {
-            if (DataContext is MainViewModel vm) vm.PhoneScreen.PropertyChanged += OnPhoneScreenPropertyChanged;
+            if (DataContext is not MainViewModel vm) return;
+            vm.PhoneScreen.PropertyChanged += OnPhoneScreenPropertyChanged;
+
+            _ = vm.AiUsage.RefreshAsync(checkLimits: true);
+            _usageTimer.Tick += (_, _) =>
+            {
+                if (WindowState != WindowState.Minimized) _ = vm.AiUsage.RefreshAsync();
+            };
+            _usageTimer.Start();
         };
         Closing += (_, _) =>
         {
+            _usageTimer.Stop();
             if (DataContext is not MainViewModel vm) return;
             vm.AgentChat.StopAll();
             vm.PhoneScreen.Shutdown();
@@ -124,6 +139,29 @@ public partial class MainWindow : Window
         _agentChatWindow = new AgentChatWindow(vm.AgentChat) { Owner = this };
         _agentChatWindow.Closed += (_, _) => _agentChatWindow = null;
         _agentChatWindow.Show();
+    }
+
+    // From the selected project's current branch. Creating one needs the GitHub sign-in; the dialog asks for it.
+    private void CreatePullRequest_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm || vm.SelectedProject is not { } project) return;
+        if (GitHubRemote.Find(project.Path) is not { } repo)
+        {
+            project.StatusMessage = "This repo isn't on GitHub (it has no GitHub remote), so there's nowhere to open a pull request.";
+            return;
+        }
+        if (project.Branch is "" or "HEAD")
+        {
+            project.StatusMessage = "Switch to a branch first: a pull request is made from a branch.";
+            return;
+        }
+
+        var dialog = new CreatePullRequestWindow(project.NewPullRequest(repo, vm.GitHub.Service), vm.GitHub.Service) { Owner = this };
+        if (dialog.ShowDialog() != true || dialog.ViewModel.Created is not { } created) return;
+
+        project.StatusMessage = $"Opened pull request #{created.Number}: {created.Title}";
+        Process.Start(new ProcessStartInfo(created.Url) { UseShellExecute = true });
+        _ = project.RefreshStatusAsync();
     }
 
     // Re-list devices whenever the picker opens, so a phone plugged in a moment ago is already there.

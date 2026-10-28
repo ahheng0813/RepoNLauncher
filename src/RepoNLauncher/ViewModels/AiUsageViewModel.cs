@@ -43,7 +43,7 @@ public partial class AiUsageViewModel : ObservableObject
             if (checkLimits) Status = "Checking plan limits with Claude Code and Codex…";
             await ReadAsync(checkLimits);
             if (checkLimits) _limitsCheckedAt = DateTime.Now;
-            Status = $"Updated {DateTime.Now:t}. Refreshes every minute while this window is open.";
+            Status = $"Updated {DateTime.Now:t}. Refreshes every minute.";
         }
         finally
         {
@@ -71,8 +71,10 @@ public class AiToolCardViewModel
         IsSignedIn = usage.IsSignedIn;
         Account = usage.Account;
         SignInText = !usage.IsSignedIn ? "Not signed in" : usage.Plan != null ? $"Signed in · {usage.Plan}" : "Signed in";
+        Plan = usage.IsSignedIn ? usage.Plan : null;
         UsagePageUrl = usagePageUrl;
         Limits = usage.Limits.Select(l => new LimitRow(l)).ToList();
+        BarLimits = Limits.Take(2).ToList();
         HasLocalSessions = usage.HasLocalSessions;
         Periods = usage.Periods.Select(p => new PeriodRow(p)).ToList();
         var modelTotal = Math.Max(1, usage.Models.Sum(m => m.Tokens));
@@ -84,6 +86,7 @@ public class AiToolCardViewModel
     public bool IsSignedIn { get; }
     public string SignInText { get; }
     public string? Account { get; }
+    public string? Plan { get; }
 
     /// <summary>The command that signs in, run in a console window; null when there's nothing to run from here.</summary>
     public string? SignInCommand { get; private init; }
@@ -95,6 +98,15 @@ public class AiToolCardViewModel
     public string UsagePageUrl { get; }
     public IReadOnlyList<LimitRow> Limits { get; }
     public string LimitsNote { get; private init; } = string.Empty;
+
+    /// <summary>The limits the usage bar at the top of the dashboard shows: the session and the week.</summary>
+    public IReadOnlyList<LimitRow> BarLimits { get; }
+
+    /// <summary>What the usage bar shows in place of the limits when there are none.</summary>
+    public string BarNote => Limits.Count > 0 ? string.Empty
+        : InstallUrl != null ? "Not installed"
+        : !IsSignedIn ? "Not signed in"
+        : "No plan limits yet";
     public bool HasLocalSessions { get; }
     public string NoSessionsText { get; private init; } = string.Empty;
     public IReadOnlyList<PeriodRow> Periods { get; }
@@ -132,7 +144,7 @@ public class AiToolCardViewModel
     };
 
     public static readonly TimeSpan CheckLimitsEvery = TimeSpan.FromMinutes(5);
-    private static string CheckedAgainText => $"Checked again every {CheckLimitsEvery.TotalMinutes:0} minutes while this window is open.";
+    private static string CheckedAgainText => $"Checked again every {CheckLimitsEvery.TotalMinutes:0} minutes while the dashboard is open.";
 
     public static string Ago(DateTimeOffset time)
     {
@@ -160,6 +172,12 @@ public class LimitRow
     public LimitRow(UsageLimit limit)
     {
         Label = limit.Label;
+        ShortLabel = limit.Label switch
+        {
+            "Session (5 hours)" => "5-hour",
+            "Week (all models)" => "Week",
+            _ => limit.Label,
+        };
         Fraction = Math.Clamp(limit.Percent / 100, 0, 1);
         PercentText = $"{limit.Percent:0}%";
         Level = limit.Percent >= 90 ? "Full" : limit.Percent >= 70 ? "High" : "Normal";
@@ -173,14 +191,17 @@ public class LimitRow
             { } reset when reset <= now => $"Started over {When(reset)}; newer use not saved yet",
             { } reset => $"Resets {When(reset)}",
         };
+        ToolTip = Detail.Length > 0 ? $"{Label}: {PercentText} used\n{Detail}" : $"{Label}: {PercentText} used";
     }
 
     public string Label { get; }
+    public string ShortLabel { get; }
     public double Fraction { get; }
     public string PercentText { get; }
     public string Level { get; }
     public bool IsOutdated { get; }
     public string Detail { get; }
+    public string ToolTip { get; }
 
     private static string When(DateTimeOffset time)
     {

@@ -15,12 +15,34 @@ using RepoNLauncher.Services;
 
 namespace RepoNLauncher.ViewModels;
 
+// The picker choices are classes, not records, on purpose: switching projects swaps the pickers' lists, and a picker
+// keeps a selection that equals an item of the new list. With value equality, a branch picked in one project would
+// show up picked in the next one.
+
+/// <summary>A branch in the Overview's branch picker; <see cref="Remote"/> is set for one only the remote has so far.</summary>
+public sealed class BranchOption(string name, string? remote, bool isCurrent)
+{
+    public string Name { get; } = name;
+    public string? Remote { get; } = remote;
+    public bool IsCurrent { get; } = isCurrent;
+    public string Note => IsCurrent ? "  current" : Remote == null ? string.Empty : $"  on {Remote}";
+    public override string ToString() => Name;
+}
+
+/// <summary>A choice in the Overview's Merge from picker; a null <see cref="Branch"/> means just pull the branch itself.</summary>
+public sealed class MergeSourceOption(string? branch, string label)
+{
+    public string? Branch { get; } = branch;
+    public string Label { get; } = label;
+    public override string ToString() => Label;
+}
+
 public partial class ProjectViewModel : ObservableObject
 {
-    // heng_main is a personal branch some repos use that should always track development;
-    // auto-merging keeps it current without a manual merge step on every fetch.
+    // heng_main is a personal branch some repos use that should always track development, so until another choice
+    // is made for it, Fetch Latest merges development into it.
     private const string AutoMergeOnBranch = "heng_main";
-    private const string AutoMergeSourceBranch = "origin/development";
+    private const string AutoMergeSourceBranch = "development";
 
     // Dev servers (Vite, Next, Express, Django, Flask, ...) print the address they serve on; the first local URL
     // in a line becomes a button. Color codes are stripped first since some tools color the URL.
@@ -101,7 +123,10 @@ public partial class ProjectViewModel : ObservableObject
     /// selection, which collapsing a section moves onto the section.</summary>
     [ObservableProperty] private bool _isSelected;
 
-    [ObservableProperty] private string _branch = string.Empty;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DefaultMergeName), nameof(MergeFromHint), nameof(IsMergePickUnsaved))]
+    [NotifyCanExecuteChangedFor(nameof(SwitchBranchCommand), nameof(UpdateMergeDefaultCommand))]
+    private string _branch = string.Empty;
     [ObservableProperty] private bool _isDirty;
     [ObservableProperty] private int _ahead;
     [ObservableProperty] private int _behind;
@@ -128,6 +153,32 @@ public partial class ProjectViewModel : ObservableObject
     public ObservableCollection<FileChangeInfo> ChangedFiles { get; } = new();
     public ObservableCollection<StashInfo> Stashes { get; } = new();
     public ObservableCollection<string> DiffLines { get; } = new();
+
+    /// <summary>The Switch to picker: local branches, then ones only the remote has (switching to one makes a local copy).</summary>
+    public ObservableCollection<BranchOption> Branches { get; } = new();
+
+    /// <summary>The Merge from picker: just this branch, or another branch to merge in.</summary>
+    public ObservableCollection<MergeSourceOption> MergeSources { get; } = new();
+
+    // Picking only chooses; Switch, Update default and Merge now act on the choice.
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SwitchBranchCommand))]
+    private BranchOption? _selectedBranch;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMergePickUnsaved))]
+    [NotifyCanExecuteChangedFor(nameof(UpdateMergeDefaultCommand), nameof(MergeNowCommand))]
+    private MergeSourceOption? _selectedMergeSource;
+
+    /// <summary>The branch Fetch Latest merges into this one by default, as shown: "none" when it just pulls.</summary>
+    public string DefaultMergeName => MergeSourceFor(Branch) ?? "none";
+
+    public string MergeFromHint => MergeSourceFor(Branch) is { } source
+        ? $"Fetch Latest pulls {Branch}, then merges {source} into it."
+        : $"Fetch Latest just pulls {Branch}.";
+
+    /// <summary>A branch other than the default is picked and not saved.</summary>
+    public bool IsMergePickUnsaved => SelectedMergeSource != null && SelectedMergeSource.Branch != MergeSourceFor(Branch);
 
     private RunningProcessHandle? _runningProcess;
 
@@ -167,6 +218,137 @@ public partial class ProjectViewModel : ObservableObject
             IsDirty = status.IsDirty;
             Ahead = status.Ahead;
             Behind = status.Behind;
+            // Only the project on screen shows the pickers; Fetch All refreshes every project's status.
+            if (IsSelected) await LoadBranchesAsync();
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task LoadBranchesAsync()
+    {
+        var branches = await _git.GetBranchesAsync(Path);
+        var current = Branch;
+
+        // No awaits from here on: two refreshes at once each rebuild the lists whole. Both pickers go back to what's in
+        // effect: the current branch, and its default branch to merge from.
+        Branches.Clear();
+        foreach (var name in branches.Local.Order(StringComparer.OrdinalIgnoreCase)) Branches.Add(new BranchOption(name, null, name == current));
+        var remoteOnly = branches.Remote
+            .Where(r => !branches.Local.Contains(r.Name))
+            .OrderBy(r => r.Remote == "origin" ? 0 : 1)
+            .DistinctBy(r => r.Name)
+            .OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase);
+        foreach (var branch in remoteOnly) Branches.Add(new BranchOption(branch.Name, branch.Remote, isCurrent: false));
+        // A detached HEAD (or a repo with no commits yet) has no branch in the list; show what git calls it.
+        if (!Branches.Any(b => b.IsCurrent)) Branches.Insert(0, new BranchOption(current, null, isCurrent: true));
+        SelectedBranch = Branches.First(b => b.IsCurrent);
+
+        MergeSources.Clear();
+        MergeSources.Add(new MergeSourceOption(null, "Same branch (just pull it)"));
+        var source = MergeSourceFor(current);
+        var others = branches.Local.Concat(branches.Remote.Select(r => r.Name))
+            .Append(source)
+            .OfType<string>()
+            .Where(name => name != current)
+            .Distinct()
+            .Order(StringComparer.OrdinalIgnoreCase);
+        foreach (var name in others) MergeSources.Add(new MergeSourceOption(name, name));
+        SelectedMergeSource = MergeSources.FirstOrDefault(m => m.Branch == source) ?? MergeSources[0];
+    }
+
+    private bool CanUpdateMergeDefault() => Branch.Length > 0 && IsMergePickUnsaved;
+
+    /// <summary>Saves the picked branch as the one Fetch Latest merges into the current branch, from now on.</summary>
+    [RelayCommand(CanExecute = nameof(CanUpdateMergeDefault))]
+    private void UpdateMergeDefault()
+    {
+        var source = SelectedMergeSource!.Branch;
+
+        // The built-in default needs no entry, which keeps heng_main following development unless told otherwise.
+        Info.MergeFrom ??= new Dictionary<string, string>();
+        if (source == DefaultMergeSource(Branch)) Info.MergeFrom.Remove(Branch);
+        else Info.MergeFrom[Branch] = source ?? string.Empty;
+        if (Info.MergeFrom.Count == 0) Info.MergeFrom = null;
+        SettingsChanged?.Invoke();
+
+        OnPropertyChanged(nameof(DefaultMergeName));
+        OnPropertyChanged(nameof(MergeFromHint));
+        OnPropertyChanged(nameof(IsMergePickUnsaved));
+        UpdateMergeDefaultCommand.NotifyCanExecuteChanged();
+        StatusMessage = source != null
+            ? $"Default saved: Fetch Latest now merges {source} into {Branch} after pulling it."
+            : $"Default saved: Fetch Latest now just pulls {Branch}.";
+    }
+
+    private bool CanMergeNow() => SelectedMergeSource?.Branch != null;
+
+    /// <summary>Merges the picked branch into the current one this once. The default stays as it is.</summary>
+    [RelayCommand(CanExecute = nameof(CanMergeNow))]
+    private async Task MergeNowAsync()
+    {
+        var source = SelectedMergeSource!.Branch!;
+        var branch = Branch;
+        IsBusy = true;
+        StatusMessage = $"Merging {source} into {branch}...";
+        try
+        {
+            // Get the branch's latest first; offline, what git already has is merged.
+            await _git.FetchAsync(Path);
+            StatusMessage = await MergeInAsync(branch, source);
+            await RefreshStatusAsync();
+            await LoadChangesAsync();
+            await LoadCommitsAsync();
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    // Merges the remote's copy of source when there is one, else the local branch; says how it went.
+    private async Task<string> MergeInAsync(string branch, string source)
+    {
+        var mergeRef = await _git.MergeRefForAsync(Path, source);
+        var merge = await _git.MergeAsync(Path, mergeRef);
+        if (merge.Success) return merge.AlreadyUpToDate ? $"{mergeRef} already merged." : $"Merged {mergeRef} into {branch}.";
+        return _git.HasMergeConflict(Path)
+            ? $"Merging {mergeRef} hit conflicts: resolve them in the Changes tab."
+            : $"Merging {mergeRef} failed: {merge.Output}";
+    }
+
+    /// <summary>The branch Fetch Latest merges into <paramref name="branch"/> after pulling it, or null for none.</summary>
+    private string? MergeSourceFor(string branch) =>
+        Info.MergeFrom != null && Info.MergeFrom.TryGetValue(branch, out var source)
+            ? (source.Length == 0 ? null : source)
+            : DefaultMergeSource(branch);
+
+    private static string? DefaultMergeSource(string branch) =>
+        string.Equals(branch, AutoMergeOnBranch, StringComparison.OrdinalIgnoreCase) ? AutoMergeSourceBranch : null;
+
+    private bool CanSwitchBranch() => SelectedBranch is { IsCurrent: false };
+
+    [RelayCommand(CanExecute = nameof(CanSwitchBranch))]
+    private async Task SwitchBranchAsync()
+    {
+        var target = SelectedBranch!;
+        IsBusy = true;
+        StatusMessage = $"Switching to {target.Name}...";
+        try
+        {
+            var result = await _git.SwitchBranchAsync(Path, target.Name, target.Remote);
+            await RefreshStatusAsync();
+            if (result.Success)
+                StatusMessage = IsDirty ? $"Switched to {target.Name}. Your uncommitted changes came along." : $"Switched to {target.Name}.";
+            else if (result.Output.Contains("would be overwritten", StringComparison.OrdinalIgnoreCase))
+                StatusMessage = $"Couldn't switch to {target.Name}: it would overwrite uncommitted changes. Commit or stash them first (Changes tab).";
+            else
+                StatusMessage = $"Couldn't switch to {target.Name}: {result.Output}";
+
+            await LoadChangesAsync();
+            await LoadCommitsAsync();
         }
         finally
         {
@@ -187,24 +369,26 @@ public partial class ProjectViewModel : ObservableObject
         StatusMessage = "Pulling...";
         try
         {
-            var result = await _git.PullAsync(Path);
-            var message = result.Success
-                ? (result.AlreadyUpToDate ? "Already up to date." : "Pulled latest changes.")
-                : $"Pull failed: {result.Output}";
-
-            if (result.Success)
+            var branch = await _git.GetCurrentBranchAsync(Path);
+            string message;
+            bool pulled;
+            if (await _git.GetUpstreamAsync(Path) != null)
             {
-                var branch = await _git.GetCurrentBranchAsync(Path);
-                if (string.Equals(branch, AutoMergeOnBranch, StringComparison.OrdinalIgnoreCase))
-                {
-                    var mergeResult = await _git.MergeAsync(Path, AutoMergeSourceBranch);
-                    message += mergeResult.Success
-                        ? mergeResult.AlreadyUpToDate
-                            ? $" {AutoMergeSourceBranch} already merged."
-                            : $" Auto-merged {AutoMergeSourceBranch} into {branch}."
-                        : $" Auto-merge failed: {mergeResult.Output}";
-                }
+                var result = await _git.PullAsync(Path);
+                pulled = result.Success;
+                message = result.Success
+                    ? (result.AlreadyUpToDate ? "Already up to date." : "Pulled latest changes.")
+                    : $"Pull failed: {result.Output}";
             }
+            else
+            {
+                // A branch made here and never pushed has nothing to pull, but a branch to merge in may still be new.
+                var result = await _git.FetchAsync(Path);
+                pulled = result.Success;
+                message = result.Success ? $"Fetched. {branch} isn't on the remote, so there was nothing to pull." : $"Fetch failed: {result.Output}";
+            }
+
+            if (pulled && MergeSourceFor(branch) is { } source) message += " " + await MergeInAsync(branch, source);
 
             StatusMessage = message;
             await RefreshStatusAsync();
@@ -686,6 +870,10 @@ public partial class ProjectViewModel : ObservableObject
             StatusMessage = $"Could not open {app.Name}: {ex.Message}";
         }
     }
+
+    /// <summary>The Create pull request dialog's view model, for this project's current branch.</summary>
+    public CreatePullRequestViewModel NewPullRequest((string Owner, string Name) repo, IGitHubService gitHub) =>
+        new(Path, Branch, repo, _git, gitHub);
 
     [RelayCommand]
     public void OpenUrl(string? url)

@@ -4,7 +4,7 @@ using RepoNLauncher.Services;
 
 namespace RepoNLauncher.ViewModels;
 
-/// <summary>The GitHub sign-in shown in the header. Only Repos on this PC needs it; everything else works signed out.</summary>
+/// <summary>The GitHub sign-in shown in the header. Only Repos on this PC and creating pull requests need it.</summary>
 public partial class GitHubAccountViewModel : ObservableObject
 {
     public GitHubAccountViewModel(IGitHubService service)

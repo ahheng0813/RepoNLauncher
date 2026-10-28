@@ -5,7 +5,9 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
+using RepoNLauncher.Models;
 
 namespace RepoNLauncher.Services;
 
@@ -34,6 +36,13 @@ public interface IGitHubService
 
     /// <summary>The repository, or null when it doesn't exist or this account can't see it.</summary>
     Task<GitHubRepo?> GetRepoAsync(string owner, string name, CancellationToken ct);
+
+    /// <summary>The open pull request from <paramref name="branch"/> of this repo, or null when there's none.</summary>
+    Task<GitHubPullRequest?> FindOpenPullRequestAsync(string owner, string name, string branch, CancellationToken ct);
+
+    /// <summary>Opens a pull request from <paramref name="head"/> into <paramref name="baseBranch"/>; both are branches of this repo.</summary>
+    Task<GitHubPullRequest> CreatePullRequestAsync(
+        string owner, string name, string head, string baseBranch, string title, string body, bool draft, CancellationToken ct);
 }
 
 public class GitHubService : IGitHubService
@@ -138,6 +147,83 @@ public class GitHubService : IGitHubService
             root.GetProperty("private").GetBoolean());
     }
 
+    public async Task<GitHubPullRequest?> FindOpenPullRequestAsync(string owner, string name, string branch, CancellationToken ct)
+    {
+        var token = _token ?? throw new GitHubException("Sign in to GitHub first.");
+        var query = $"head={Uri.EscapeDataString($"{owner}:{branch}")}&state=open&per_page=1";
+        using var response = await SendAsync($"{RepoPath(owner, name)}/pulls?{query}", token, ct);
+        if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Forbidden) return null;
+        ThrowIfSignedOut(response);
+
+        var pulls = await ReadJsonAsync(response, ct);
+        return pulls.ValueKind == JsonValueKind.Array && pulls.GetArrayLength() > 0 ? PullRequestOf(pulls[0]) : null;
+    }
+
+    public async Task<GitHubPullRequest> CreatePullRequestAsync(
+        string owner, string name, string head, string baseBranch, string title, string body, bool draft, CancellationToken ct)
+    {
+        var token = _token ?? throw new GitHubException("Sign in to GitHub first.");
+        var json = JsonSerializer.Serialize(new Dictionary<string, object>
+        {
+            ["title"] = title,
+            ["head"] = head,
+            ["base"] = baseBranch,
+            ["body"] = body,
+            ["draft"] = draft,
+        });
+        using var response = await SendAsync(HttpMethod.Post, $"{RepoPath(owner, name)}/pulls", token, ct,
+            () => new StringContent(json, Encoding.UTF8, "application/json"));
+        ThrowIfSignedOut(response);
+        switch (response.StatusCode)
+        {
+            case HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests when IsRateLimited(response):
+                throw new GitHubException("GitHub's hourly request limit is used up. Try again later.");
+            case HttpStatusCode.Forbidden:
+                throw new GitHubException($"Your GitHub sign-in can't open pull requests in {owner}/{name}. A token needs the repo scope.");
+            case HttpStatusCode.NotFound:
+                throw new GitHubException($"GitHub can't find {owner}/{name} for {Login}.");
+            // GitHub explains what's wrong: a pull request is already open, no commits between the branches...
+            case HttpStatusCode.UnprocessableEntity:
+                throw new GitHubException(await ValidationMessageAsync(response, ct));
+        }
+        return PullRequestOf(await ReadJsonAsync(response, ct));
+    }
+
+    private static string RepoPath(string owner, string name) => $"repos/{Uri.EscapeDataString(owner)}/{Uri.EscapeDataString(name)}";
+
+    private static GitHubPullRequest PullRequestOf(JsonElement pull) => new(
+        pull.GetProperty("number").GetInt32(),
+        pull.GetProperty("title").GetString() ?? string.Empty,
+        pull.GetProperty("html_url").GetString() ?? string.Empty,
+        pull.TryGetProperty("draft", out var draft) && draft.ValueKind == JsonValueKind.True);
+
+    private void ThrowIfSignedOut(HttpResponseMessage response)
+    {
+        if (response.StatusCode != HttpStatusCode.Unauthorized) return;
+        SignOut();
+        throw new GitHubException("GitHub no longer accepts your sign-in. Sign in again.");
+    }
+
+    // {"message":"Validation Failed","errors":[{"message":"A pull request already exists for owner:branch."}]}
+    private static async Task<string> ValidationMessageAsync(HttpResponseMessage response, CancellationToken ct)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
+            var root = document.RootElement;
+            var details = root.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Array
+                ? errors.EnumerateArray()
+                    .Select(e => e.ValueKind == JsonValueKind.Object && e.TryGetProperty("message", out var m) ? m.GetString() : null)
+                    .OfType<string>()
+                    .ToList()
+                : [];
+            if (details.Count > 0) return string.Join(" ", details);
+            if (root.TryGetProperty("message", out var message) && message.GetString() is { Length: > 0 } text) return $"GitHub said: {text}";
+        }
+        catch (JsonException) { }
+        return "GitHub didn't accept the pull request.";
+    }
+
     // The login the token belongs to, or null when GitHub rejects the token.
     private async Task<string?> LoginForTokenAsync(string token, CancellationToken ct)
     {
@@ -146,14 +232,19 @@ public class GitHubService : IGitHubService
         return (await ReadJsonAsync(response, ct)).GetProperty("login").GetString();
     }
 
-    private async Task<HttpResponseMessage> SendAsync(string path, string token, CancellationToken ct)
+    private Task<HttpResponseMessage> SendAsync(string path, string token, CancellationToken ct) =>
+        SendAsync(HttpMethod.Get, path, token, ct, content: null);
+
+    // content makes the request body afresh for each attempt, since a redirect sends it again.
+    private async Task<HttpResponseMessage> SendAsync(
+        HttpMethod method, string path, string token, CancellationToken ct, Func<HttpContent>? content)
     {
         var uri = new Uri(_http.BaseAddress!, path);
         // A renamed or transferred repo answers with a redirect. HttpClient would follow it without the token,
         // which turns a private repo into a 404, so redirects within the API are followed here.
         for (var hops = 0; ; hops++)
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+            using var request = new HttpRequestMessage(method, uri) { Content = content?.Invoke() };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             HttpResponseMessage response;

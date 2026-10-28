@@ -140,6 +140,65 @@
             </Style.Triggers>
         </Style>
 
+        <!-- One tool in the AI usage bar: tile, name, plan, then the session and week limits as small meters -->
+        <DataTemplate x:Key="UsageBarTool" DataType="{x:Type vm:AiToolCardViewModel}">
+            <StackPanel Orientation="Horizontal">
+                <Border x:Name="Tile" Width="18" Height="18" CornerRadius="5" Background="{StaticResource Accent}" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Letter}" FontSize="10.5" FontWeight="Bold" Foreground="White"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12.5" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Plan}" Foreground="{StaticResource Text.Muted}" FontSize="12" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                <ItemsControl ItemsSource="{Binding BarLimits}" VerticalAlignment="Center" Focusable="False">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel x:Name="Limit" Orientation="Horizontal" Margin="14,0,0,0" Background="Transparent"
+                                        ToolTip="{Binding ToolTip}">
+                                <TextBlock Text="{Binding ShortLabel}" Foreground="{StaticResource Text.Secondary}" FontSize="12"
+                                           VerticalAlignment="Center"/>
+                                <Grid Width="64" Height="5" Margin="8,1,8,0" VerticalAlignment="Center">
+                                    <Border Background="{StaticResource Bg.Hover}" CornerRadius="2.5"/>
+                                    <Border x:Name="Fill" Background="{StaticResource Accent}" CornerRadius="2.5" RenderTransformOrigin="0,0.5">
+                                        <Border.RenderTransform>
+                                            <ScaleTransform ScaleX="{Binding Fraction}"/>
+                                        </Border.RenderTransform>
+                                    </Border>
+                                </Grid>
+                                <TextBlock Text="{Binding PercentText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding Level}" Value="High">
+                                    <Setter TargetName="Fill" Property="Background" Value="{StaticResource Warning}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Level}" Value="Full">
+                                    <Setter TargetName="Fill" Property="Background" Value="{StaticResource Danger}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsOutdated}" Value="True">
+                                    <Setter TargetName="Limit" Property="Opacity" Value="0.5"/>
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{Binding BarNote}" Foreground="{StaticResource Text.Muted}" FontSize="12" Margin="12,0,0,0"
+                           VerticalAlignment="Center"
+                           Visibility="{Binding BarNote, Converter={StaticResource StringNotEmptyToVisibility}}"/>
+            </StackPanel>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding Name}" Value="Claude">
+                    <Setter TargetName="Tile" Property="Background" Value="#C96442"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Name}" Value="Codex">
+                    <Setter TargetName="Tile" Property="Background" Value="#3B3F4A"/>
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
         <Style x:Key="ChangeTypeBadge" TargetType="Border">
             <Setter Property="Width" Value="18"/>
             <Setter Property="Height" Value="18"/>
@@ -162,6 +221,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="3"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <Rectangle Grid.Row="0" Fill="{StaticResource Accent.Gradient}"/>
                 <DockPanel Grid.Row="1" Margin="20,14">
@@ -183,8 +243,6 @@
                         <Border Width="1" Background="{StaticResource Border.Subtle}" Margin="4,2,12,2"/>
                         <Button Content="AI Chat" Style="{StaticResource Button.Secondary}" Click="OpenAiChat_Click"
                                 ToolTip="Chat with Claude Code or Codex in a project, and read your saved chats"/>
-                        <Button Content="AI Usage" Style="{StaticResource Button.Secondary}" Click="OpenAiUsage_Click"
-                                ToolTip="Claude Code and Codex plan limits and token use"/>
                         <Button Style="{StaticResource Button.Secondary}" Margin="0" ToolTip="Show or hide the phone screen panel"
                                 Command="{Binding PhoneScreen.TogglePanelCommand}">
                             <StackPanel Orientation="Horizontal">
@@ -193,7 +251,7 @@
                             </StackPanel>
                         </Button>
                         <Border Width="1" Background="{StaticResource Border.Subtle}" Margin="12,2,12,2"/>
-                        <!-- GitHub account: only Repos on this PC needs it -->
+                        <!-- GitHub account: only Repos on this PC and creating pull requests need it -->
                         <Button Style="{StaticResource Button.Secondary}" Margin="0" Click="SignInToGitHub_Click"
                                 Visibility="{Binding GitHub.Login, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}">
                             <StackPanel Orientation="Horizontal">
@@ -217,6 +275,29 @@
                         </Border>
                     </StackPanel>
                 </DockPanel>
+
+                <!-- AI usage, always in view; View details opens the window with token use and the rest -->
+                <Border Grid.Row="2" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="0,1,0,0" Padding="20,6"
+                        DataContext="{Binding AiUsage}">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource Button.Secondary}" Margin="0" Padding="10,4"
+                                Click="OpenAiUsage_Click" AutomationProperties.Name="View usage details"
+                                ToolTip="Plan limits, token use and models for Claude Code and Codex">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="View details" FontSize="12"/>
+                                <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" Margin="7,1,0,0"/>
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Text="AI USAGE" Style="{StaticResource SectionLabel}" Margin="0,0,18,0" VerticalAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Reading usage…" Foreground="{StaticResource Text.Muted}" FontSize="12"
+                                       Visibility="{Binding ClaudeCard, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}"/>
+                            <ContentControl Content="{Binding ClaudeCard}" ContentTemplate="{StaticResource UsageBarTool}" Focusable="False"
+                                            Margin="0,0,30,0"/>
+                            <ContentControl Content="{Binding CodexCard}" ContentTemplate="{StaticResource UsageBarTool}" Focusable="False"/>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
             </Grid>
         </Border>
 
@@ -344,6 +425,8 @@
                                         <RowDefinition/>
                                         <RowDefinition/>
                                         <RowDefinition/>
+                                        <RowDefinition/>
+                                        <RowDefinition/>
                                     </Grid.RowDefinitions>
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="KIND" Style="{StaticResource SectionLabel}"
                                                VerticalAlignment="Center" Margin="0,0,10,10"/>
@@ -354,23 +437,84 @@
                                         <TextBlock Text="{Binding DetectedKindNote}" Foreground="{StaticResource Text.Muted}" FontSize="11.5"
                                                    VerticalAlignment="Center" Margin="10,0,0,0"/>
                                     </StackPanel>
-                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="BRANCH" Style="{StaticResource SectionLabel}"/>
-                                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,0,0,10" FontFamily="Consolas">
-                                        <TextBlock.Text>
-                                            <MultiBinding StringFormat="{}{0}  (ahead {1} / behind {2})">
-                                                <Binding Path="Branch"/>
-                                                <Binding Path="Ahead"/>
-                                                <Binding Path="Behind"/>
-                                            </MultiBinding>
-                                        </TextBlock.Text>
-                                    </TextBlock>
-                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="STATUS" Style="{StaticResource SectionLabel}"/>
-                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding StatusMessage}" Foreground="{StaticResource Cyan}"
+                                    <!-- The branch checked out now -->
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="BRANCH" Style="{StaticResource SectionLabel}"
+                                               VerticalAlignment="Center" Margin="0,0,10,10"/>
+                                    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,10">
+                                        <Border Background="{StaticResource Accent.Muted}" CornerRadius="6" Padding="10,4" VerticalAlignment="Center"
+                                                ToolTip="The branch checked out now">
+                                            <TextBlock Text="{Binding Branch}" FontFamily="Consolas" FontWeight="SemiBold" FontSize="13"/>
+                                        </Border>
+                                        <TextBlock Text="current" Foreground="{StaticResource Text.Muted}" FontSize="11.5"
+                                                   VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                        <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="12" VerticalAlignment="Center" Margin="16,0,0,0">
+                                            <TextBlock.Text>
+                                                <MultiBinding StringFormat="{}ahead {0} · behind {1}">
+                                                    <Binding Path="Ahead"/>
+                                                    <Binding Path="Behind"/>
+                                                </MultiBinding>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </StackPanel>
+                                    <!-- Picking only chooses; Switch does it. One only the remote has gets a local copy first. -->
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="SWITCH TO" Style="{StaticResource SectionLabel}"
+                                               VerticalAlignment="Center" Margin="0,0,10,10"/>
+                                    <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,10">
+                                        <ComboBox Width="260" Height="30" ItemsSource="{Binding Branches}" SelectedItem="{Binding SelectedBranch}"
+                                                  AutomationProperties.Name="Switch to branch">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock TextTrimming="CharacterEllipsis">
+                                                        <Run Text="{Binding Name, Mode=OneWay}" FontFamily="Consolas"/>
+                                                        <Run Text="{Binding Note, Mode=OneWay}" Foreground="{StaticResource Text.Muted}" FontSize="11"/>
+                                                    </TextBlock>
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                        <Button Content="Switch" Style="{StaticResource Button.Primary}" Margin="8,0,0,0"
+                                                Command="{Binding SwitchBranchCommand}"
+                                                ToolTip="Switch to the picked branch. Uncommitted changes come along when they don't clash."/>
+                                    </StackPanel>
+                                    <!-- The default is saved per branch and used by Fetch Latest; Merge now merges the pick just once -->
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="MERGE FROM" Style="{StaticResource SectionLabel}"
+                                               VerticalAlignment="Top" Margin="0,2,10,10"/>
+                                    <StackPanel Grid.Row="3" Grid.Column="1" Margin="0,0,0,10">
+                                        <TextBlock FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8">
+                                            <Run Text="Default:" Foreground="{StaticResource Text.Secondary}"/>
+                                            <Run Text="{Binding DefaultMergeName, Mode=OneWay}" FontFamily="Consolas" FontWeight="SemiBold"/>
+                                            <Run Text="·" Foreground="{StaticResource Text.Muted}"/>
+                                            <Run Text="{Binding MergeFromHint, Mode=OneWay}" Foreground="{StaticResource Text.Muted}"/>
+                                        </TextBlock>
+                                        <StackPanel Orientation="Horizontal">
+                                            <ComboBox Width="260" Height="30" ItemsSource="{Binding MergeSources}"
+                                                      SelectedItem="{Binding SelectedMergeSource}" AutomationProperties.Name="Merge from"/>
+                                            <Button Content="Update default" Style="{StaticResource Button.Secondary}" Margin="8,0,8,0"
+                                                    Command="{Binding UpdateMergeDefaultCommand}"
+                                                    ToolTip="Make Fetch Latest merge the picked branch into this one from now on"/>
+                                            <Button Content="Merge now" Style="{StaticResource Button.Secondary}" Margin="0"
+                                                    Command="{Binding MergeNowCommand}"
+                                                    ToolTip="Merge the picked branch into this one just this once; the default stays as it is"/>
+                                        </StackPanel>
+                                        <TextBlock Foreground="{StaticResource Warning}" FontSize="11.5" TextWrapping="Wrap" Margin="0,6,0,0"
+                                                   Text="Not saved. Update default to have Fetch Latest use it every time, or Merge now to merge it just once."
+                                                   Visibility="{Binding IsMergePickUnsaved, Converter={StaticResource BoolToVisibility}}"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="STATUS" Style="{StaticResource SectionLabel}"/>
+                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding StatusMessage}" Foreground="{StaticResource Cyan}"
                                                Margin="0,0,0,10" TextWrapping="Wrap"/>
                                 </Grid>
 
                                 <StackPanel Orientation="Horizontal">
                                     <Button Content="Fetch Latest" Style="{StaticResource Button.Primary}" Command="{Binding FetchLatestCommand}"/>
+                                    <Button Style="{StaticResource Button.Secondary}" Click="CreatePullRequest_Click"
+                                            AutomationProperties.Name="Create Pull Request"
+                                            ToolTip="Open a pull request on GitHub from this branch">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Path Data="{StaticResource GitHubMark}" Fill="{StaticResource Text.Primary}" Width="13" Height="13"
+                                                  Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Create Pull Request"/>
+                                        </StackPanel>
+                                    </Button>
                                     <Button Content="Refresh Status" Style="{StaticResource Button.Secondary}" Command="{Binding RefreshStatusCommand}"/>
                                     <Button Content="Remove from Dashboard" Style="{StaticResource Button.Danger}"
                                             Command="{Binding DataContext.RemoveProjectCommand, RelativeSource={RelativeSource AncestorType=Window}}"

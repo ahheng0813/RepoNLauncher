@@ -64,7 +64,11 @@ public class ProcessRunnerService : IProcessRunner
 
     public async Task<CaptureResult> RunCaptureAsync(string workingDirectory, string command, CancellationToken ct = default)
     {
-        using var process = new Process { StartInfo = BuildStartInfo(workingDirectory, command, redirectOutput: true) };
+        var startInfo = BuildStartInfo(workingDirectory, command, redirectOutput: true);
+        // Nobody can answer a prompt in the hidden console, so git fails instead of waiting forever for a password.
+        // Git Credential Manager still opens its own sign-in window.
+        startInfo.Environment["GIT_TERMINAL_PROMPT"] = "0";
+        using var process = new Process { StartInfo = startInfo };
         process.Start();
 
         var stdOutTask = process.StandardOutput.ReadToEndAsync(ct);

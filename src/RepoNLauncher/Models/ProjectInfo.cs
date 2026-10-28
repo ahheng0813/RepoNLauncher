@@ -12,4 +12,10 @@ public class ProjectInfo
     public string? CsprojOverride { get; set; }
     public string? EnvFileOverride { get; set; }
     public bool IsAutoDiscovered { get; set; }
+
+    /// <summary>
+    /// Per local branch, the branch Fetch Latest merges in after pulling: "development" merges origin/development.
+    /// An empty value means only the branch itself is pulled; a branch not listed gets the default.
+    /// </summary>
+    public Dictionary<string, string>? MergeFrom { get; set; }
 }

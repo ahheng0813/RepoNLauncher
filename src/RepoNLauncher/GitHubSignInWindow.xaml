@@ -13,7 +13,7 @@
             <TextBlock Text="Sign in to GitHub" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center"/>
         </StackPanel>
         <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="12.5" TextWrapping="Wrap" Margin="0,8,0,18"
-                   Text="Repos on this PC uses your GitHub account to check who owns each repo. Everything else in Repo'N'Launcher works without signing in."/>
+                   Text="Repos on this PC uses your GitHub account to check who owns each repo, and Create Pull Request to open pull requests. Everything else in Repo'N'Launcher works without signing in."/>
 
         <Button x:Name="GitSignInButton" Style="{StaticResource Button.Primary}" Margin="0" Padding="14,9" Click="SignInWithGit_Click">
             <StackPanel Orientation="Horizontal">
