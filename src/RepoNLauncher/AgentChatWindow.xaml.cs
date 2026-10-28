@@ -31,6 +31,7 @@ public partial class AgentChatWindow : Window
     private bool _stickToBottom = true;
     private int _mentionStart = -1;
     private Rect _mentionAt;
+    private UserChatItem? _pinned;
 
     public AgentChatWindow(AgentChatViewModel viewModel)
     {
@@ -50,6 +51,15 @@ public partial class AgentChatWindow : Window
         _vm.PropertyChanged += OnViewModelChanged;
         Closed += (_, _) => _vm.PropertyChanged -= OnViewModelChanged;
 
+        // Under the Prompts button, right edges lined up: it sits at the right of the header, so the list opens inward.
+        PromptsPopup.CustomPopupPlacementCallback = (popupSize, targetSize, _) =>
+        {
+            var dpi = VisualTreeHelper.GetDpi(PromptsButton);
+            return [new CustomPopupPlacement(
+                new System.Windows.Point(targetSize.Width - popupSize.Width, targetSize.Height + 6 * dpi.DpiScaleY),
+                PopupPrimaryAxis.Horizontal)];
+        };
+
         // Just above the @ being typed. Placed by hand: Top placement follows the pen-tablet "right-handed" setting,
         // which flips popups to the left. The callback works in device pixels.
         MentionPopup.CustomPopupPlacementCallback = (popupSize, _, _) =>
@@ -65,6 +75,8 @@ public partial class AgentChatWindow : Window
     {
         if (e.PropertyName != nameof(AgentChatViewModel.Current)) return;
         CloseMention();
+        PromptsPopup.IsOpen = false;
+        ShowPinnedPrompt(null);
         _stickToBottom = true;
         Dispatcher.InvokeAsync(() =>
         {
@@ -79,6 +91,145 @@ public partial class AgentChatWindow : Window
         if (_scroller == null) return;
         if (e.ExtentHeightChange == 0) _stickToBottom = _scroller.VerticalOffset >= _scroller.ScrollableHeight - 40;
         else if (_stickToBottom) _scroller.ScrollToEnd();
+
+        JumpToLatest.Visibility = !_stickToBottom && _scroller.ScrollableHeight - _scroller.VerticalOffset > 200
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        ShowPinnedPrompt(PromptAboveView());
+    }
+
+    // ===== Prompts: the pinned prompt, the prompts list, and going to one =====
+
+    /// <summary>
+    /// The prompt that the part of the chat at the top of the view answers, when that prompt itself has scrolled off the
+    /// top; null when it's still in view or nothing in view follows a prompt.
+    /// </summary>
+    private UserChatItem? PromptAboveView()
+    {
+        if (_scroller == null || _vm.Current is not { } chat || TranscriptPanel() is not { } panel) return null;
+
+        // The item under the top edge (just below the scroller's padding); with a gap there, the first one below it.
+        var probe = _scroller.Padding.Top + 2;
+        int topIndex = -1;
+        var bestTop = double.MaxValue;
+        foreach (UIElement child in panel.Children)
+        {
+            var top = child.TransformToAncestor(_scroller).Transform(default).Y;
+            var bottom = top + child.RenderSize.Height;
+            if (bottom <= probe || top >= bestTop) continue;
+            bestTop = top;
+            topIndex = Transcript.ItemContainerGenerator.IndexFromContainer(child);
+        }
+        if (topIndex < 0 || topIndex >= chat.Items.Count) return null;
+
+        // A prompt at the top is in view itself; one further up has scrolled off.
+        if (chat.Items[topIndex] is UserChatItem) return null;
+        for (var i = topIndex - 1; i >= 0; i--)
+            if (chat.Items[i] is UserChatItem prompt) return prompt;
+        return null;
+    }
+
+    private void ShowPinnedPrompt(UserChatItem? prompt)
+    {
+        if (prompt == _pinned) return;
+        _pinned = prompt;
+        PinnedPrompt.Visibility = prompt == null ? Visibility.Collapsed : Visibility.Visible;
+        if (prompt == null || _vm.Current is not { } chat) return;
+
+        var prompts = chat.Items.OfType<UserChatItem>().ToList();
+        PinnedText.Text = prompt.Preview;
+        PinnedNumber.Text = $"{prompts.IndexOf(prompt) + 1} of {prompts.Count}";
+    }
+
+    private void PinnedPrompt_Click(object sender, RoutedEventArgs e)
+    {
+        if (_pinned != null) GoTo(_pinned);
+    }
+
+    private void JumpToLatest_Click(object sender, RoutedEventArgs e)
+    {
+        _stickToBottom = true;
+        ScrollToEnd();
+    }
+
+    private void PromptsButton_Click(object sender, RoutedEventArgs e)
+    {
+        var current = _pinned ?? PromptAtTop();
+        var prompts = (_vm.Current?.Items.OfType<UserChatItem>() ?? [])
+            .Select((prompt, i) => new PromptLink(i + 1, prompt, prompt == current))
+            .ToList();
+        PromptsHeading.Text = prompts.Count switch
+        {
+            0 => "No prompts in this chat yet",
+            1 => "1 prompt · pick it to go to it",
+            _ => $"{prompts.Count} prompts · pick one to go to it",
+        };
+        PromptList.ItemsSource = prompts;
+        PromptsPopup.IsOpen = true;
+
+        // The list opens where you are: on the prompt being read, else the latest, with the keyboard on it.
+        var here = prompts.FirstOrDefault(p => p.IsCurrent) ?? prompts.LastOrDefault();
+        if (here == null) return;
+        Dispatcher.InvokeAsync(() =>
+        {
+            if (PromptList.ItemContainerGenerator.ContainerFromItem(here) is not ContentPresenter row ||
+                FindChild<System.Windows.Controls.Button>(row) is not { } button) return;
+            button.BringIntoView();
+            button.Focus();
+        }, DispatcherPriority.Loaded);
+    }
+
+    // With no pinned prompt, a prompt at the top of the view is the one being read.
+    private UserChatItem? PromptAtTop()
+    {
+        if (_scroller == null || TranscriptPanel() is not { } panel) return null;
+        return panel.Children.OfType<FrameworkElement>()
+            .Where(c => c.TransformToAncestor(_scroller).Transform(default).Y + c.RenderSize.Height > _scroller.Padding.Top)
+            .Select(c => c.DataContext)
+            .OfType<UserChatItem>()
+            .FirstOrDefault();
+    }
+
+    private void PromptLink_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not PromptLink link) return;
+        PromptsPopup.IsOpen = false;
+        GoTo(link.Item);
+    }
+
+    /// <summary>Scrolls the chat so <paramref name="item"/> sits at the top.</summary>
+    private void GoTo(ChatItemViewModel item)
+    {
+        if (_scroller == null || _vm.Current is not { } chat || TranscriptPanel() is not { } panel) return;
+        var index = chat.Items.IndexOf(item);
+        if (index < 0) return;
+
+        _stickToBottom = false;
+        panel.BringIndexIntoViewPublic(index);
+        // That only brings it into view somewhere. Line its top up with the top once layout has caught up, and again
+        // after: items measured for the first time on the way can still move it.
+        Dispatcher.InvokeAsync(() => AlignTop(index), DispatcherPriority.Loaded);
+        Dispatcher.InvokeAsync(() => AlignTop(index), DispatcherPriority.Background);
+    }
+
+    private void AlignTop(int index)
+    {
+        if (_scroller == null || Transcript.ItemContainerGenerator.ContainerFromIndex(index) is not FrameworkElement container) return;
+        var top = container.TransformToAncestor(_scroller).Transform(default).Y;
+        _scroller.ScrollToVerticalOffset(_scroller.VerticalOffset + top - _scroller.Padding.Top);
+    }
+
+    private VirtualizingStackPanel? TranscriptPanel() => FindChild<VirtualizingStackPanel>(Transcript);
+
+    private static T? FindChild<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T match) return match;
+            if (FindChild<T>(child) is { } deeper) return deeper;
+        }
+        return null;
     }
 
     // Text boxes inside the chat (replies, tool output) take the wheel even with nothing to scroll. Unless one of them

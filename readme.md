@@ -31,6 +31,10 @@ Built with WPF on .NET 8.
 - **AI Chat.** Chat with Claude Code or Codex about a project, as in their own apps. It runs the `claude` or `codex` program installed on this PC, which uses its own sign-in.
   - **Composer:** pick the agent, model, effort, permissions and project folder. Type `@` to mention a file. Paste, drop or attach images and other files.
   - **Replies:** they stream in as Markdown. Each tool call is a row you can expand to see its input and output.
+  - **Finding your way in a long chat:**
+    - **Pinned prompt:** while you read a reply, the prompt it answers stays pinned at the top, with its number (3 of 21). Click it to go back to that prompt.
+    - **Jump to latest:** appears once you scroll up and takes you back to the newest message.
+    - **Prompts:** in the chat's header, lists every prompt in the chat, with the one you're reading highlighted. Click one, or use Up/Down and Enter, to go to it.
   - **Claude's questions:** permission prompts, multiple-choice questions and plan approvals appear as cards you answer in the chat.
   - **Codex:** it doesn't stop to ask. Its sandbox setting (read only, edit project, full access) decides what it may do.
   - **History:** every saved Claude Code and Codex chat on this PC is listed, with search. Open one to read it or carry on.

@@ -580,6 +580,51 @@
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Right" Text="{Binding ModelInUse}" FontFamily="{StaticResource Mono}" FontSize="11.5"
                                Foreground="{StaticResource Text.Muted}" VerticalAlignment="Center" ToolTip="Model in use"/>
+                    <Button x:Name="PromptsButton" DockPanel.Dock="Right" Style="{StaticResource Button.Secondary}" Padding="10,5"
+                            Margin="0,0,14,0" VerticalAlignment="Center" Click="PromptsButton_Click"
+                            AutomationProperties.Name="Prompts" ToolTip="Every prompt in this chat; pick one to go to it">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8FD;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="0,1,7,0"/>
+                            <TextBlock Text="Prompts" FontSize="12"/>
+                        </StackPanel>
+                    </Button>
+                    <!-- Under the Prompts button, its right edge lined up with the button's (placed by hand, see the code) -->
+                    <Popup x:Name="PromptsPopup" PlacementTarget="{Binding ElementName=PromptsButton}" Placement="Custom"
+                           AllowsTransparency="True" StaysOpen="False">
+                        <Border Background="{StaticResource Bg.Elevated}" BorderBrush="{StaticResource Border.Strong}" BorderThickness="1"
+                                CornerRadius="8" Padding="4" Width="460">
+                            <DockPanel>
+                                <TextBlock x:Name="PromptsHeading" DockPanel.Dock="Top" Style="{StaticResource Muted}" FontSize="11" Margin="8,4,8,6"/>
+                                <!-- One button per prompt: click, or Up/Down then Enter -->
+                                <ScrollViewer MaxHeight="440" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                              Focusable="False">
+                                    <ItemsControl x:Name="PromptList" Focusable="False" KeyboardNavigation.DirectionalNavigation="Contained"
+                                                  AutomationProperties.Name="Prompts in this chat">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Style="{StaticResource RowButton}" Click="PromptLink_Click"
+                                                        AutomationProperties.Name="{Binding Label}">
+                                                    <DockPanel>
+                                                        <TextBlock x:Name="Number" DockPanel.Dock="Left" Text="{Binding Number}" FontFamily="{StaticResource Mono}"
+                                                                   FontSize="11.5" Foreground="{StaticResource Text.Muted}" MinWidth="26" Margin="0,1,6,0"/>
+                                                        <TextBlock x:Name="Preview" Text="{Binding Preview}" FontSize="12.5" TextWrapping="Wrap" MaxHeight="38"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                    </DockPanel>
+                                                </Button>
+                                                <!-- The prompt the view is on -->
+                                                <DataTemplate.Triggers>
+                                                    <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                        <Setter TargetName="Number" Property="Foreground" Value="{StaticResource Accent}"/>
+                                                        <Setter TargetName="Number" Property="FontWeight" Value="Bold"/>
+                                                    </DataTrigger>
+                                                </DataTemplate.Triggers>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </DockPanel>
+                        </Border>
+                    </Popup>
                     <Border Width="30" Height="30" CornerRadius="8" VerticalAlignment="Center">
                         <Border.Style>
                             <Style TargetType="Border">
@@ -627,6 +672,29 @@
                     </Style>
                 </ItemsControl.ItemContainerStyle>
             </ItemsControl>
+
+            <!-- The prompt the part of the chat in view answers, once that prompt has scrolled off the top. A click goes back to it. -->
+            <Border x:Name="PinnedPrompt" Grid.Row="1" VerticalAlignment="Top" Visibility="Collapsed" Background="{StaticResource Bg.App}"
+                    BorderBrush="{StaticResource Border.Subtle}" BorderThickness="0,0,0,1" Padding="24,6,24,6">
+                <Button MaxWidth="860" Style="{StaticResource RowButton}" Click="PinnedPrompt_Click"
+                        AutomationProperties.Name="Go to this prompt" ToolTip="Go to this prompt">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Left" Text="&#xE74A;" FontFamily="Segoe MDL2 Assets" FontSize="11"
+                                   Foreground="{StaticResource Text.Secondary}" Margin="0,2,10,0"/>
+                        <TextBlock x:Name="PinnedNumber" DockPanel.Dock="Right" Style="{StaticResource Muted}" Margin="12,1,0,0"/>
+                        <TextBlock x:Name="PinnedText" FontSize="12.5" TextWrapping="Wrap" MaxHeight="38" TextTrimming="CharacterEllipsis"/>
+                    </DockPanel>
+                </Button>
+            </Border>
+
+            <Button x:Name="JumpToLatest" Grid.Row="1" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,12"
+                    Padding="12,6" Visibility="Collapsed" Style="{StaticResource Button.Secondary}" Click="JumpToLatest_Click"
+                    AutomationProperties.Name="Jump to latest" ToolTip="Go to the latest message">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE74B;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="0,1,8,0"/>
+                    <TextBlock Text="Jump to latest" FontSize="12"/>
+                </StackPanel>
+            </Button>
 
             <TextBlock Grid.Row="1" Text="Reading this chat…" Style="{StaticResource Muted}" FontSize="12.5"
                        HorizontalAlignment="Center" VerticalAlignment="Center"

@@ -12,13 +12,39 @@ namespace RepoNLauncher.ViewModels;
 /// <summary>One entry in a chat: a message, a tool call, a question for the user, or a note.</summary>
 public abstract class ChatItemViewModel : ObservableObject;
 
+/// <summary>A prompt in the chat's prompts list: its number in the chat, the prompt to go to, and whether it's the one being read.</summary>
+public sealed record PromptLink(int Number, UserChatItem Item, bool IsCurrent)
+{
+    public string Preview => Item.Preview;
+    public string Label => $"Prompt {Number}: {Preview}";
+}
+
 public sealed class UserChatItem(string text, IReadOnlyList<ChatImage> images, IReadOnlyList<string> files) : ChatItemViewModel
 {
+    private const int PreviewLength = 300;
+
     private IReadOnlyList<BitmapSource>? _thumbnails;
 
     public string Text { get; } = text;
     public bool HasText => Text.Length > 0;
     public IReadOnlyList<string> Files { get; } = files;
+
+    /// <summary>The prompt on one line, for the pinned prompt bar and the prompts list; what was attached when it has no text.</summary>
+    public string Preview { get; } = PreviewOf(text, images.Count, files.Count);
+
+    private static string PreviewOf(string text, int images, int files)
+    {
+        var line = string.Join(' ', text.Split((char[])[' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries));
+        if (line.Length > 0) return line.Length > PreviewLength ? line[..PreviewLength] + "…" : line;
+
+        string[] attached =
+        [
+            images switch { 0 => "", 1 => "1 image", _ => $"{images} images" },
+            files switch { 0 => "", 1 => "1 file", _ => $"{files} files" },
+        ];
+        var what = string.Join(" and ", attached.Where(a => a.Length > 0));
+        return what.Length > 0 ? $"({what})" : "(empty prompt)";
+    }
 
     /// <summary>Decoded on first display (on the UI thread), small, and only once.</summary>
     public IReadOnlyList<BitmapSource> Thumbnails => _thumbnails ??= images.Select(Thumbnail).OfType<BitmapSource>().ToList();
