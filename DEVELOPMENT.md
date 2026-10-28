@@ -51,6 +51,18 @@ The app checks the repo's GitHub releases when it starts and every 4 hours (`Ser
 
 4. The **Readme version** workflow (`.github\workflows\readme-version.yml`) then puts the new version on the readme's download links and commits that to `main`. Pull before your next push. It can also be run by hand from the repo's Actions tab.
 
+### Raising the version with the script
+
+`-Bump patch` (1.0.0 → 1.0.1), `-Bump minor` (→ 1.1.0) or `-Bump major` (→ 2.0.0) raises the version, commits just that as "Version x.y.z" and pushes it. With `-Publish` it then releases it, so this one command does steps 1 to 3:
+
+```powershell
+.\release.ps1 -Bump patch -Publish
+```
+
+- It stops before changing anything if there are uncommitted changes, if you're not on `main`, or if GitHub has commits you haven't pulled, so the release always matches what's on GitHub.
+- It asks nothing, so it also works as a saved start command in the dashboard's Run tab: `powershell -NoProfile -File release.ps1 -Bump patch -Publish`.
+- If the release fails after the version was pushed, run `.\release.ps1 -Publish` to try again.
+
 To try an update before publishing, set `REPONLAUNCHER_UPDATE_FEED` to a folder of releases (such as `release\out`) before starting the installed app. It then updates from there instead of GitHub.
 
 The installers aren't signed, so Windows SmartScreen warns before the first install. `vpk pack` can sign them with `--signParams` or `--azureTrustedSignFile`.

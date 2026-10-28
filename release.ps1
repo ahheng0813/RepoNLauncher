@@ -6,7 +6,10 @@
 #         .\release.ps1 -Version 1.1.0   build another version (raise it for every release)
 #         .\release.ps1 -Publish         also publish it as a GitHub release, which installed copies update to.
 #                                        Needs the GitHub CLI signed in (gh auth login) and a public repo for others.
-param([string]$Version, [switch]$Publish)
+#         .\release.ps1 -Bump patch      raise the version (patch 1.0.0 -> 1.0.1, minor -> 1.1.0, major -> 2.0.0), commit
+#                                        and push just that, and stop. Add -Publish to release it straight after.
+# Nothing here asks a question, so it also runs as a saved start command in the dashboard's Run tab.
+param([string]$Version, [ValidateSet('patch', 'minor', 'major')][string]$Bump, [switch]$Publish)
 
 $ErrorActionPreference = 'Stop'
 $root    = $PSScriptRoot
@@ -15,6 +18,55 @@ $icon    = Join-Path $root 'src\RepoNLauncher\Assets\app.ico'
 $appDir  = Join-Path $root 'release\app'
 $outDir  = Join-Path $root 'release\out'
 $repoUrl = 'https://github.com/ahheng0813/RepoNLauncher'
+
+# Raises <Version>, commits just that and pushes it, so the release is built from, and tagged at, what's on GitHub.
+if ($Bump) {
+    if ($Version) { throw 'Use -Bump or -Version, not both.' }
+    Push-Location $root
+    try {
+        $uncommitted = git status --porcelain
+        if ($uncommitted) { throw "Commit or stash these first, so the release matches what's on GitHub:`n$($uncommitted -join "`n")" }
+
+        $default = (git symbolic-ref --short refs/remotes/origin/HEAD) -replace '^origin/', ''
+        if ((git rev-parse --abbrev-ref HEAD) -ne $default) { throw "Switch to $default first: the release is tagged on $default." }
+
+        git fetch --quiet origin
+        if ($LASTEXITCODE -ne 0) { throw "git fetch failed ($LASTEXITCODE)" }
+        $behind = [int](git rev-list --count "HEAD..origin/$default")
+        if ($behind -gt 0) { throw "GitHub has $behind commit(s) this folder doesn't. Run git pull first." }
+
+        if ($Publish) {
+            # Before raising the version, so a missing sign-in doesn't leave a version without its release.
+            $null = gh auth token
+            if ($LASTEXITCODE -ne 0) { throw 'Sign in to the GitHub CLI first: gh auth login' }
+        }
+
+        $bytes = [IO.File]::ReadAllBytes($proj)
+        $hasBom = $bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF
+        $text = [IO.File]::ReadAllText($proj)
+        $match = [regex]::Match($text, '<Version>(\d+)\.(\d+)\.(\d+)</Version>')
+        if (-not $match.Success) { throw "There's no <Version>x.y.z</Version> in $proj." }
+        $major, $minor, $patch = 1..3 | ForEach-Object { [int]$match.Groups[$_].Value }
+        $Version = switch ($Bump) {
+            'major' { "$($major + 1).0.0" }
+            'minor' { "$major.$($minor + 1).0" }
+            'patch' { "$major.$minor.$($patch + 1)" }
+        }
+        $text = $text.Remove($match.Index, $match.Length).Insert($match.Index, "<Version>$Version</Version>")
+        [IO.File]::WriteAllText($proj, $text, (New-Object Text.UTF8Encoding($hasBom)))
+
+        git commit --quiet -m "Version $Version" -- $proj
+        if ($LASTEXITCODE -ne 0) { throw "git commit failed ($LASTEXITCODE)" }
+        # Along with any of your commits that weren't pushed yet.
+        git push --quiet origin $default
+        if ($LASTEXITCODE -ne 0) { throw "git push failed ($LASTEXITCODE). The version commit is made here: push it, then run .\release.ps1 -Publish." }
+        Write-Host "Raised the version to $Version and pushed it."
+    }
+    finally {
+        Pop-Location
+    }
+    if (-not $Publish) { return }
+}
 
 if (-not $Version) {
     $Version = ([xml](Get-Content $proj)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
