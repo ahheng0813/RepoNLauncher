@@ -15,12 +15,13 @@ public sealed record ProjectOption(string Name, string Path)
 }
 
 /// <summary>
-/// The AI chat window: chats saved on this PC by Claude Code and Codex, and the chats open in it. A chat keeps running
-/// when the window closes; reopening shows it where it got to.
+/// The AI chat window: chats saved on this PC by Claude Code and Codex, and the chats open in it, up to four side by
+/// side. A chat keeps running when the window closes; reopening shows it where it got to.
 /// </summary>
 public sealed partial class AgentChatViewModel : ObservableObject
 {
     private const int MaxOpenChats = 12;
+    public const int MaxPanes = 4;
 
     private readonly ChatHistoryService _history = new();
     private readonly Func<IEnumerable<ProjectOption>> _dashboardProjects;
@@ -40,6 +41,17 @@ public sealed partial class AgentChatViewModel : ObservableObject
         SessionsView.Filter = o => o is ChatListItemViewModel item && Matches(item);
         _claudePath = AgentCli.FindClaude();
         _codexPath = AgentCli.FindCodex();
+
+        _activePane = new ChatPaneViewModel(this) { IsActive = true };
+        Panes.Add(_activePane);
+        Panes.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(IsSplit));
+            OnPropertyChanged(nameof(CanSplit));
+            SplitCommand.NotifyCanExecuteChanged();
+            ClosePaneCommand.NotifyCanExecuteChanged();
+            OpenBesideCommand.NotifyCanExecuteChanged();
+        };
     }
 
     public ObservableCollection<ChatListItemViewModel> Sessions { get; } = new();
@@ -47,7 +59,18 @@ public sealed partial class AgentChatViewModel : ObservableObject
     public ObservableCollection<ProjectOption> Projects { get; } = new();
     public ProjectFileIndex Files { get; } = new();
 
-    [ObservableProperty] private ChatSessionViewModel? _current;
+    /// <summary>The chats on screen, in reading order: one fills the window, up to <see cref="MaxPanes"/> share it.</summary>
+    public ObservableCollection<ChatPaneViewModel> Panes { get; } = new();
+
+    /// <summary>The pane last clicked or typed in. New chat and the sidebar open chats there.</summary>
+    [ObservableProperty] private ChatPaneViewModel _activePane;
+
+    /// <summary>The chat in the active pane.</summary>
+    public ChatSessionViewModel? Current => ActivePane.Chat;
+
+    public bool IsSplit => Panes.Count > 1;
+    public bool CanSplit => Panes.Count < MaxPanes;
+
     [ObservableProperty] private ChatListItemViewModel? _selectedSession;
     [ObservableProperty] private string _search = string.Empty;
 
@@ -83,6 +106,13 @@ public sealed partial class AgentChatViewModel : ObservableObject
     partial void OnSelectedSessionChanged(ChatListItemViewModel? value)
     {
         if (value != null && !_syncingSelection) Open(value);
+    }
+
+    partial void OnActivePaneChanged(ChatPaneViewModel? oldValue, ChatPaneViewModel newValue)
+    {
+        if (oldValue != null) oldValue.IsActive = false;
+        newValue.IsActive = true;
+        SelectCurrent();
     }
 
     public bool IsInstalled(AgentKind agent) => (agent == AgentKind.Claude ? ClaudePath : CodexPath) != null;
@@ -123,11 +153,75 @@ public sealed partial class AgentChatViewModel : ObservableObject
             return;
         }
 
-        var agent = _lastAgent ?? (ClaudePath != null || CodexPath == null ? AgentKind.Claude : AgentKind.Codex);
-        var folder = _selectedProjectPath() ?? Projects.FirstOrDefault()?.Path ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        EnsureProject(folder);
-        Current = new ChatSessionViewModel(this, agent, folder);
+        ActivePane.Chat = CreateChat(_selectedProjectPath());
         SelectedSession = null;
+    }
+
+    private ChatSessionViewModel CreateChat(string? folder)
+    {
+        var agent = _lastAgent ?? (ClaudePath != null || CodexPath == null ? AgentKind.Claude : AgentKind.Codex);
+        folder ??= Projects.FirstOrDefault()?.Path ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        EnsureProject(folder);
+        return new ChatSessionViewModel(this, agent, folder);
+    }
+
+    /// <summary>Adds a pane with a new chat, in the folder of the chat it was split from.</summary>
+    [RelayCommand(CanExecute = nameof(CanSplit))]
+    private void Split(ChatPaneViewModel? from)
+    {
+        if (!CanSplit) return;
+        var pane = new ChatPaneViewModel(this) { Chat = CreateChat(from?.Chat?.WorkingDirectory ?? _selectedProjectPath()) };
+        Panes.Add(pane);
+        ActivePane = pane;
+    }
+
+    /// <summary>Opens a saved chat in a pane of its own beside the ones on screen.</summary>
+    [RelayCommand(CanExecute = nameof(CanSplit))]
+    private void OpenBeside(ChatListItemViewModel? item)
+    {
+        if (item == null) return;
+        if (PaneShowing(item) is { } showing)
+        {
+            ActivePane = showing;
+            return;
+        }
+        if (!CanSplit) return;
+        var pane = new ChatPaneViewModel(this) { Chat = ChatFor(item) };
+        Panes.Add(pane);
+        ActivePane = pane;
+        ForgetIdleChats();
+    }
+
+    /// <summary>Takes a pane off the screen. Its chat keeps running, and the sidebar still has it.</summary>
+    [RelayCommand(CanExecute = nameof(IsSplit))]
+    private void ClosePane(ChatPaneViewModel? pane)
+    {
+        if (pane == null || !IsSplit) return;
+        var index = Panes.IndexOf(pane);
+        if (index < 0) return;
+        Panes.RemoveAt(index);
+        if (pane == ActivePane) ActivePane = Panes[Math.Min(index, Panes.Count - 1)];
+        // A chat on its first turn isn't in the sidebar yet; look for it now so it can be found again.
+        if (pane.Chat is { IsStarted: true }) _ = RefreshHistoryAsync();
+    }
+
+    private ChatPaneViewModel? PaneShowing(ChatListItemViewModel item) =>
+        Panes.FirstOrDefault(p => p.Chat is { SessionId: { } id } chat && chat.Agent == item.Agent && id == item.Id);
+
+    // The sidebar shows which chat the active pane has.
+    private void SelectCurrent()
+    {
+        _syncingSelection = true;
+        try
+        {
+            SelectedSession = Current is { SessionId: { } id } current
+                ? Sessions.FirstOrDefault(s => s.Agent == current.Agent && s.Id == id)
+                : null;
+        }
+        finally
+        {
+            _syncingSelection = false;
+        }
     }
 
     [RelayCommand]
@@ -157,6 +251,18 @@ public sealed partial class AgentChatViewModel : ObservableObject
 
     private void Open(ChatListItemViewModel item)
     {
+        // A chat already on screen is gone to, not shown twice.
+        if (PaneShowing(item) is { } showing)
+        {
+            ActivePane = showing;
+            return;
+        }
+        ActivePane.Chat = ChatFor(item);
+        ForgetIdleChats();
+    }
+
+    private ChatSessionViewModel ChatFor(ChatListItemViewModel item)
+    {
         var summary = item.Summary;
         var chat = _open.FirstOrDefault(c => c.Agent == summary.Agent && c.SessionId == summary.Id);
         if (chat == null)
@@ -164,17 +270,16 @@ public sealed partial class AgentChatViewModel : ObservableObject
             chat = new ChatSessionViewModel(this, summary.Agent, summary.WorkingDirectory, summary);
             _open.Add(chat);
             _ = chat.LoadAsync();
-            ForgetIdleChats();
         }
         item.Chat = chat;
         EnsureProject(summary.WorkingDirectory);
-        Current = chat;
+        return chat;
     }
 
-    // Saved chats can be long; keep only the most recent few in memory. A running chat always stays.
+    // Saved chats can be long; keep only the most recent few in memory. A running chat, or one on screen, always stays.
     private void ForgetIdleChats()
     {
-        while (_open.Count > MaxOpenChats && _open.FirstOrDefault(c => !c.IsRunning && c != Current) is { } idle)
+        while (_open.Count > MaxOpenChats && _open.FirstOrDefault(c => !c.IsRunning && Panes.All(p => p.Chat != c)) is { } idle)
         {
             _open.Remove(idle);
             foreach (var item in Sessions.Where(i => i.Chat == idle)) item.Chat = null;
@@ -192,7 +297,7 @@ public sealed partial class AgentChatViewModel : ObservableObject
             _lastRefresh = DateTime.Now;
             ClaudePath = claude;
             CodexPath = codex;
-            foreach (var chat in _open.Append(Current).OfType<ChatSessionViewModel>()) chat.IsAgentMissing = !IsInstalled(chat.Agent);
+            foreach (var chat in _open.Concat(Panes.Select(p => p.Chat)).OfType<ChatSessionViewModel>()) chat.IsAgentMissing = !IsInstalled(chat.Agent);
             Merge(sessions);
         }
         finally

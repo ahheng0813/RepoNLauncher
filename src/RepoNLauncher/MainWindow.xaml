@@ -288,6 +288,36 @@
                                 <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" Margin="7,1,0,0"/>
                             </StackPanel>
                         </Button>
+                        <!-- Reads the usage again and asks for the plan limits now; the arrow turns while any refresh runs -->
+                        <Button DockPanel.Dock="Right" Style="{StaticResource Button.Secondary}" Margin="0,0,6,0" Padding="8,4"
+                                Command="{Binding RefreshCommand}" AutomationProperties.Name="Refresh usage"
+                                ToolTip="Refresh usage and check the plan limits now">
+                            <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center"
+                                       RenderTransformOrigin="0.5,0.5">
+                                <TextBlock.RenderTransform>
+                                    <RotateTransform/>
+                                </TextBlock.RenderTransform>
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsRefreshing}" Value="True">
+                                                <DataTrigger.EnterActions>
+                                                    <BeginStoryboard x:Name="Spin">
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.Angle"
+                                                                             From="0" To="360" Duration="0:0:1" RepeatBehavior="Forever"/>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </DataTrigger.EnterActions>
+                                                <DataTrigger.ExitActions>
+                                                    <StopStoryboard BeginStoryboardName="Spin"/>
+                                                </DataTrigger.ExitActions>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Button>
                         <TextBlock Text="AI USAGE" Style="{StaticResource SectionLabel}" Margin="0,0,18,0" VerticalAlignment="Center"/>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Text="Reading usage…" Foreground="{StaticResource Text.Muted}" FontSize="12"
