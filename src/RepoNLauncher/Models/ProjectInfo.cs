@@ -9,6 +9,9 @@ public class ProjectInfo
     public ProjectKind Kind { get; set; } = ProjectKind.Unknown;
     public ProjectKind? KindOverride { get; set; }
     public string? RunCommandOverride { get; set; }
+
+    /// <summary>Start commands kept in the Run tab's list, each run with one click. Null when none were saved.</summary>
+    public List<string>? SavedRunCommands { get; set; }
     public string? CsprojOverride { get; set; }
     public string? EnvFileOverride { get; set; }
     public bool IsAutoDiscovered { get; set; }

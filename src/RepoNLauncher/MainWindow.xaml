@@ -800,6 +800,10 @@
                                             Margin="8,0,0,0" Command="{Binding ChooseStartFileCommand}"
                                             ToolTip="Pick the script that starts this project; the command to run it is filled in"
                                             Visibility="{Binding CanChooseStartFile, Converter={StaticResource BoolToVisibility}}"/>
+                                    <Button DockPanel.Dock="Right" Content="Save" Style="{StaticResource Button.Secondary}"
+                                            Margin="8,0,0,0" Command="{Binding SaveStartCommandCommand}"
+                                            AutomationProperties.Name="Save command"
+                                            ToolTip="Keep this command in the list below, to run it with one click"/>
                                     <Grid>
                                         <TextBox x:Name="StartCommandBox" FontFamily="Cascadia Mono, Consolas"
                                                  Text="{Binding StartCommand, UpdateSourceTrigger=PropertyChanged}"/>
@@ -807,6 +811,49 @@
                                                    VerticalAlignment="Center" Margin="11,0,0,0" IsHitTestVisible="False"
                                                    Visibility="{Binding Text, ElementName=StartCommandBox, Converter={StaticResource StringNotEmptyToVisibility}, ConverterParameter=Invert}"/>
                                     </Grid>
+                                </DockPanel>
+
+                                <!-- Saved start commands, each run with one click; hidden until one is saved -->
+                                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                                    <DockPanel.Style>
+                                        <Style TargetType="DockPanel">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SavedCommands.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DockPanel.Style>
+                                    <TextBlock DockPanel.Dock="Left" Text="SAVED" Style="{StaticResource SectionLabel}"
+                                               VerticalAlignment="Top" Margin="0,9,12,0"/>
+                                    <ItemsControl ItemsSource="{Binding SavedCommands}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,12,8">
+                                                    <Button Style="{StaticResource Button.Secondary}" Margin="0"
+                                                            Command="{Binding DataContext.RunSavedCommand, ElementName=ProjectTabControl}"
+                                                            CommandParameter="{Binding}"
+                                                            AutomationProperties.Name="{Binding StringFormat=Run {0}}"
+                                                            ToolTip="{Binding StringFormat=Run {0}}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="▶" FontSize="10" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                            <TextBlock Text="{Binding}" FontFamily="Cascadia Mono, Consolas"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <Button Content="✕" Style="{StaticResource Button.Icon}" Margin="2,0,0,0"
+                                                            Command="{Binding DataContext.RemoveSavedCommandCommand, ElementName=ProjectTabControl}"
+                                                            CommandParameter="{Binding}"
+                                                            AutomationProperties.Name="{Binding StringFormat=Remove {0}}"
+                                                            ToolTip="Remove from the saved commands"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
                                 </DockPanel>
 
                                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">

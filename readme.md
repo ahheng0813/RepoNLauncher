@@ -36,6 +36,7 @@ The files aren't code-signed yet, so Windows may warn before the first run: choo
 - **Changes.** Changed files with diffs. Commit, discard, stash, and resolve merge conflicts.
 - **Commits.** Recent history.
 - **Run.** Starts the project with a live console: `flutter run` on a device, `dotnet run`, or your own command. **Choose file…** builds the command from a script.
+  - **Save** keeps the typed command in a list under it, so a project can have several: each saved command has its own ▶ to run it with one click, and ✕ to remove it.
   - Type in the box under the console to answer the app's prompts. Flutter projects also get **Hot reload** and **Hot restart**.
   - A button opens any local URL the app prints, and you're warned when its ports are already in use.
 - **Environment.** The values from `.env` and `appsettings*.json`.

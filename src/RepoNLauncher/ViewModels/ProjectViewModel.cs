@@ -101,8 +101,12 @@ public partial class ProjectViewModel : ObservableObject
             // No change notification: the text box is the only writer, and echoing a cleaned-up value back would fight the typing.
             Info.RunCommandOverride = string.IsNullOrWhiteSpace(value) ? null : value;
             SettingsChanged?.Invoke();
+            SaveStartCommandCommand.NotifyCanExecuteChanged();
         }
     }
+
+    /// <summary>Start commands kept for this project, each with its own run button. The box's command stays separate.</summary>
+    public ObservableCollection<string> SavedCommands { get; }
 
     /// <summary>Placeholder for the start command box: what Run does while it's empty, or an example.</summary>
     public string StartCommandHint => Kind switch
@@ -137,7 +141,7 @@ public partial class ProjectViewModel : ObservableObject
     [ObservableProperty] private string _statusMessage = string.Empty;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ConsoleInputHint))]
-    [NotifyCanExecuteChangedFor(nameof(SendInputCommand), nameof(SendKeyCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SendInputCommand), nameof(SendKeyCommand), nameof(RunSavedCommand))]
     private bool _isRunning;
     [ObservableProperty] private DeviceInfo? _selectedDevice;
     [ObservableProperty]
@@ -219,6 +223,7 @@ public partial class ProjectViewModel : ObservableObject
         _processRunner = processRunner;
         _ports = ports;
         _ides = ides;
+        SavedCommands = new ObservableCollection<string>(info.SavedRunCommands ?? new List<string>());
     }
 
     [RelayCommand]
@@ -688,11 +693,43 @@ public partial class ProjectViewModel : ObservableObject
     }
 
     [RelayCommand]
-    public void Run()
+    public void Run() => StartRun(string.IsNullOrWhiteSpace(Info.RunCommandOverride) ? null : Info.RunCommandOverride.Trim());
+
+    /// <summary>Runs one of the saved start commands; the box's command stays as it is.</summary>
+    [RelayCommand(CanExecute = nameof(CanRunSaved))]
+    private void RunSaved(string command) => StartRun(command);
+
+    private bool CanRunSaved(string? command) => !IsRunning;
+
+    private bool CanSaveStartCommand() => StartCommand.Trim() is { Length: > 0 } command && !SavedCommands.Contains(command);
+
+    /// <summary>Keeps the box's command in the saved list, to run it again with one click.</summary>
+    [RelayCommand(CanExecute = nameof(CanSaveStartCommand))]
+    private void SaveStartCommand()
+    {
+        SavedCommands.Add(StartCommand.Trim());
+        SavedCommandsChanged();
+    }
+
+    [RelayCommand]
+    private void RemoveSavedCommand(string command)
+    {
+        SavedCommands.Remove(command);
+        SavedCommandsChanged();
+    }
+
+    private void SavedCommandsChanged()
+    {
+        Info.SavedRunCommands = SavedCommands.Count == 0 ? null : SavedCommands.ToList();
+        SettingsChanged?.Invoke();
+        SaveStartCommandCommand.NotifyCanExecuteChanged();
+    }
+
+    // customCommand is the box's command or a saved one; null runs the kind's own (flutter run / dotnet run).
+    private void StartRun(string? customCommand)
     {
         if (IsRunning) return;
 
-        var customCommand = string.IsNullOrWhiteSpace(Info.RunCommandOverride) ? null : Info.RunCommandOverride.Trim();
         string command;
         List<int> ports = new();
         switch (Kind)
@@ -819,6 +856,7 @@ public partial class ProjectViewModel : ObservableObject
 
         Info.RunCommandOverride = StartCommandBuilder.Build(Path, dialog.FileName);
         OnPropertyChanged(nameof(StartCommand));
+        SaveStartCommandCommand.NotifyCanExecuteChanged();
         SettingsChanged?.Invoke();
 
         // A project the scan couldn't classify is told apart by the file it starts from.
