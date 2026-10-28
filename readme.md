@@ -6,11 +6,11 @@ A Windows dashboard for the git repos on your PC: see their status, fetch, commi
 
 Get the latest version from [Releases](https://github.com/ahheng0813/RepoNLauncher/releases/latest). It runs on 64-bit Windows 10 and 11, with nothing else to install for the app itself.
 
-| Download | Type | Notes |
-| --- | --- | --- |
-| [RepoNLauncher-win-Setup.exe](https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win-Setup.exe) | Installer (recommended) | Installs for your Windows account in one step, no admin rights needed. Adds Desktop and Start menu shortcuts. |
-| [RepoNLauncher-win.msi](https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win.msi) | Install wizard | Choose whether to install it for just you or for everyone on the PC. |
-| [RepoNLauncher-win-Portable.zip](https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win-Portable.zip) | Portable | No install: unzip it anywhere and run `Repo'N'Launcher.exe`. |
+| File type | Download |
+| --- | --- |
+| `.exe` installer (recommended) | [![Download the latest version](https://img.shields.io/github/v/release/ahheng0813/RepoNLauncher?label=Download&color=2ea44f)](https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win-Setup.exe) |
+| `.msi` install wizard | [![Download the latest version](https://img.shields.io/github/v/release/ahheng0813/RepoNLauncher?label=Download&color=2ea44f)](https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win.msi) |
+| `.zip` portable | [![Download the latest version](https://img.shields.io/github/v/release/ahheng0813/RepoNLauncher?label=Download&color=2ea44f)](https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win-Portable.zip) |
 
 The files aren't code-signed yet, so Windows may warn before the first run: choose **More info**, then **Run anyway**.
 
