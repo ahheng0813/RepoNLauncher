@@ -8,7 +8,7 @@ Get the latest version from [Releases](https://github.com/ahheng0813/RepoNLaunch
 
 | File type | Download |
 | --- | --- |
-| `.exe` installer (recommended) | [![Download the latest version](https://img.shields.io/github/v/release/ahheng0813/RepoNLauncher?label=Download&color=2ea44f)](https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win-Setup.exe) |
+| `.exe` installer (recommended) | <a href="https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win-Setup.exe">V1.0.0</a>|
 | `.msi` install wizard | [![Download the latest version](https://img.shields.io/github/v/release/ahheng0813/RepoNLauncher?label=Download&color=2ea44f)](https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win.msi) |
 | `.zip` portable | [![Download the latest version](https://img.shields.io/github/v/release/ahheng0813/RepoNLauncher?label=Download&color=2ea44f)](https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win-Portable.zip) |
 
