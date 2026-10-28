@@ -96,6 +96,25 @@ public partial class MainViewModel : ObservableObject
         _ = gitHub.VerifySavedSignInAsync();
     }
 
+    /// <summary>
+    /// The first start of an installed copy, for this Windows user: the installers only add a Start menu icon, so the
+    /// dashboard asks once whether to add a desktop one. A copy that has one already, from an earlier version that
+    /// added it, isn't asked, now or after the icon is deleted.
+    /// </summary>
+    public bool ShouldAskAboutDesktopIcon()
+    {
+        if (!Updates.IsInstalledBySetup || _config.DesktopIconAsked) return false;
+        if (!DesktopIcon.Exists) return true;
+        DesktopIconAsked();
+        return false;
+    }
+
+    public void DesktopIconAsked()
+    {
+        _config.DesktopIconAsked = true;
+        PersistConfig();
+    }
+
     public void SaveOpenWithApps(IReadOnlyList<OpenWithApp> apps)
     {
         _config.OpenWithApps = apps.ToList();

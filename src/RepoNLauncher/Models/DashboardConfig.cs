@@ -10,4 +10,7 @@ public class DashboardConfig
     public List<string> CollapsedGroups { get; set; } = new();
 
     public List<OpenWithApp> OpenWithApps { get; set; } = new();
+
+    /// <summary>The installed app has asked whether to add a desktop icon, or found one already, so it doesn't ask again.</summary>
+    public bool DesktopIconAsked { get; set; }
 }

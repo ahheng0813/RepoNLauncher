@@ -12,6 +12,8 @@ Get the latest version from [Releases](https://github.com/ahheng0813/RepoNLaunch
 | `.msi` install wizard | <a href="https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win.msi">V1.0.0</a> |
 | `.zip` portable | <a href="https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win-Portable.zip">V1.0.0</a> |
 
+The installers add a Start menu icon. The first time the app starts, it asks whether to add one to your desktop too.
+
 The files aren't code-signed yet, so Windows may warn before the first run: choose **More info**, then **Run anyway**.
 
 **Updates:** every copy updates itself. The app checks for a new version when it starts and every 4 hours, downloads it in the background, and then shows **Restart to update** in the status bar. If you don't restart, the update is applied the next time the app starts. The status bar also shows your version and has **Check for updates**.

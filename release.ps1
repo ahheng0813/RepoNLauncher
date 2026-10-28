@@ -41,8 +41,10 @@ try {
         if ($LASTEXITCODE -ne 0) { Write-Host 'No earlier release downloaded; this one ships as a full update only.' }
     }
 
+    # Only the Start menu icon: neither installer can offer a choice, so the app asks on its first start whether to
+    # add one to the desktop (Services\DesktopIcon.cs).
     dotnet vpk pack --packId RepoNLauncher --packVersion $Version --runtime win-x64 --packDir $appDir --mainExe RepoNLauncher.exe `
-        --packTitle "Repo'N'Launcher" --packAuthors AhHeng --icon $icon --msi --outputDir $outDir
+        --packTitle "Repo'N'Launcher" --packAuthors AhHeng --icon $icon --shortcuts StartMenuRoot --msi --outputDir $outDir
     if ($LASTEXITCODE -ne 0) { throw "vpk pack failed ($LASTEXITCODE)" }
 
     if ($Publish) {

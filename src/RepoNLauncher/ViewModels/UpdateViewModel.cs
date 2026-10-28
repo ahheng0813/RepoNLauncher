@@ -29,6 +29,9 @@ public partial class UpdateViewModel : ObservableObject
     /// <summary>Only an installed copy can update itself.</summary>
     public bool CanUpdate => _updates.IsInstalled;
 
+    /// <summary>Installed by the Setup.exe or the .msi, not unzipped from the portable zip.</summary>
+    public bool IsInstalledBySetup => _updates.IsInstalled && !_updates.IsPortable;
+
     [ObservableProperty] private string _status = string.Empty;
 
     /// <summary>A newer version, downloaded and ready: Restart to update applies it.</summary>

@@ -28,6 +28,8 @@ That exe doesn't update itself; the installed app does.
 - `RepoNLauncher-win-Portable.zip`: runs without installing.
 - The packages and `releases.win.json` that installed copies update from.
 
+Both installers add only a Start menu icon, since neither can offer a choice. The installed app asks on its first start whether to add a desktop icon (`Services\DesktopIcon.cs`), once per Windows user. Velopack updates that icon with its own and removes it on uninstall.
+
 The app checks the repo's GitHub releases when it starts and every 4 hours (`Services\UpdateService.cs`). Checking needs the releases to be public: while the repo is private, the status bar says it couldn't check.
 
 `vpk` is pinned in `.config\dotnet-tools.json`, and `release.ps1` restores it.

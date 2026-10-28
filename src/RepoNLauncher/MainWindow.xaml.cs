@@ -38,6 +38,9 @@ public partial class MainWindow : Window
             _ = vm.AiUsage.RefreshAsync(checkLimits: true);
             vm.Updates.RestartRequested += () => RestartToUpdate(vm);
             vm.Updates.Start();
+            // Once the dashboard has drawn, so the question shows over it rather than before it.
+            if (vm.ShouldAskAboutDesktopIcon())
+                Dispatcher.BeginInvoke(() => AskAboutDesktopIcon(vm), DispatcherPriority.ApplicationIdle);
             _usageTimer.Tick += (_, _) =>
             {
                 if (WindowState != WindowState.Minimized) _ = vm.AiUsage.RefreshAsync();
@@ -64,6 +67,24 @@ public partial class MainWindow : Window
 
         vm.Updates.ApplyOnExit();
         Close();
+    }
+
+    private void AskAboutDesktopIcon(MainViewModel vm)
+    {
+        var dialog = new DesktopIconWindow { Owner = this };
+        dialog.ShowDialog();
+        vm.DesktopIconAsked();
+        if (!dialog.CreateIcon) return;
+
+        try
+        {
+            DesktopIcon.Create();
+        }
+        catch (Exception e)
+        {
+            System.Windows.MessageBox.Show(this, $"The desktop icon couldn't be created: {e.Message}", "Create Desktop Icon",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     private void OnPhoneScreenPropertyChanged(object? sender, PropertyChangedEventArgs e)

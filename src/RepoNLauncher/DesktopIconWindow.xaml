@@ -1,0 +1,21 @@
+<Window x:Class="RepoNLauncher.DesktopIconWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Repo'N'Launcher" Width="420" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{StaticResource Bg.App}"
+        FontFamily="Segoe UI">
+
+    <StackPanel Margin="24,22,24,20">
+        <TextBlock Text="Repo'N'Launcher is installed" FontSize="17" FontWeight="SemiBold"/>
+        <TextBlock Text="It's in the Start menu. It can have an icon on your desktop too."
+                   Foreground="{StaticResource Text.Secondary}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+
+        <CheckBox x:Name="CreateIconBox" Content="Create Desktop Icon" IsChecked="True" Margin="0,18,0,0"/>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">
+            <Button Content="OK" Style="{StaticResource Button.Primary}" Margin="0" MinWidth="80" IsDefault="True"
+                    Click="Ok_Click"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

@@ -28,6 +28,9 @@ public class UpdateService
 
     public bool IsInstalled => _manager.IsInstalled;
 
+    /// <summary>Unzipped from the portable zip rather than installed; it still updates itself.</summary>
+    public bool IsPortable => _manager.IsPortable;
+
     /// <summary>The installed version, or the build's own when not installed.</summary>
     public string Version =>
         _manager.CurrentVersion?.ToString() ?? Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "?";
