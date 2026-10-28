@@ -1,0 +1,55 @@
+<Window x:Class="RepoNLauncher.PhoneScreenWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:RepoNLauncher.Controls"
+        Title="Phone Screen - Repo'N'Launcher" Height="860" Width="420"
+        WindowStartupLocation="CenterScreen"
+        Background="Black"
+        FontFamily="Segoe UI">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- In full screen the toolbar hides; touching the top edge of the screen (this strip) brings it back -->
+        <Border x:Name="RevealStrip" Grid.Row="0" Height="4" Background="Transparent" Visibility="Collapsed"
+                MouseEnter="RevealStrip_MouseEnter"/>
+
+        <Border x:Name="Toolbar" Grid.Row="0" Background="{StaticResource Bg.Elevated}" BorderBrush="{StaticResource Border.Subtle}"
+                BorderThickness="0,0,0,1" Padding="10,6" MouseLeave="Toolbar_MouseLeave">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Command="{Binding ToggleFullScreenCommand}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource Button.Secondary}">
+                                <Setter Property="Content" Value="Full screen (F11)"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsFullScreen}" Value="True">
+                                        <Setter Property="Content" Value="Exit full screen (Esc)"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button Content="Dock back" Style="{StaticResource Button.Secondary}" Margin="0"
+                            ToolTip="Put the screen back in the dashboard's side panel" Command="{Binding TogglePopOutCommand}"/>
+                </StackPanel>
+                <TextBlock Text="{Binding Status}" Foreground="{StaticResource Text.Secondary}" FontSize="12"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
+            </DockPanel>
+        </Border>
+
+        <!-- Only visible while there's no screen: the host's native window covers it otherwise -->
+        <TextBlock Grid.Row="1" Text="{Binding Status}" Foreground="{StaticResource Text.Secondary}" Margin="24"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/>
+
+        <controls:ScreenHost x:Name="Screen" Grid.Row="1" ScreenHandle="{Binding PopOutScreenHandle}"
+                             Visibility="{Binding HasScreen, Converter={StaticResource BoolToVisibility}}"/>
+    </Grid>
+</Window>

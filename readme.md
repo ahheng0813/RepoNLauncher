@@ -1,0 +1,53 @@
+# Repo'N'Launcher
+
+A Windows dashboard for the git repos on your PC: see their status, fetch, commit, and start them from one window.
+
+Built with WPF on .NET 8.
+
+## Features
+
+- **Project list in folder sections.** Add a project folder, or scan a folder for every git repo in it. Repos are grouped into collapsible sections by folder: a subfolder with two or more repos gets its own nested section. A section's checkbox ticks all of its repos for **Fetch Selected**.
+- **Overview.** Shows the branch and status, with Fetch Latest. You can change the project type (Flutter, .NET, Node, Python) if it was detected wrong. **Open in** has Explorer, Visual Studio, Android Studio and VS Code, plus any apps you add yourself.
+- **Changes.** Changed files with diffs. Commit, discard, stash, and resolve merge conflicts (ours / theirs / mark resolved).
+- **Commits.** Recent history.
+- **Run.**
+  - Starts the project with its live console: `flutter run` on a chosen device, `dotnet run`, or your own start command.
+  - **Choose file…** builds the command from a script, e.g. `python app.py`, using the project's `.venv` when it has one.
+  - Shows a button for any local URL the app prints.
+  - Warns when the app's ports are already in use.
+- **Environment.** Lists the values from `.env` and `appsettings*.json`.
+- **Phone screen.** Mirrors an Android phone or emulator beside the dashboard through [scrcpy](https://github.com/Genymobile/scrcpy), which the app can download for you.
+- **Repos on this PC.** Needs a GitHub sign-in.
+  - Finds every git repo on your local drives and asks GitHub who owns each one.
+  - Filters them into **All**, **Mine** and **Others**, and adds the ones you pick to the dashboard.
+  - Skips Windows, Program Files, AppData, hidden and dot-folders, and dependency folders such as `node_modules`.
+
+## GitHub sign-in
+
+GitHub sign-in is optional; only **Repos on this PC** uses it. You can sign in in two ways:
+
+- **Sign in with browser** uses the GitHub sign-in Git already has (Git Credential Manager). If Git isn't signed in yet, GitHub opens in your browser.
+- **Token:** paste a personal access token with the `repo` scope.
+
+The token is encrypted for your Windows account (DPAPI) and kept apart from the settings file. **Sign out** deletes it.
+
+## Build and run
+
+Requires the .NET 8 SDK on Windows.
+
+```powershell
+dotnet run --project src\RepoNLauncher
+```
+
+To build the single-file exe (`publish\RepoNLauncher.exe`), add a desktop shortcut and start it:
+
+```powershell
+.\publish.ps1                         # closes a running copy first
+.\publish.ps1 -NoShortcut -NoLaunch
+```
+
+## Where settings live
+
+- `%APPDATA%\RepoNLauncher\config.json` holds your projects, scan folders, section states and Open-in apps.
+- `%APPDATA%\RepoNLauncher\github-sign-in.dat` holds the encrypted GitHub sign-in.
+- Debug builds use `%APPDATA%\RepoNLauncher-Dev` instead, so running from source never touches the installed app's settings.

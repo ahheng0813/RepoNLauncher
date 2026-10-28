@@ -1,0 +1,60 @@
+<Window x:Class="RepoNLauncher.GitHubSignInWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Sign in to GitHub - Repo'N'Launcher" Width="520" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{StaticResource Bg.App}"
+        FontFamily="Segoe UI">
+
+    <StackPanel Margin="24,22,24,20">
+        <StackPanel Orientation="Horizontal">
+            <Path Data="{StaticResource GitHubMark}" Fill="{StaticResource Text.Primary}" Width="22" Height="22" Stretch="Uniform"
+                  VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <TextBlock Text="Sign in to GitHub" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        </StackPanel>
+        <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="12.5" TextWrapping="Wrap" Margin="0,8,0,18"
+                   Text="Repos on this PC uses your GitHub account to check who owns each repo. Everything else in Repo'N'Launcher works without signing in."/>
+
+        <Button x:Name="GitSignInButton" Style="{StaticResource Button.Primary}" Margin="0" Padding="14,9" Click="SignInWithGit_Click">
+            <StackPanel Orientation="Horizontal">
+                <Path Data="{StaticResource GitHubMark}" Fill="White" Width="15" Height="15" Stretch="Uniform"
+                      VerticalAlignment="Center" Margin="0,0,9,0"/>
+                <TextBlock Text="Sign in with browser" Foreground="White" FontWeight="SemiBold"/>
+            </StackPanel>
+        </Button>
+        <TextBlock Foreground="{StaticResource Text.Muted}" FontSize="11.5" TextWrapping="Wrap" Margin="0,7,0,0"
+                   Text="Uses Git's GitHub sign-in (Git Credential Manager). If Git is already signed in to GitHub this finishes right away; otherwise GitHub opens in your browser."/>
+
+        <Grid Margin="0,20,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Border Grid.Column="0" Height="1" Background="{StaticResource Border.Subtle}" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" Text="or use a token" Foreground="{StaticResource Text.Muted}" FontSize="11.5" Margin="12,0"/>
+            <Border Grid.Column="2" Height="1" Background="{StaticResource Border.Subtle}" VerticalAlignment="Center"/>
+        </Grid>
+
+        <DockPanel>
+            <Button x:Name="TokenSignInButton" DockPanel.Dock="Right" Content="Sign in" Style="{StaticResource Button.Secondary}"
+                    Margin="8,0,0,0" Click="SignInWithToken_Click"/>
+            <PasswordBox x:Name="TokenBox" ToolTip="Personal access token" KeyDown="TokenBox_KeyDown"/>
+        </DockPanel>
+        <TextBlock Foreground="{StaticResource Text.Muted}" FontSize="11.5" TextWrapping="Wrap" Margin="0,7,0,0">
+            <Run Text="A personal access token with the"/>
+            <Run Text="repo" FontFamily="Cascadia Mono, Consolas"/>
+            <Run Text="scope, so your private repos count too."/>
+            <Hyperlink NavigateUri="https://github.com/settings/tokens/new?scopes=repo&amp;description=Repo%27N%27Launcher"
+                       RequestNavigate="Link_RequestNavigate" Foreground="{StaticResource Cyan}">Create one on GitHub</Hyperlink>
+        </TextBlock>
+
+        <DockPanel x:Name="StatusPanel" Margin="0,18,0,0" Visibility="Collapsed">
+            <ProgressBar x:Name="BusyBar" DockPanel.Dock="Left" Width="60" IsIndeterminate="True" VerticalAlignment="Center"
+                         Margin="0,0,10,0"/>
+            <TextBlock x:Name="StatusText" TextWrapping="Wrap" FontSize="12.5" VerticalAlignment="Center"/>
+        </DockPanel>
+
+        <Button Content="Cancel" Style="{StaticResource Button.Secondary}" HorizontalAlignment="Right" Margin="0,20,0,0" IsCancel="True"/>
+    </StackPanel>
+</Window>
