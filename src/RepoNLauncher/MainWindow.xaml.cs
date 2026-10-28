@@ -9,6 +9,8 @@ public partial class MainWindow : Window
 {
     private PhoneScreenWindow? _phoneWindow;
     private PcReposWindow? _pcReposWindow;
+    private AiUsageWindow? _aiUsageWindow;
+    private AgentChatWindow? _agentChatWindow;
 
     public MainWindow()
     {
@@ -29,6 +31,7 @@ public partial class MainWindow : Window
         Closing += (_, _) =>
         {
             if (DataContext is not MainViewModel vm) return;
+            vm.AgentChat.StopAll();
             vm.PhoneScreen.Shutdown();
             vm.PhoneScreen.IsPoppedOut = false; // closes the pop-out window so the app can exit
         };
@@ -93,6 +96,34 @@ public partial class MainWindow : Window
         _pcReposWindow = new PcReposWindow(vm.PcRepos) { Owner = this };
         _pcReposWindow.Closed += (_, _) => _pcReposWindow = null;
         _pcReposWindow.Show();
+    }
+
+    private void OpenAiUsage_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm) return;
+        if (_aiUsageWindow != null)
+        {
+            _aiUsageWindow.Activate();
+            return;
+        }
+        _aiUsageWindow = new AiUsageWindow(vm.AiUsage) { Owner = this };
+        _aiUsageWindow.Closed += (_, _) => _aiUsageWindow = null;
+        _aiUsageWindow.Show();
+    }
+
+    // Chats keep running with the window closed; reopening it shows where they got to.
+    private void OpenAiChat_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm) return;
+        if (_agentChatWindow != null)
+        {
+            if (_agentChatWindow.WindowState == WindowState.Minimized) _agentChatWindow.WindowState = WindowState.Normal;
+            _agentChatWindow.Activate();
+            return;
+        }
+        _agentChatWindow = new AgentChatWindow(vm.AgentChat) { Owner = this };
+        _agentChatWindow.Closed += (_, _) => _agentChatWindow = null;
+        _agentChatWindow.Show();
     }
 
     // Re-list devices whenever the picker opens, so a phone plugged in a moment ago is already there.

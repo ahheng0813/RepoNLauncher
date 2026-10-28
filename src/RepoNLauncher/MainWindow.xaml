@@ -181,6 +181,10 @@
                         <Button Content="Repos on this PC" Style="{StaticResource Button.Secondary}" Click="OpenPcRepos_Click"
                                 ToolTip="Find every repo on this PC and see which are yours on GitHub (needs GitHub sign-in)"/>
                         <Border Width="1" Background="{StaticResource Border.Subtle}" Margin="4,2,12,2"/>
+                        <Button Content="AI Chat" Style="{StaticResource Button.Secondary}" Click="OpenAiChat_Click"
+                                ToolTip="Chat with Claude Code or Codex in a project, and read your saved chats"/>
+                        <Button Content="AI Usage" Style="{StaticResource Button.Secondary}" Click="OpenAiUsage_Click"
+                                ToolTip="Claude Code and Codex plan limits and token use"/>
                         <Button Style="{StaticResource Button.Secondary}" Margin="0" ToolTip="Show or hide the phone screen panel"
                                 Command="{Binding PhoneScreen.TogglePanelCommand}">
                             <StackPanel Orientation="Horizontal">

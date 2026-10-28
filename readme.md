@@ -22,6 +22,20 @@ Built with WPF on .NET 8.
   - Filters them into **All**, **Mine** and **Others**, and adds the ones you pick to the dashboard.
   - Skips Windows, Program Files, AppData, hidden and dot-folders, and dependency folders such as `node_modules`.
 
+- **AI Chat.** Chat with Claude Code or Codex about a project, as in their own apps. It runs the `claude` or `codex` program installed on this PC, which uses its own sign-in.
+  - **Composer:** pick the agent, model, effort, permissions and project folder. Type `@` to mention a file. Paste, drop or attach images and other files.
+  - **Replies:** they stream in as Markdown. Each tool call is a row you can expand to see its input and output.
+  - **Claude's questions:** permission prompts, multiple-choice questions and plan approvals appear as cards you answer in the chat.
+  - **Codex:** it doesn't stop to ask. Its sandbox setting (read only, edit project, full access) decides what it may do.
+  - **History:** every saved Claude Code and Codex chat on this PC is listed, with search. Open one to read it or carry on.
+  - A chat keeps running when the window is closed. Closing the dashboard stops it.
+  - Codex is found on PATH, in npm, or inside the Codex app.
+- **AI Usage.** Shows Claude Code and Codex usage, read only from what each tool stores on this PC. Neither tool's sign-in is used, and nothing is sent anywhere.
+  - **Sign-in and plan:** whether each tool is installed and signed in, and on which plan.
+  - **Plan limits:** the 5-hour and weekly limits each tool last saved, with when they reset and how old the figures are.
+  - **Token use:** today, the last 7 and 30 days, and per model, from the session files.
+  - Codex use is counted from the sessions saved on this PC, which come from Codex CLI, the IDE extension and AI Chat.
+
 ## GitHub sign-in
 
 GitHub sign-in is optional; only **Repos on this PC** uses it. You can sign in in two ways:

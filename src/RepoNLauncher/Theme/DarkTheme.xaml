@@ -441,7 +441,7 @@
                                            ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                            Margin="{TemplateBinding Padding}"
                                            VerticalAlignment="Center" HorizontalAlignment="Left"/>
-                        <Path HorizontalAlignment="Right" Margin="0,0,10,0" Data="M 0,0 L 4,4 L 8,0"
+                        <Path HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Data="M 0,0 L 4,4 L 8,0"
                               Stroke="{StaticResource Text.Secondary}" StrokeThickness="1.5" IsHitTestVisible="False"/>
                         <Popup x:Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}"
                                AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
