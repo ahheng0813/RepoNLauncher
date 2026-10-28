@@ -570,6 +570,14 @@
                                                 ToolTip="Opens the solution, or the folder if there is none"/>
                                         <Button Content="Android Studio" Command="{Binding OpenInAndroidStudioCommand}"/>
                                         <Button Content="VS Code" Command="{Binding OpenInVsCodeCommand}"/>
+                                        <Button Command="{Binding OpenInGitHubCommand}" AutomationProperties.Name="GitHub"
+                                                ToolTip="{Binding GitHubToolTip}" ToolTipService.ShowOnDisabled="True">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Path Data="{StaticResource GitHubMark}" Fill="{StaticResource Text.Primary}" Width="13" Height="13"
+                                                      Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="GitHub"/>
+                                            </StackPanel>
+                                        </Button>
                                         <ItemsControl ItemsSource="{Binding DataContext.OpenWithApps, RelativeSource={RelativeSource AncestorType=Window}}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>

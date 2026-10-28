@@ -235,7 +235,13 @@ public partial class ProjectViewModel : ObservableObject
             Ahead = status.Ahead;
             Behind = status.Behind;
             // Only the project on screen shows the pickers; Fetch All refreshes every project's status.
-            if (IsSelected) await LoadBranchesAsync();
+            if (IsSelected)
+            {
+                await LoadBranchesAsync();
+                // A remote may have been added or changed since.
+                OnPropertyChanged(nameof(GitHubToolTip));
+                OpenInGitHubCommand.NotifyCanExecuteChanged();
+            }
         }
         finally
         {
@@ -865,6 +871,18 @@ public partial class ProjectViewModel : ObservableObject
         else ConsoleOutput.Add(line);
         _lastLineIsPartial = partial;
     }
+
+    /// <summary>The repo's page on GitHub, from its GitHub remote (origin first); null when it isn't on GitHub.</summary>
+    public string? GitHubUrl => GitHubRemote.Find(Path) is { } repo
+        ? $"https://github.com/{Uri.EscapeDataString(repo.Owner)}/{Uri.EscapeDataString(repo.Name)}"
+        : null;
+
+    public string GitHubToolTip => GitHubUrl ?? "This repo has no GitHub remote, so it isn't on GitHub";
+
+    [RelayCommand(CanExecute = nameof(IsOnGitHub))]
+    private void OpenInGitHub() => OpenUrl(GitHubUrl);
+
+    private bool IsOnGitHub() => GitHubUrl != null;
 
     [RelayCommand]
     public void OpenInExplorer()

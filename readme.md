@@ -29,7 +29,7 @@ The files aren't code-signed yet, so Windows may warn before the first run: choo
 ## Features
 
 - **Projects in folder sections.** Add a project folder, or scan a folder for every git repo in it. Repos are grouped by folder into collapsible sections. Tick repos, or a whole section, for **Fetch Selected**.
-- **Overview.** The repo's status, **Fetch Latest**, and its project type. **Open in** has Explorer, Visual Studio, Android Studio, VS Code and any apps you add.
+- **Overview.** The repo's status, **Fetch Latest**, and its project type. **Open in** has Explorer, Visual Studio, Android Studio, VS Code, the repo's page on **GitHub** (when it has a GitHub remote) and any apps you add.
   - **Branch:** the branch checked out now. Pick another under **Switch to** and press **Switch**, or make one with **New branch…**.
   - **Merge from:** the branch **Fetch Latest** merges in after pulling. Pick one and press **Update default** to keep it, or **Merge now** to merge it just once.
   - **Create Pull Request:** from the current branch, with the title and description filled in from its commits.
