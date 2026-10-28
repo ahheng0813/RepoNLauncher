@@ -2,113 +2,63 @@
 
 A Windows dashboard for the git repos on your PC: see their status, fetch, commit, and start them from one window.
 
-Built with WPF on .NET 8.
+## Download
+
+Get the latest version from [Releases](https://github.com/ahheng0813/RepoNLauncher/releases/latest). It runs on 64-bit Windows 10 and 11, with nothing else to install for the app itself.
+
+| Download | Type | Notes |
+| --- | --- | --- |
+| [RepoNLauncher-win-Setup.exe](https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win-Setup.exe) | Installer (recommended) | Installs for your Windows account in one step, no admin rights needed. Adds Desktop and Start menu shortcuts. |
+| [RepoNLauncher-win.msi](https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win.msi) | Install wizard | Choose whether to install it for just you or for everyone on the PC. |
+| [RepoNLauncher-win-Portable.zip](https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win-Portable.zip) | Portable | No install: unzip it anywhere and run `Repo'N'Launcher.exe`. |
+
+The files aren't code-signed yet, so Windows may warn before the first run: choose **More info**, then **Run anyway**.
+
+**Updates:** every copy updates itself. The app checks for a new version when it starts and every 4 hours, downloads it in the background, and then shows **Restart to update** in the status bar. If you don't restart, the update is applied the next time the app starts. The status bar also shows your version and has **Check for updates**.
+
+### What else you need
+
+- [Git for Windows](https://git-scm.com/download/win).
+- To run a project from the dashboard, the tools it runs with: Flutter, the .NET SDK, Node.js or Python.
+- For **AI Chat** and the AI usage bar, Claude Code or Codex installed and signed in.
+- For **Phone screen**, an Android phone with USB debugging on, or an emulator. The app downloads scrcpy for you.
 
 ## Features
 
-- **Project list in folder sections.** Add a project folder, or scan a folder for every git repo in it. Repos are grouped into collapsible sections by folder: a subfolder with two or more repos gets its own nested section. A section's checkbox ticks all of its repos for **Fetch Selected**.
-- **Overview.** Shows the status, with Fetch Latest. You can change the project type (Flutter, .NET, Node, Python) if it was detected wrong. **Open in** has Explorer, Visual Studio, Android Studio and VS Code, plus any apps you add yourself.
-  - **Branch:** the branch checked out now. To change it, pick one under **Switch to** and press **Switch**; picking alone does nothing. A branch only the remote has gets a local copy that tracks it. Uncommitted changes come along unless they clash; then the switch stops and says so.
-  - **New branch…:** name it (spaces become dashes) and pick where it starts: the current branch, another local branch, or a remote's copy such as `origin/main` as of the last fetch. It's switched to straight away unless you untick that. It stays local until it's pushed, for example by Create Pull Request.
-  - **Merge from:** shows the current branch's default: the branch Fetch Latest merges in after pulling (the remote's copy). It's none at first, so Fetch Latest just pulls, except `heng_main`, which merges `development`.
-    - Pick a branch and press **Update default** to have Fetch Latest merge it from now on. Defaults are saved per branch.
-    - Or press **Merge now** to merge the picked branch just once; the default stays as it is.
-  - **Create Pull Request:** from the current branch into a branch you pick on GitHub, with a title, description and draft option filled in from the commits. The branch is pushed first if GitHub doesn't have all of it. Creating it here needs the GitHub sign-in; **Finish on GitHub** opens GitHub's own page instead.
-- **Changes.** Changed files with diffs. Commit, discard, stash, and resolve merge conflicts (ours / theirs / mark resolved).
+- **Projects in folder sections.** Add a project folder, or scan a folder for every git repo in it. Repos are grouped by folder into collapsible sections. Tick repos, or a whole section, for **Fetch Selected**.
+- **Overview.** The repo's status, **Fetch Latest**, and its project type. **Open in** has Explorer, Visual Studio, Android Studio, VS Code and any apps you add.
+  - **Branch:** the branch checked out now. Pick another under **Switch to** and press **Switch**, or make one with **New branch…**.
+  - **Merge from:** the branch **Fetch Latest** merges in after pulling. Pick one and press **Update default** to keep it, or **Merge now** to merge it just once.
+  - **Create Pull Request:** from the current branch, with the title and description filled in from its commits.
+- **Changes.** Changed files with diffs. Commit, discard, stash, and resolve merge conflicts.
 - **Commits.** Recent history.
-- **Run.**
-  - Starts the project with its live console: `flutter run` on a chosen device, `dotnet run`, or your own start command.
-  - **Choose file…** builds the command from a script, e.g. `python app.py`, using the project's `.venv` when it has one.
-  - **Input:** type in the box under the console and press Enter (or **Send**) to answer the app's prompts, as in a terminal; an empty line is just Enter. A prompt shows in the console while it waits, and your answer appears after it.
-  - **Hot reload** and **Hot restart** (Flutter projects) send `r` and `R` to `flutter run`. Its other keys can be typed too: `q` quits, `h` lists them all.
-  - The console follows new output while it's scrolled to the bottom. Scroll up to read, and it stays put.
-  - The input is a pipe, not a real terminal, so a program that reads keys straight from its console window, such as a password prompt, still can't be answered here.
-  - Shows a button for any local URL the app prints.
-  - Warns when the app's ports are already in use.
-- **Environment.** Lists the values from `.env` and `appsettings*.json`.
-- **Phone screen.** Mirrors an Android phone or emulator beside the dashboard through [scrcpy](https://github.com/Genymobile/scrcpy), which the app can download for you.
-- **Repos on this PC.** Needs a GitHub sign-in.
-  - Finds every git repo on your local drives and asks GitHub who owns each one.
-  - Filters them into **All**, **Mine** and **Others**, and adds the ones you pick to the dashboard.
-  - Skips Windows, Program Files, AppData, hidden and dot-folders, and dependency folders such as `node_modules`.
-
-- **AI Chat.** Chat with Claude Code or Codex about a project, as in their own apps. It runs the `claude` or `codex` program installed on this PC, which uses its own sign-in.
-  - **Composer:** pick the agent, model, effort, permissions and project folder. Type `@` to mention a file. Paste, drop or attach images and other files.
-  - **Replies:** they stream in as Markdown. Each tool call is a row you can expand to see its input and output.
-  - **Finding your way in a long chat:**
-    - **Pinned prompt:** while you read a reply, the prompt it answers stays pinned at the top, with its number (3 of 21). Click it to go back to that prompt.
-    - **Jump to latest:** appears once you scroll up and takes you back to the newest message.
-    - **Prompts:** in the chat's header, lists every prompt in the chat, with the one you're reading highlighted. Click one, or use Up/Down and Enter, to go to it.
-  - **Claude's questions:** permission prompts, multiple-choice questions and plan approvals appear as cards you answer in the chat.
-  - **Codex:** it doesn't stop to ask. Its sandbox setting (read only, edit project, full access) decides what it may do.
-  - **History:** every saved Claude Code and Codex chat on this PC is listed, with search. Open one to read it or carry on.
-  - A chat keeps running when the window is closed. Closing the dashboard stops it.
-  - Codex is found on PATH, in npm, or inside the Codex app.
-- **AI Usage.** Claude Code and Codex usage. The dashboard never reads either tool's sign-in.
-  - **Usage bar:** under the header, always in view: each tool's plan and its session and weekly (or monthly) limits. It refreshes every minute while the dashboard is open, except when minimized. **View details** opens the full window.
-  - **Sign-in and plan:** whether each tool is installed and signed in, and on which plan.
-  - **Plan limits:** the 5-hour, weekly or monthly limits, with when they reset. They're checked with the installed tools when the dashboard starts, every 5 minutes, when the details window opens, and on Refresh: Claude Code's `/usage` command (run locally, no model call, no saved chat) and Codex's app server. Each tool fetches them with its own sign-in. Without the tool, the last saved figures show.
-  - **Token use:** today, the last 7 and 30 days, and per model, from the session files.
-  - Codex use is counted from the sessions saved on this PC, which come from Codex CLI, the IDE extension and AI Chat.
+- **Run.** Starts the project with a live console: `flutter run` on a device, `dotnet run`, or your own command. **Choose file…** builds the command from a script.
+  - Type in the box under the console to answer the app's prompts. Flutter projects also get **Hot reload** and **Hot restart**.
+  - A button opens any local URL the app prints, and you're warned when its ports are already in use.
+- **Environment.** The values from `.env` and `appsettings*.json`.
+- **Phone screen.** Mirrors an Android phone or emulator beside the dashboard through [scrcpy](https://github.com/Genymobile/scrcpy).
+- **Repos on this PC.** Finds every git repo on your drives and sorts them into **Mine** and **Others** by GitHub owner, so you can add them to the dashboard.
+- **AI Chat.** Chat with Claude Code or Codex about a project, using the one installed on this PC.
+  - Type `@` to mention a file, and paste or drop images and files.
+  - Answer Claude's permission prompts, questions and plans in the chat.
+  - In a long chat, the prompt you're reading stays pinned at the top. **Prompts** lists them all, and **Jump to latest** takes you back down.
+  - **History** lists every saved Claude Code and Codex chat on this PC, with search.
+  - A chat keeps running when its window is closed. Closing the dashboard stops it.
+- **AI usage bar.** Your Claude Code and Codex plan limits (5-hour, weekly or monthly) under the header, always in view. **View details** adds token use by day and by model. The dashboard never reads either tool's sign-in.
 
 ## GitHub sign-in
 
-GitHub sign-in is optional; **Repos on this PC** and creating a pull request from the dashboard use it. You can sign in in two ways:
+Optional: only **Repos on this PC** and **Create Pull Request** use it.
 
-- **Sign in with browser** uses the GitHub sign-in Git already has (Git Credential Manager). If Git isn't signed in yet, GitHub opens in your browser.
+- **Sign in with browser** uses the GitHub sign-in Git already has, or opens GitHub in your browser.
 - **Token:** paste a personal access token with the `repo` scope.
 
-The token is encrypted for your Windows account (DPAPI) and kept apart from the settings file. **Sign out** deletes it.
-
-## Build and run
-
-Requires the .NET 8 SDK on Windows.
-
-```powershell
-dotnet run --project src\RepoNLauncher
-```
-
-To build the single-file exe (`publish\RepoNLauncher.exe`), add a desktop shortcut and start it:
-
-```powershell
-.\publish.ps1                         # closes a running copy first
-.\publish.ps1 -NoShortcut -NoLaunch
-```
-
-That exe doesn't update itself; the installed app does (below).
-
-## Install and updates
-
-[Velopack](https://velopack.io) builds the installers. Both put the same app on the PC, and the installed app updates itself:
-
-- `RepoNLauncher-win-Setup.exe` installs for the current user, with no admin needed, and adds Desktop and Start menu shortcuts.
-- `RepoNLauncher-win.msi` is an install wizard, for the current user or for everyone on the PC.
-
-The installed app checks the repo's GitHub releases when it starts and every 4 hours. It downloads a newer version in the background, then shows **Restart to update** in the status bar. If you don't restart, the update is applied the next time the app starts. The status bar also shows the version and has **Check for updates**.
-
-Checking needs the releases to be public. While the repo is private, the status bar says it couldn't check.
-
-The installers aren't signed, so Windows SmartScreen warns before the first install (More info → Run anyway). `vpk pack` can sign them with `--signParams` or `--azureTrustedSignFile`.
-
-### Making a release
-
-1. Raise `<Version>` in `src\RepoNLauncher\RepoNLauncher.csproj`. Installed copies only update to a higher version.
-2. Build the installers into `release\out`:
-
-   ```powershell
-   .\release.ps1
-   ```
-
-3. Publish them as a GitHub release (tag `v<version>`), which installed copies then update to. This needs the GitHub CLI signed in (`gh auth login`):
-
-   ```powershell
-   .\release.ps1 -Publish
-   ```
-
-`vpk` is pinned in `.config\dotnet-tools.json`; the script restores it. To try an update before publishing, set `REPONLAUNCHER_UPDATE_FEED` to a folder of releases (such as `release\out`) before starting the installed app; it then updates from there instead of GitHub.
+The sign-in is encrypted for your Windows account, and **Sign out** deletes it.
 
 ## Where settings live
 
-- `%APPDATA%\RepoNLauncher\config.json` holds your projects, scan folders, section states and Open-in apps.
-- `%APPDATA%\RepoNLauncher\github-sign-in.dat` holds the encrypted GitHub sign-in.
-- Debug builds use `%APPDATA%\RepoNLauncher-Dev` instead, so running from source never touches the installed app's settings.
+In `%APPDATA%\RepoNLauncher`: `config.json` holds your projects and settings, and `github-sign-in.dat` the encrypted GitHub sign-in.
+
+## Building from source
+
+See [DEVELOPMENT.md](DEVELOPMENT.md).
