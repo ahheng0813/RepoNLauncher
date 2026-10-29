@@ -17,15 +17,15 @@ Get the latest version from [Releases](https://github.com/ahheng0813/RepoNLaunch
     <tbody>
       <tr>
         <td align="left"><code>.exe</code> installer (recommended)</td>
-        <td align="center"><a href="https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win-Setup.exe">V1.1.0</a></td>
+        <td align="center"><a href="https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win-Setup.exe">V1.3.0</a></td>
       </tr>
       <tr>
         <td align="left"><code>.msi</code> install wizard</td>
-        <td align="center"><a href="https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win.msi">V1.1.0</a></td>
+        <td align="center"><a href="https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win.msi">V1.3.0</a></td>
       </tr>
       <tr>
         <td align="left"><code>.zip</code> portable</td>
-        <td align="center"><a href="https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win-Portable.zip">V1.1.0</a></td>
+        <td align="center"><a href="https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win-Portable.zip">V1.3.0</a></td>
       </tr>
     </tbody>
   </table>
