@@ -312,21 +312,18 @@ public partial class PhoneScreenViewModel : ObservableObject
         session.Exited += () => Application.Current?.Dispatcher.BeginInvoke(() => OnVoiceExited(session));
     }
 
-    [RelayCommand]
-    private async Task ChooseFilesToSendAsync()
+    /// <summary>The selected device's files to look through, send to and copy from; null (saying why) when there's none.</summary>
+    public PhoneFilesViewModel? OpenFiles()
     {
-        if (SelectedDevice is not { } device)
+        if (SelectedDevice is not { IsReady: true } device)
         {
-            Status = "No device selected.";
-            return;
+            Status = SelectedDevice == null ? "No device selected." : $"{SelectedDevice.Model} isn't ready: {SelectedDevice.State}.";
+            return null;
         }
-
-        var dialog = new Microsoft.Win32.OpenFileDialog { Title = $"Send files to {device.Model}", Multiselect = true };
-        if (dialog.ShowDialog() != true) return;
-        await SendFilesAsync(dialog.FileNames);
+        return new PhoneFilesViewModel(_tools, device);
     }
 
-    /// <summary>Copies files or folders (chosen, or dropped on the panel) to the selected device's Download folder.</summary>
+    /// <summary>Copies files or folders dropped on the tools to the selected device's Download folder.</summary>
     public async Task SendFilesAsync(IReadOnlyList<string> paths)
     {
         if (SelectedDevice is not { } device)
@@ -342,7 +339,7 @@ public partial class PhoneScreenViewModel : ObservableObject
         try
         {
             var sent = await _tools.SendFilesAsync(device.Serial, paths);
-            Status = $"Sent {what} to {device.Model}'s Download folder" + (sent == null ? "." : $": {Describe(sent)}.");
+            Status = $"Sent {what} to {device.Model}'s Download folder" + (sent == null ? "." : $": {sent.Summary}.");
         }
         catch (Exception e) when (e is InvalidOperationException or TimeoutException)
         {
@@ -623,17 +620,6 @@ public partial class PhoneScreenViewModel : ObservableObject
     }
 
     private static string Elapsed(TimeSpan time) => time.ToString(time.TotalHours >= 1 ? @"h\:mm\:ss" : @"m\:ss");
-
-    private static string Describe(SentFiles sent)
-    {
-        var size = sent.Bytes switch
-        {
-            < 1024 * 1024 => $"{Math.Max(1, sent.Bytes / 1024)} KB",
-            < 1024L * 1024 * 1024 => $"{sent.Bytes / (1024.0 * 1024):0.#} MB",
-            _ => $"{sent.Bytes / (1024.0 * 1024 * 1024):0.##} GB",
-        };
-        return $"{sent.Files} {(sent.Files == 1 ? "file" : "files")}, {size} in {Math.Max(0.1, sent.Seconds):0.#} s";
-    }
 
     // So a screenshot can be pasted straight into a chat or an issue.
     private static bool CopyImage(string path)

@@ -59,6 +59,13 @@ public partial class DeviceTools : UserControl
 
     private void CameraButton_Click(object sender, RoutedEventArgs e) => CameraPopup.IsOpen = true;
 
+    private void FilesButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not PhoneScreenViewModel phone) return;
+        if (phone.SelectedDevice is { } device) PhoneFilesWindow.ShowFor(device.Serial, phone.OpenFiles);
+        else phone.OpenFiles(); // says to pick one
+    }
+
     private void CameraChoice_Click(object sender, RoutedEventArgs e) => CameraPopup.IsOpen = false;
 
     private void LocationButton_Click(object sender, RoutedEventArgs e)
