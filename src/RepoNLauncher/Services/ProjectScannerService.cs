@@ -45,7 +45,8 @@ public class ProjectScannerService : IProjectScanner
                 Kind = DetectKind(dir),
                 IsAutoDiscovered = true,
             });
-            return; // don't descend into nested repos
+            // Keep looking inside: a folder of repos can be a repo itself (a stray "git init" there is enough), and
+            // stopping here would hide every repo in it.
         }
 
         IEnumerable<string> subDirs;

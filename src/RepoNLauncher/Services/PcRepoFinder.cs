@@ -6,8 +6,8 @@ namespace RepoNLauncher.Services;
 public record PcScanProgress(int FoldersChecked, int ReposFound);
 
 /// <summary>
-/// Finds every git repo on the PC's local drives. Skips hidden, system and dot-folders, installed software, app data,
-/// and dependency/build folders, and doesn't look inside a repo once found.
+/// Finds every git repo on the PC's local drives, repos inside other repos included. Skips hidden, system and
+/// dot-folders, installed software, app data, dependency/build folders, and submodules.
 /// </summary>
 public static class PcRepoFinder
 {
@@ -70,7 +70,8 @@ public static class PcRepoFinder
         return repos.Order(StringComparer.OrdinalIgnoreCase).ToList();
     }
 
-    // Records the folder if it's a repo, otherwise returns the subfolders worth walking into.
+    // Records the folder if it's a repo, and returns the subfolders worth walking into. A repo's are walked too: a folder
+    // of repos can be a repo itself (a stray "git init" there is enough), and stopping at it would hide every repo in it.
     private static List<DirectoryInfo> Inspect(DirectoryInfo dir, ConcurrentBag<string> repos)
     {
         var subDirs = new List<DirectoryInfo>();
@@ -81,8 +82,9 @@ public static class PcRepoFinder
                 // .git is a folder in a normal clone and a file in a worktree or submodule.
                 if (entry.Name.Equals(".git", StringComparison.OrdinalIgnoreCase))
                 {
-                    repos.Add(dir.FullName.TrimEnd(Path.DirectorySeparatorChar));
-                    return [];
+                    if (entry is DirectoryInfo || !IsSubmodule((FileInfo)entry))
+                        repos.Add(dir.FullName.TrimEnd(Path.DirectorySeparatorChar));
+                    continue;
                 }
 
                 if (entry is DirectoryInfo sub && ShouldWalk(sub)) subDirs.Add(sub);
@@ -90,6 +92,19 @@ public static class PcRepoFinder
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
         return subDirs;
+    }
+
+    // A submodule is part of the repo around it, so it isn't listed on its own. Its .git file points into that repo's
+    // .git/modules ("gitdir: ../.git/modules/lib"); a worktree's points into its main repo's .git/worktrees.
+    private static bool IsSubmodule(FileInfo gitFile)
+    {
+        try
+        {
+            using var reader = gitFile.OpenText();
+            var line = reader.ReadLine();
+            return line != null && line.Replace('\\', '/').Contains("/.git/modules/", StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; }
     }
 
     private static bool ShouldWalk(DirectoryInfo dir)
