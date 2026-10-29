@@ -6,11 +6,30 @@ A Windows dashboard for the git repos on your PC: see their status, fetch, commi
 
 Get the latest version from [Releases](https://github.com/ahheng0813/RepoNLauncher/releases/latest). It runs on 64-bit Windows 10 and 11, with nothing else to install for the app itself.
 
-| File type | Download |
-| --- | --- |
-| `.exe` installer (recommended) | <a href="https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win-Setup.exe">V1.1.0</a> |
-| `.msi` install wizard | <a href="https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win.msi">V1.1.0</a> |
-| `.zip` portable | <a href="https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win-Portable.zip">V1.1.0</a> |
+<div class=dwld_table>
+  <table align="center">
+    <thead>
+      <tr>
+        <th width="46%", align="center">File type</th>
+        <th width="500px", align="center">Download</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td align="left"><code>.exe</code> installer (recommended)</td>
+        <td align="center"><a href="https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win-Setup.exe">V1.1.0</a></td>
+      </tr>
+      <tr>
+        <td align="left"><code>.msi</code> install wizard</td>
+        <td align="center"><a href="https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win.msi">V1.1.0</a></td>
+      </tr>
+      <tr>
+        <td align="left"><code>.zip</code> portable</td>
+        <td align="center"><a href="https://github.com/ahheng0813/RepoNLauncher/releases/latest/download/RepoNLauncher-win-Portable.zip">V1.1.0</a></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
 The installers add a Start menu icon. The first time the app starts, it asks whether to add one to your desktop too.
 
