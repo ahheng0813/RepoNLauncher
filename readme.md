@@ -51,6 +51,7 @@ The files aren't code-signed yet, so Windows may warn before the first run: choo
 - **Overview.** The repo's status, **Fetch Latest**, and its project type. **Open in** has Explorer, Visual Studio, Android Studio, VS Code, the repo's page on **GitHub** (when it has a GitHub remote) and any apps you add.
   - **Branch:** the branch checked out now. Pick another under **Switch to** and press **Switch**, or make one with **New branch…**.
   - **Publish branch:** shown while the current branch is only on this PC, such as one just made with **New branch…**. It pushes the branch to the remote, and **Fetch Latest** pulls it from there afterwards.
+  - **Push:** shown while the current branch has commits that its remote branch doesn't, such as ones you just committed or merged in. Until you push, they're only on this PC, even though **Commits** lists them.
   - **Merge from:** the branch **Fetch Latest** merges in after pulling. Pick one and press **Update default** to keep it, or **Merge now** to merge it just once.
   - **Create Pull Request:** from the current branch, with the title and description filled in from its commits.
 - **Changes.** Changed files with diffs. Commit, discard, stash, and resolve merge conflicts.
