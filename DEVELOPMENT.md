@@ -49,6 +49,12 @@ The app checks the repo's GitHub releases when it starts and every 4 hours (`Ser
    .\release.ps1 -Publish
    ```
 
+   It first asks for the release's description, which GitHub shows on the release page. Type it in markdown, a line at a time, and end it with an empty line. Pressing Enter straight away publishes it without one. To skip the question, give it with `-Notes`:
+
+   ```powershell
+   .\release.ps1 -Publish -Notes "Fixed the phone screen going black after a rotate."
+   ```
+
 4. The **Readme version** workflow (`.github\workflows\readme-version.yml`) then puts the new version on the readme's download links and commits that to `main`. Pull before your next push. It can also be run by hand from the repo's Actions tab.
 
 ### Raising the version with the script
@@ -68,8 +74,9 @@ The app checks the repo's GitHub releases when it starts and every 4 hours (`Ser
 | `ask` | asks "New version [1.0.1]:" and takes what you type, or the suggestion on Enter |
 
 - The new version must be higher than the current one, since installed copies only update to a higher version. `ask` asks again until it is.
+- With `-Publish` it also asks for the description, right after the version and before committing anything, so the build then runs without stopping. `-Notes` works here too.
 - It stops before changing anything if there are uncommitted changes, if you're not on `main`, or if GitHub has commits you haven't pulled, so the release always matches what's on GitHub.
-- It works as a saved start command in the dashboard's Run tab: `powershell -NoProfile -File release.ps1 -Bump ask -Publish`. Answer the question in the box under the console.
+- It works as a saved start command in the dashboard's Run tab: `powershell -NoProfile -File release.ps1 -Bump ask -Publish`. Answer the questions in the box under the console.
 - If the release fails after the version was pushed, run `.\release.ps1 -Publish` to try again.
 
 To try an update before publishing, set `REPONLAUNCHER_UPDATE_FEED` to a folder of releases (such as `release\out`) before starting the installed app. It then updates from there instead of GitHub.

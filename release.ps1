@@ -6,12 +6,15 @@
 #         .\release.ps1 -Version 1.1.0   build another version (raise it for every release)
 #         .\release.ps1 -Publish         also publish it as a GitHub release, which installed copies update to.
 #                                        Needs the GitHub CLI signed in (gh auth login) and a public repo for others.
+#                                        It first asks for the release's description: lines of markdown, ended by an
+#                                        empty line. Enter straight away publishes it without one.
+#         .\release.ps1 -Publish -Notes "Fixed the phone screen."   give the description instead of being asked
 #         .\release.ps1 -Bump patch      raise the version (patch 1.0.0 -> 1.0.1, minor -> 1.1.0, major -> 2.0.0), commit
 #                                        and push just that, and stop. Add -Publish to release it straight after.
 #         .\release.ps1 -Bump 1.2.0      the same, to the version given
 #         .\release.ps1 -Bump ask        the same, asking for the version first
-# It also runs as a saved start command in the dashboard's Run tab; -Bump ask is answered in the box under the console.
-param([string]$Version, [string]$Bump, [switch]$Publish)
+# It also runs as a saved start command in the dashboard's Run tab; its questions are answered in the box under the console.
+param([string]$Version, [string]$Bump, [switch]$Publish, [string]$Notes)
 
 $ErrorActionPreference = 'Stop'
 $root    = $PSScriptRoot
@@ -35,6 +38,21 @@ function Read-NewVersion([string]$Current, [string]$Suggested) {
         return $answer
     }
 }
+
+# The release's description, which GitHub shows on the release page. Read the same way, a line at a time until an empty
+# one, so Enter straight away (or no input at all) gives none.
+function Read-ReleaseNotes([string]$Version) {
+    Write-Host "Describe what's new in $Version, in markdown. An empty line ends it; Enter now leaves it blank:"
+    $lines = while ($true) {
+        $line = [Console]::In.ReadLine()
+        if ([string]::IsNullOrWhiteSpace($line)) { break }
+        $line.TrimEnd()
+    }
+    $lines -join "`n"
+}
+
+# Asked once, along with the version, so the build after it runs without stopping again.
+$askNotes = $Publish -and -not $PSBoundParameters.ContainsKey('Notes')
 
 # Raises <Version>, commits just that and pushes it, so the release is built from, and tagged at, what's on GitHub.
 if ($Bump) {
@@ -74,6 +92,7 @@ if ($Bump) {
             default { $Bump }
         }
         if ([version]$Version -le [version]$current) { throw "$Version isn't higher than ${current}: installed copies only update to a higher version." }
+        if ($askNotes) { $Notes = Read-ReleaseNotes $Version; $askNotes = $false }
         $text = $text.Remove($match.Index, $match.Length).Insert($match.Index, "<Version>$Version</Version>")
         [IO.File]::WriteAllText($proj, $text, (New-Object Text.UTF8Encoding($hasBom)))
 
@@ -93,6 +112,7 @@ if ($Bump) {
 if (-not $Version) {
     $Version = ([xml](Get-Content $proj)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
 }
+if ($askNotes) { $Notes = Read-ReleaseNotes $Version }
 Write-Host "Releasing Repo'N'Launcher $Version"
 
 Push-Location $root
@@ -115,10 +135,18 @@ try {
         if ($LASTEXITCODE -ne 0) { Write-Host 'No earlier release downloaded; this one ships as a full update only.' }
     }
 
+    # The notes go in the package, and vpk upload makes them the GitHub release's description.
+    $notesArgs = @()
+    if ($Notes) {
+        $notesFile = Join-Path $root 'release\notes.md'
+        [IO.File]::WriteAllText($notesFile, $Notes, (New-Object Text.UTF8Encoding($false)))
+        $notesArgs = '--releaseNotes', $notesFile
+    }
+
     # Only the Start menu icon: neither installer can offer a choice, so the app asks on its first start whether to
     # add one to the desktop (Services\DesktopIcon.cs).
     dotnet vpk pack --packId RepoNLauncher --packVersion $Version --runtime win-x64 --packDir $appDir --mainExe RepoNLauncher.exe `
-        --packTitle "Repo'N'Launcher" --packAuthors AhHeng --icon $icon --shortcuts StartMenuRoot --msi --outputDir $outDir
+        --packTitle "Repo'N'Launcher" --packAuthors AhHeng --icon $icon --shortcuts StartMenuRoot --msi @notesArgs --outputDir $outDir
     if ($LASTEXITCODE -ne 0) { throw "vpk pack failed ($LASTEXITCODE)" }
 
     if ($Publish) {
