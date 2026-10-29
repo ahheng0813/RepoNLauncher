@@ -24,6 +24,7 @@
         <Border x:Name="Toolbar" Grid.Row="0" Background="{StaticResource Bg.Elevated}" BorderBrush="{StaticResource Border.Subtle}"
                 BorderThickness="0,0,0,1" Padding="10,6" MouseLeave="Toolbar_MouseLeave">
             <DockPanel>
+                <controls:DeviceTools x:Name="Tools" DockPanel.Dock="Bottom" Margin="-6,4,0,0"/>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                     <Button Command="{Binding ToggleFullScreenCommand}">
                         <Button.Style>

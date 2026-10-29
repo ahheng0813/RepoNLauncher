@@ -61,7 +61,14 @@ The files aren't code-signed yet, so Windows may warn before the first run: choo
   - Type in the box under the console to answer the app's prompts. Flutter projects also get **Hot reload** and **Hot restart**.
   - A button opens any local URL the app prints, and you're warned when its ports are already in use.
 - **Environment.** The values from `.env` and `appsettings*.json`.
-- **Phone screen.** Mirrors an Android phone or emulator beside the dashboard through [scrcpy](https://github.com/Genymobile/scrcpy).
+- **Phone screen.** Mirrors an Android phone or emulator beside the dashboard through [scrcpy](https://github.com/Genymobile/scrcpy). The buttons under the device list work on the device picked there, docked or popped out:
+  - **Screenshot:** saves the screen at full resolution to `Pictures\Repo'N'Launcher` and copies it, ready to paste.
+  - **Record screen:** records what's shown to `Videos\Repo'N'Launcher`, with the phone's sound while it plays on this PC (Android 11 or later). Press it again to save; mirroring carries on. Closing the dashboard saves a recording in progress too.
+  - **Record voice:** records the phone's microphone to `Music\Repo'N'Launcher` (Android 11 or later), alongside the mirror. An Android Studio emulator's microphone is this PC's once **Virtual microphone uses host audio input** is on in its Extended controls.
+  - **Camera:** shows the phone's back or front camera instead of its screen (Android 12 or later). Screenshot then takes a photo, as big as the camera is shown (pop out or go full screen for a bigger one), and Record records video with the microphone's sound.
+  - **Location:** gives the device a virtual location. Pick the place on the map: search for a place or address, click the map to put the pin there (or drag the pin), type or paste latitude, longitude (from Google Maps, say), or use this PC's location from Windows. The map and the coordinates follow each other; then press **Set location**. An Android Studio emulator's GPS moves there. A phone (Android 12 or later) reports it to its apps until you give it its real location back, or close the dashboard. The map and place search are [OpenStreetMap](https://www.openstreetmap.org/copyright)'s, so they need the internet.
+  - **Send files:** copies files from this PC to the phone's Download folder. You can also drop them on the buttons.
+  - After each screenshot or recording, the file is shown under the buttons to open or find in its folder.
 - **Android emulators.** The phone button in the Phone screen's header, or **Emulators…** in a Flutter project's Run tab, lists the emulators on this PC to start. You can also create one: pick a name, a size (small phone, medium phone or tablet) and an installed Android version. A started emulator joins the Phone screen and Flutter device lists.
 - **Repos on this PC.** Finds every git repo on your drives and sorts them into **Mine** and **Others** by GitHub owner, so you can add them to the dashboard.
 - **Clone from GitHub.** Lists every repo your GitHub account can see (yours, your organizations' and ones you collaborate on) and marks each **On this PC** or **Not on this PC**, checking the dashboard, the clone folder and your drives. Search by name or description.
@@ -87,7 +94,7 @@ The sign-in is encrypted for your Windows account, and **Sign out** deletes it. 
 
 ## Where settings live
 
-In `%APPDATA%\RepoNLauncher`: `config.json` holds your projects and settings, and `github-sign-in.dat` the encrypted GitHub sign-in.
+In `%APPDATA%\RepoNLauncher`: `config.json` holds your projects and settings, and `github-sign-in.dat` the encrypted GitHub sign-in. The Location map keeps the map pictures it has shown in `%LOCALAPPDATA%\RepoNLauncher\MapTiles` (up to about 200 MB), so it doesn't download them again.
 
 ## Building from source
 

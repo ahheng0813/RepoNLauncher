@@ -1,0 +1,384 @@
+<UserControl x:Class="RepoNLauncher.Controls.DeviceTools"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:RepoNLauncher.Converters"
+             xmlns:local="clr-namespace:RepoNLauncher.Controls"
+             xmlns:models="clr-namespace:RepoNLauncher.Models">
+
+    <!-- The Phone screen's tools, on its PhoneScreenViewModel: in the docked panel and in the pop-out window's toolbar -->
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+        <conv:NullToVisibilityConverter x:Key="NullToVisibility"/>
+        <conv:EnumToVisibilityConverter x:Key="EnumToVisibility"/>
+        <conv:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibility"/>
+
+        <Style x:Key="Note" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+
+        <Style x:Key="FlyoutHeading" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <Style x:Key="Flyout" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource Bg.Elevated}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Border.Strong}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="14,12"/>
+            <Setter Property="Width" Value="300"/>
+        </Style>
+
+        <!-- One choice in a flyout: a check glyph, then the text -->
+        <Style x:Key="ChoiceButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{StaticResource Text.Primary}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="8,6">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Check" TargetType="TextBlock">
+            <Setter Property="Text" Value="&#xE73E;"/>
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- A recording in progress: red dot, what and how long, and its stop button -->
+        <Style x:Key="RecordingPill" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource Danger.Muted}"/>
+            <Setter Property="BorderBrush" Value="#5A2E35"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="7"/>
+            <Setter Property="Padding" Value="10,2,2,2"/>
+            <Setter Property="Margin" Value="0,6,6,0"/>
+        </Style>
+
+        <Style x:Key="Placeholder" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
+            <!-- Where a text box's own text starts: its padding counts twice, round the box and round its text -->
+            <Setter Property="Margin" Value="19,0,10,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
+
+        <!-- Zoom in and out, over the map -->
+        <Style x:Key="MapButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{StaticResource Text.Primary}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Width="26" Height="26" Background="{StaticResource Bg.Elevated}"
+                                BorderBrush="{StaticResource Border.Strong}" BorderThickness="1" CornerRadius="5">
+                            <TextBlock Text="{TemplateBinding Content}" FontFamily="Segoe MDL2 Assets" FontSize="11"
+                                       Foreground="{TemplateBinding Foreground}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TextLink" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{StaticResource Accent.Hover}"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <TextBlock x:Name="Text" Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"
+                                   FontSize="{TemplateBinding FontSize}"/>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Text" Property="TextDecorations" Value="Underline"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <!-- A background, so a file dropped between the buttons lands here too -->
+    <StackPanel Background="Transparent">
+        <WrapPanel>
+            <Button Content="&#xE924;" Style="{StaticResource Button.Ghost}" Command="{Binding TakeScreenshotCommand}"
+                    AutomationProperties.Name="Screenshot"
+                    ToolTip="Screenshot: saves the screen to Pictures\Repo'N'Launcher and copies it to paste. While a camera shows, takes a photo as big as it's shown."/>
+
+            <Button Command="{Binding ToggleScreenRecordingCommand}">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
+                        <Setter Property="Content" Value="&#xE714;"/>
+                        <Setter Property="AutomationProperties.Name" Value="Record the screen"/>
+                        <Setter Property="ToolTip" Value="Record what's shown, the screen or a camera, to Videos\Repo'N'Launcher. It has the phone's sound while that plays on this PC (Android 11 or later)."/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsRecordingScreen}" Value="True">
+                                <Setter Property="Content" Value="&#xE71A;"/>
+                                <Setter Property="Foreground" Value="{StaticResource Danger}"/>
+                                <Setter Property="AutomationProperties.Name" Value="Stop recording and save it"/>
+                                <Setter Property="ToolTip" Value="Stop recording and save it"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+
+            <Button Command="{Binding ToggleVoiceRecordingCommand}">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
+                        <Setter Property="Content" Value="&#xE720;"/>
+                        <Setter Property="AutomationProperties.Name" Value="Record voice"/>
+                        <Setter Property="ToolTip" Value="Record voice from the phone's microphone to Music\Repo'N'Launcher (Android 11 or later). An Android Studio emulator's microphone is this PC's once Virtual microphone uses host audio input is on in its Extended controls."/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsRecordingVoice}" Value="True">
+                                <Setter Property="Content" Value="&#xE71A;"/>
+                                <Setter Property="Foreground" Value="{StaticResource Danger}"/>
+                                <Setter Property="AutomationProperties.Name" Value="Stop recording voice and save it"/>
+                                <Setter Property="ToolTip" Value="Stop recording voice and save it"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+
+            <Button x:Name="CameraButton" Click="CameraButton_Click">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
+                        <Setter Property="Content" Value="&#xE722;"/>
+                        <Setter Property="AutomationProperties.Name" Value="Camera"/>
+                        <Setter Property="ToolTip" Value="Show the phone's back or front camera instead of its screen (Android 12 or later)"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Source}" Value="{x:Static models:MirrorSource.BackCamera}">
+                                <Setter Property="Foreground" Value="{StaticResource Accent.Hover}"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Source}" Value="{x:Static models:MirrorSource.FrontCamera}">
+                                <Setter Property="Foreground" Value="{StaticResource Accent.Hover}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+
+            <Button x:Name="LocationButton" Click="LocationButton_Click">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
+                        <Setter Property="Content" Value="&#xE707;"/>
+                        <Setter Property="AutomationProperties.Name" Value="Location"/>
+                        <Setter Property="ToolTip" Value="Location: give the phone a virtual location, picked on a map, or this PC's"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Location.HasVirtualPhoneLocation}" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource Accent.Hover}"/>
+                                <Setter Property="ToolTip" Value="Location: the phone has a virtual location now"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+
+            <Button Content="&#xE8E5;" Style="{StaticResource Button.Ghost}" Command="{Binding ChooseFilesToSendCommand}"
+                    AutomationProperties.Name="Send files to the phone"
+                    ToolTip="Send files from this PC to the phone's Download folder. You can also drop files on this bar."/>
+
+            <ProgressBar IsIndeterminate="True" Width="40" Height="3" VerticalAlignment="Center" Margin="6,0,0,0"
+                         Visibility="{Binding IsSendingFiles, Converter={StaticResource BoolToVisibility}}"/>
+        </WrapPanel>
+
+        <!-- Recordings in progress -->
+        <WrapPanel>
+            <Border Style="{StaticResource RecordingPill}" Visibility="{Binding IsRecordingScreen, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel Orientation="Horizontal">
+                    <Ellipse Width="8" Height="8" Fill="{StaticResource Danger}" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                    <TextBlock Text="{Binding ScreenRecordingLabel}" Foreground="{StaticResource Danger}" FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding ScreenRecordingTime}" Foreground="{StaticResource Danger}" FontSize="12" FontFamily="Consolas"
+                               VerticalAlignment="Center" Margin="6,0,4,0"/>
+                    <Button Content="&#xE71A;" Style="{StaticResource Button.Ghost}" FontSize="11" Padding="6,4"
+                            Command="{Binding ToggleScreenRecordingCommand}" ToolTip="Stop recording and save it"
+                            AutomationProperties.Name="Stop recording and save it"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource RecordingPill}" Visibility="{Binding IsRecordingVoice, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel Orientation="Horizontal">
+                    <Ellipse Width="8" Height="8" Fill="{StaticResource Danger}" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                    <TextBlock Text="Voice" Foreground="{StaticResource Danger}" FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding VoiceRecordingTime}" Foreground="{StaticResource Danger}" FontSize="12" FontFamily="Consolas"
+                               VerticalAlignment="Center" Margin="6,0,4,0"/>
+                    <Button Content="&#xE71A;" Style="{StaticResource Button.Ghost}" FontSize="11" Padding="6,4"
+                            Command="{Binding ToggleVoiceRecordingCommand}" ToolTip="Stop recording voice and save it"
+                            AutomationProperties.Name="Stop recording voice and save it"/>
+                </StackPanel>
+            </Border>
+        </WrapPanel>
+
+        <!-- What was saved last -->
+        <Border Background="{StaticResource Bg.PanelAlt}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
+                CornerRadius="7" Padding="10,4,2,4" Margin="0,6,0,0"
+                Visibility="{Binding LastCapturePath, Converter={StaticResource NullToVisibility}}">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="&#xE711;" Style="{StaticResource Button.Ghost}" FontSize="10" Padding="6,4"
+                        Command="{Binding DismissLastCaptureCommand}" ToolTip="Hide" AutomationProperties.Name="Hide the saved file"/>
+                <Button DockPanel.Dock="Right" Content="&#xE838;" Style="{StaticResource Button.Ghost}" FontSize="12" Padding="6,4"
+                        Command="{Binding ShowLastCaptureInFolderCommand}" ToolTip="Show in its folder" AutomationProperties.Name="Show in its folder"/>
+                <Button DockPanel.Dock="Right" Content="Open" Style="{StaticResource TextLink}" VerticalAlignment="Center" Margin="8,0,4,0"
+                        Command="{Binding OpenLastCaptureCommand}" ToolTip="{Binding LastCapturePath}"/>
+                <TextBlock Text="{Binding LastCaptureName}" FontSize="11.5" Foreground="{StaticResource Text.Secondary}"
+                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding LastCapturePath}"/>
+            </DockPanel>
+        </Border>
+
+        <!-- Camera: what the mirror shows -->
+        <Popup x:Name="CameraPopup" PlacementTarget="{Binding ElementName=CameraButton}" Placement="Bottom" VerticalOffset="4"
+               AllowsTransparency="True" StaysOpen="False">
+            <Border Style="{StaticResource Flyout}">
+                <StackPanel>
+                    <TextBlock Text="SHOW" Style="{StaticResource FlyoutHeading}"/>
+                    <Button Style="{StaticResource ChoiceButton}" Click="CameraChoice_Click"
+                            Command="{Binding ShowSourceCommand}" CommandParameter="{x:Static models:MirrorSource.Screen}"
+                            AutomationProperties.Name="Show the phone's screen">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Style="{StaticResource Check}"
+                                       Visibility="{Binding Source, Converter={StaticResource EnumToVisibility}, ConverterParameter=Screen}"/>
+                            <TextBlock Text="The phone's screen"/>
+                        </DockPanel>
+                    </Button>
+                    <Button Style="{StaticResource ChoiceButton}" Click="CameraChoice_Click"
+                            Command="{Binding ShowSourceCommand}" CommandParameter="{x:Static models:MirrorSource.BackCamera}"
+                            AutomationProperties.Name="Show the back camera">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Style="{StaticResource Check}"
+                                       Visibility="{Binding Source, Converter={StaticResource EnumToVisibility}, ConverterParameter=BackCamera}"/>
+                            <TextBlock Text="Back camera"/>
+                        </DockPanel>
+                    </Button>
+                    <Button Style="{StaticResource ChoiceButton}" Click="CameraChoice_Click"
+                            Command="{Binding ShowSourceCommand}" CommandParameter="{x:Static models:MirrorSource.FrontCamera}"
+                            AutomationProperties.Name="Show the front camera">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Style="{StaticResource Check}"
+                                       Visibility="{Binding Source, Converter={StaticResource EnumToVisibility}, ConverterParameter=FrontCamera}"/>
+                            <TextBlock Text="Front camera"/>
+                        </DockPanel>
+                    </Button>
+                    <TextBlock Style="{StaticResource Note}" Margin="8,8,0,0"
+                               Text="Cameras need Android 12 or later. While one shows, Screenshot takes a photo, as big as the camera is shown (pop out for a bigger one), and Record records video with the microphone's sound."/>
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- Location: a virtual one, pinned on the map, found by name, typed or this PC's -->
+        <Popup x:Name="LocationPopup" PlacementTarget="{Binding ElementName=LocationButton}" Placement="Bottom" VerticalOffset="4"
+               AllowsTransparency="True" StaysOpen="False" DataContext="{Binding Location}">
+            <Border Style="{StaticResource Flyout}" Width="380">
+                <StackPanel>
+                    <TextBlock Text="LOCATION" Style="{StaticResource FlyoutHeading}"/>
+
+                    <Grid>
+                        <TextBox x:Name="SearchBox" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Padding="8,6,34,6"
+                                 AutomationProperties.Name="Search for a place" KeyDown="SearchBox_KeyDown"/>
+                        <TextBlock Text="Search for a place or address" Style="{StaticResource Placeholder}"
+                                   Visibility="{Binding SearchText, Converter={StaticResource StringNotEmptyToVisibility}, ConverterParameter=Invert}"/>
+                        <Button Content="&#xE721;" Style="{StaticResource Button.Ghost}" FontSize="12" HorizontalAlignment="Right" Margin="0,0,3,0"
+                                Command="{Binding SearchCommand}" ToolTip="Search OpenStreetMap" AutomationProperties.Name="Search"/>
+                    </Grid>
+                    <TextBlock Text="{Binding SearchNote}" Style="{StaticResource Note}" Margin="0,5,0,0"
+                               Visibility="{Binding SearchNote, Converter={StaticResource StringNotEmptyToVisibility}}"/>
+
+                    <!-- What the search found; the one on the map has the check -->
+                    <ItemsControl ItemsSource="{Binding Places}" Margin="0,4,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Style="{StaticResource ChoiceButton}" ToolTip="{Binding Place.FullName}"
+                                        AutomationProperties.Name="{Binding Place.FullName}" CommandParameter="{Binding}"
+                                        Command="{Binding DataContext.ChoosePlaceCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Right" Style="{StaticResource Check}" Margin="8,0,0,0"
+                                                   Visibility="{Binding IsChosen, Converter={StaticResource BoolToVisibility}}"/>
+                                        <TextBlock TextTrimming="CharacterEllipsis" FontSize="12.5">
+                                            <Run Text="{Binding Place.Name, Mode=OneWay}"/>
+                                            <Run Text="{Binding Place.Address, Mode=OneWay}" Foreground="{StaticResource Text.Muted}" FontSize="11.5"/>
+                                        </TextBlock>
+                                    </DockPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Grid Height="230" Margin="0,8,0,0">
+                        <local:TileMap x:Name="Map" Pin="{Binding Pin}" Zoom="{Binding MapZoom}" AutomationProperties.Name="Map"/>
+                        <Border BorderBrush="{StaticResource Border.Strong}" BorderThickness="1" CornerRadius="6" IsHitTestVisible="False"/>
+                        <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,6,6,0">
+                            <Button Content="&#xE710;" Style="{StaticResource MapButton}" Click="ZoomIn_Click"
+                                    ToolTip="Zoom in" AutomationProperties.Name="Zoom in"/>
+                            <Button Content="&#xE738;" Style="{StaticResource MapButton}" Click="ZoomOut_Click" Margin="0,4,0,0"
+                                    ToolTip="Zoom out" AutomationProperties.Name="Zoom out"/>
+                        </StackPanel>
+                        <!-- The map's data is OpenStreetMap's, which asks for this on the map itself -->
+                        <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,1,1" Padding="5,1,6,2"
+                                Background="#D9FFFFFF" CornerRadius="4,0,5,0">
+                            <Button Content="© OpenStreetMap contributors" Style="{StaticResource TextLink}" Foreground="#34408A" FontSize="10"
+                                    Click="MapCopyright_Click" ToolTip="OpenStreetMap's copyright and licence"/>
+                        </Border>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Note}" Margin="0,5,0,0"
+                               Text="Click the map to put the pin there, or drag the pin. Drag to look around, and scroll to zoom."/>
+
+                    <Grid Margin="0,10,0,0">
+                        <TextBox x:Name="CoordinatesBox" Text="{Binding Coordinates, UpdateSourceTrigger=PropertyChanged}"
+                                 AutomationProperties.Name="Latitude and longitude" KeyDown="CoordinatesBox_KeyDown"
+                                 ToolTip="The pin's latitude, longitude. Type or paste others, from Google Maps say, to move it."/>
+                        <TextBlock Text="Latitude, longitude, e.g. 3.1390, 101.6869" Style="{StaticResource Placeholder}"
+                                   Visibility="{Binding Coordinates, Converter={StaticResource StringNotEmptyToVisibility}, ConverterParameter=Invert}"/>
+                    </Grid>
+
+                    <WrapPanel Margin="0,10,0,0">
+                        <Button Content="Set location" Style="{StaticResource Button.Primary}" Margin="0,0,8,6" Command="{Binding SetCommand}"/>
+                        <Button Content="Use this PC's location" Style="{StaticResource Button.Secondary}" Margin="0,0,0,6"
+                                Command="{Binding UsePcLocationCommand}" ToolTip="Where Windows says this PC is"/>
+                    </WrapPanel>
+                    <Button Content="Give the phone its real location back" Style="{StaticResource Button.Secondary}" Margin="0,0,0,6"
+                            HorizontalAlignment="Left" Command="{Binding UseRealLocationCommand}"
+                            Visibility="{Binding HasVirtualPhoneLocation, Converter={StaticResource BoolToVisibility}}"/>
+
+                    <TextBlock Text="{Binding Status}" Foreground="{StaticResource Text.Secondary}" FontSize="12" TextWrapping="Wrap"
+                               Margin="0,4,0,0" Visibility="{Binding Status, Converter={StaticResource StringNotEmptyToVisibility}}"/>
+
+                    <DockPanel Margin="0,10,0,0">
+                        <Button DockPanel.Dock="Right" Content="Open Google Maps" Style="{StaticResource TextLink}" Command="{Binding OpenMapCommand}"
+                                VerticalAlignment="Top" Margin="10,0,0,0" ToolTip="Google Maps at the pin, for the places it knows that this map doesn't"/>
+                        <TextBlock Style="{StaticResource Note}"
+                                   Text="An Android Studio emulator moves its GPS. A phone needs Android 12 or later, and gets its real location back when the dashboard closes."/>
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+        </Popup>
+    </StackPanel>
+</UserControl>

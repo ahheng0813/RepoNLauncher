@@ -87,7 +87,7 @@ public partial class MainViewModel : ObservableObject
         _processRunner = processRunner;
         _ports = ports;
         _ides = ides;
-        PhoneScreen = new PhoneScreenViewModel(scrcpy);
+        PhoneScreen = new PhoneScreenViewModel(scrcpy, new DeviceToolsService(scrcpy));
         GitHub = new GitHubAccountViewModel(gitHub);
         PcRepos = new PcReposViewModel(GitHub, IsOnDashboard, paths => AddProjectsFrom("Repos on this PC", paths));
         AiUsage = aiUsage;
