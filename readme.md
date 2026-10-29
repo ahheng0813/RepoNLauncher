@@ -50,6 +50,7 @@ The files aren't code-signed yet, so Windows may warn before the first run: choo
 - **Projects in folder sections.** Add a project folder, or scan a folder for every git repo in it. Repos are grouped by folder into collapsible sections. Tick repos, or a whole section, for **Fetch Selected**.
 - **Overview.** The repo's status, **Fetch Latest**, and its project type. **Open in** has Explorer, Visual Studio, Android Studio, VS Code, the repo's page on **GitHub** (when it has a GitHub remote) and any apps you add.
   - **Branch:** the branch checked out now. Pick another under **Switch to** and press **Switch**, or make one with **New branch…**.
+  - **Publish branch:** shown while the current branch is only on this PC, such as one just made with **New branch…**. It pushes the branch to the remote, and **Fetch Latest** pulls it from there afterwards.
   - **Merge from:** the branch **Fetch Latest** merges in after pulling. Pick one and press **Update default** to keep it, or **Merge now** to merge it just once.
   - **Create Pull Request:** from the current branch, with the title and description filled in from its commits.
 - **Changes.** Changed files with diffs. Commit, discard, stash, and resolve merge conflicts.
@@ -62,6 +63,10 @@ The files aren't code-signed yet, so Windows may warn before the first run: choo
 - **Phone screen.** Mirrors an Android phone or emulator beside the dashboard through [scrcpy](https://github.com/Genymobile/scrcpy).
 - **Android emulators.** The phone button in the Phone screen's header, or **Emulators…** in a Flutter project's Run tab, lists the emulators on this PC to start. You can also create one: pick a name, a size (small phone, medium phone or tablet) and an installed Android version. A started emulator joins the Phone screen and Flutter device lists.
 - **Repos on this PC.** Finds every git repo on your drives and sorts them into **Mine** and **Others** by GitHub owner, so you can add them to the dashboard.
+- **Clone from GitHub.** Lists every repo your GitHub account can see (yours, your organizations' and ones you collaborate on) and marks each **On this PC** or **Not on this PC**, checking the dashboard, the clone folder and your drives. Search by name or description.
+  - Tick as many as you like, pick a branch for any that shouldn't use the default, and press **Clone**. They're cloned one after another into the **Clone into** folder, each in a folder named after the repo, and added to the dashboard.
+  - **Stop** cancels the clone in progress and removes its half-made folder.
+  - A repo already on this PC shows where it is, with **Add to dashboard** if it isn't there yet.
 - **AI Chat.** Chat with Claude Code or Codex about a project, using the one installed on this PC.
   - Type `@` to mention a file, and paste or drop images and files.
   - Answer Claude's permission prompts, questions and plans in the chat.
@@ -72,12 +77,12 @@ The files aren't code-signed yet, so Windows may warn before the first run: choo
 
 ## GitHub sign-in
 
-Optional: only **Repos on this PC** and **Create Pull Request** use it.
+Optional: only **Repos on this PC**, **Clone from GitHub** and **Create Pull Request** use it.
 
 - **Sign in with browser** uses the GitHub sign-in Git already has, or opens GitHub in your browser.
 - **Token:** paste a personal access token with the `repo` scope.
 
-The sign-in is encrypted for your Windows account, and **Sign out** deletes it.
+The sign-in is encrypted for your Windows account, and **Sign out** deletes it. Cloning, like fetching and pushing, uses Git's own GitHub sign-in, so for a private repo Git asks for one if it doesn't have it yet.
 
 ## Where settings live
 

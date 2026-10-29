@@ -240,6 +240,8 @@
                         <Button Content="Rescan All" Style="{StaticResource Button.Secondary}" Command="{Binding RescanAllFoldersCommand}"/>
                         <Button Content="Repos on this PC" Style="{StaticResource Button.Secondary}" Click="OpenPcRepos_Click"
                                 ToolTip="Find every repo on this PC and see which are yours on GitHub (needs GitHub sign-in)"/>
+                        <Button Content="Clone from GitHub" Style="{StaticResource Button.Secondary}" Click="OpenCloneRepos_Click"
+                                ToolTip="List your GitHub repos, see which this PC has, and clone the others (needs GitHub sign-in)"/>
                         <Border Width="1" Background="{StaticResource Border.Subtle}" Margin="4,2,12,2"/>
                         <Button Content="AI Chat" Style="{StaticResource Button.Secondary}" Click="OpenAiChat_Click"
                                 ToolTip="Chat with Claude Code or Codex in a project, and read your saved chats"/>
@@ -251,7 +253,7 @@
                             </StackPanel>
                         </Button>
                         <Border Width="1" Background="{StaticResource Border.Subtle}" Margin="12,2,12,2"/>
-                        <!-- GitHub account: only Repos on this PC and creating pull requests need it -->
+                        <!-- GitHub account: only Repos on this PC, Clone from GitHub and creating pull requests need it -->
                         <Button Style="{StaticResource Button.Secondary}" Margin="0" Click="SignInToGitHub_Click"
                                 Visibility="{Binding GitHub.Login, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}">
                             <StackPanel Orientation="Horizontal">
@@ -477,7 +479,8 @@
                                         </Border>
                                         <TextBlock Text="current" Foreground="{StaticResource Text.Muted}" FontSize="11.5"
                                                    VerticalAlignment="Center" Margin="8,0,0,0"/>
-                                        <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="12" VerticalAlignment="Center" Margin="16,0,0,0">
+                                        <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="12" VerticalAlignment="Center" Margin="16,0,0,0"
+                                                   Visibility="{Binding IsPublished, Converter={StaticResource BoolToVisibility}}">
                                             <TextBlock.Text>
                                                 <MultiBinding StringFormat="{}ahead {0} · behind {1}">
                                                     <Binding Path="Ahead"/>
@@ -485,6 +488,20 @@
                                                 </MultiBinding>
                                             </TextBlock.Text>
                                         </TextBlock>
+                                        <!-- A branch made here that the remote doesn't have yet -->
+                                        <TextBlock Text="{Binding NotPublishedText}" Foreground="{StaticResource Warning}" FontSize="12"
+                                                   VerticalAlignment="Center" Margin="16,0,10,0"
+                                                   Visibility="{Binding NeedsPublish, Converter={StaticResource BoolToVisibility}}"/>
+                                        <Button Style="{StaticResource Button.Primary}" Margin="0" Padding="12,5"
+                                                Command="{Binding PublishBranchCommand}" AutomationProperties.Name="Publish branch"
+                                                Visibility="{Binding NeedsPublish, Converter={StaticResource BoolToVisibility}}"
+                                                ToolTip="Push this branch to the remote, and pull from and push to it from now on">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE898;" FontFamily="Segoe MDL2 Assets" Foreground="White" FontSize="12"
+                                                           VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                                <TextBlock Text="Publish branch" Foreground="White" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                        </Button>
                                     </StackPanel>
                                     <!-- Picking only chooses; Switch does it. One only the remote has gets a local copy first. -->
                                     <TextBlock Grid.Row="2" Grid.Column="0" Text="SWITCH TO" Style="{StaticResource SectionLabel}"

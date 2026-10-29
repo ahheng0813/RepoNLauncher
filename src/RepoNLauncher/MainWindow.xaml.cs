@@ -12,6 +12,7 @@ public partial class MainWindow : Window
 {
     private PhoneScreenWindow? _phoneWindow;
     private PcReposWindow? _pcReposWindow;
+    private CloneReposWindow? _cloneReposWindow;
     private AiUsageWindow? _aiUsageWindow;
     private AgentChatWindow? _agentChatWindow;
     private EmulatorsWindow? _emulatorsWindow;
@@ -156,6 +157,21 @@ public partial class MainWindow : Window
         _pcReposWindow = new PcReposWindow(vm.PcRepos) { Owner = this };
         _pcReposWindow.Closed += (_, _) => _pcReposWindow = null;
         _pcReposWindow.Show();
+    }
+
+    private void OpenCloneRepos_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm) return;
+        if (!vm.GitHub.IsSignedIn && !SignInToGitHub()) return;
+
+        if (_cloneReposWindow != null)
+        {
+            _cloneReposWindow.Activate();
+            return;
+        }
+        _cloneReposWindow = new CloneReposWindow(vm.CloneRepos) { Owner = this };
+        _cloneReposWindow.Closed += (_, _) => _cloneReposWindow = null;
+        _cloneReposWindow.Show();
     }
 
     private void OpenEmulators_Click(object sender, RoutedEventArgs e)
