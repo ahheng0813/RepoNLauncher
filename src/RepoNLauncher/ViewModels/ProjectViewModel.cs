@@ -137,8 +137,8 @@ public partial class ProjectViewModel : ObservableObject
 
     /// <summary>The current branch has a branch on a remote that it pulls from and pushes to.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(NeedsPublish), nameof(NeedsPush))]
-    [NotifyCanExecuteChangedFor(nameof(PublishBranchCommand), nameof(PushCommand))]
+    [NotifyPropertyChangedFor(nameof(NeedsPublish), nameof(NeedsPush), nameof(NeedsRebase))]
+    [NotifyCanExecuteChangedFor(nameof(PublishBranchCommand), nameof(PushCommand), nameof(RebaseCommand))]
     private bool _isPublished = true;
 
     /// <summary>Where Publish branch pushes to: origin, else the repo's first remote; null when it has none.</summary>
@@ -150,10 +150,15 @@ public partial class ProjectViewModel : ObservableObject
 
     /// <summary>Commits on the current branch that the remote branch it pulls from doesn't have yet.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(NeedsPush))]
-    [NotifyCanExecuteChangedFor(nameof(PushCommand))]
+    [NotifyPropertyChangedFor(nameof(NeedsPush), nameof(NeedsRebase))]
+    [NotifyCanExecuteChangedFor(nameof(PushCommand), nameof(RebaseCommand))]
     private int _ahead;
-    [ObservableProperty] private int _behind;
+
+    /// <summary>Commits on the remote branch it pulls from that the current branch doesn't have yet, as of the last fetch.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NeedsPush), nameof(NeedsRebase))]
+    [NotifyCanExecuteChangedFor(nameof(PushCommand), nameof(RebaseCommand))]
+    private int _behind;
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string _statusMessage = string.Empty;
     [ObservableProperty]
@@ -209,8 +214,15 @@ public partial class ProjectViewModel : ObservableObject
 
     public string NotPublishedText => $"not on {PublishRemote} yet";
 
-    /// <summary>The current branch is on the remote but has commits made here that the remote doesn't, so Push is offered.</summary>
-    public bool NeedsPush => IsPublished && Ahead > 0;
+    /// <summary>The current branch is on the remote but has commits made here that the remote doesn't, so Push is offered.
+    /// Not while the remote also has new ones: the push would be turned down, so Rebase is offered instead.</summary>
+    public bool NeedsPush => IsPublished && Ahead > 0 && Behind == 0;
+
+    /// <summary>
+    /// The current branch and the remote one it pulls from each have commits the other doesn't, so neither a plain pull
+    /// nor a push goes through. Rebase puts the commits made here on top of the remote's.
+    /// </summary>
+    public bool NeedsRebase => IsPublished && Ahead > 0 && Behind > 0;
 
     /// <summary>A branch other than the default is picked and not saved.</summary>
     public bool IsMergePickUnsaved => SelectedMergeSource != null && SelectedMergeSource.Branch != MergeSourceFor(Branch);
@@ -463,6 +475,47 @@ public partial class ProjectViewModel : ObservableObject
         }
     }
 
+    /// <summary>Puts the commits made here on top of the ones the remote branch has, so the branch can be pulled and pushed again.</summary>
+    [RelayCommand(CanExecute = nameof(NeedsRebase))]
+    private async Task RebaseAsync()
+    {
+        var branch = Branch;
+        var count = Ahead;
+        IsBusy = true;
+        StatusMessage = $"Rebasing {branch}...";
+        try
+        {
+            var message = await PullRebaseAsync(branch);
+            await RefreshStatusAsync();
+            await LoadChangesAsync();
+            await LoadCommitsAsync();
+            StatusMessage = message ?? $"Rebased {branch}: your {count} commit{(count == 1 ? "" : "s")} now come after the remote's. Press Push to send them.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    // Pulls with the commits made here put back on top, for Rebase and for Commit's pull first. Returns why it didn't
+    // work out, or null when it did. A rebase that clashes is undone, so the branch is just as it was.
+    private async Task<string?> PullRebaseAsync(string branch)
+    {
+        var result = await _git.PullRebaseAsync(Path);
+        if (_git.IsRebasing(Path))
+        {
+            await _git.AbortRebaseAsync(Path);
+            return $"Couldn't rebase {branch}: your commits change the same lines as the remote's, so nothing was changed. "
+                + "Merge them instead with git pull --no-rebase, then resolve the clash in the Changes tab.";
+        }
+        if (!result.Success) return $"Rebase failed: {result.Output}";
+        // git still exits with 0 when the uncommitted changes it set aside clash with what came in.
+        if (result.Output.Contains("autostash resulted in conflicts", StringComparison.OrdinalIgnoreCase))
+            return "Pulled, but your uncommitted changes clash with what came in: resolve the conflicted files in the Changes tab. "
+                + "A copy of your changes is kept in the stash list.";
+        return null;
+    }
+
     [RelayCommand]
     public async Task FetchLatestAsync()
     {
@@ -497,8 +550,12 @@ public partial class ProjectViewModel : ObservableObject
 
             if (pulled && MergeSourceFor(branch) is { } source) message += " " + await MergeInAsync(branch, source);
 
-            StatusMessage = message;
             await RefreshStatusAsync();
+            // The pull fetched first, so ahead and behind now show both sides have commits the other doesn't.
+            if (!pulled && NeedsRebase)
+                message = $"Couldn't pull: {Branch} has {Ahead} commit{(Ahead == 1 ? "" : "s")} made here and the remote has {Behind} new one{(Behind == 1 ? "" : "s")}. "
+                    + "Press Rebase to put yours on top of the remote's.";
+            StatusMessage = message;
             await LoadChangesAsync();
         }
         finally
@@ -590,6 +647,7 @@ public partial class ProjectViewModel : ObservableObject
             StatusMessage = "Enter a commit message first.";
             return;
         }
+        if (!await PullBeforeCommitAsync()) return;
 
         var result = await _git.CommitAllAsync(Path, CommitMessage.Trim());
         Report(result, "Committed all changes.", "Commit failed");
@@ -599,6 +657,58 @@ public partial class ProjectViewModel : ObservableObject
         await RefreshStatusAsync();
         if (result.Success && NeedsPush) StatusMessage += " It's only on this PC until you press Push.";
         await LoadCommitsAsync();
+    }
+
+    // A commit made on top of an old copy of the branch splits it from the remote's, and then neither a pull nor a push
+    // goes through. So when the remote has new commits, offer to set the changes aside, pull, and put them back first.
+    // Returns whether to go on with the commit.
+    private async Task<bool> PullBeforeCommitAsync()
+    {
+        if (!IsPublished) return true;
+
+        StatusMessage = "Checking the remote for new commits...";
+        // Offline, the fetch fails and the check goes on with what git already knows.
+        await _git.FetchAsync(Path);
+        await RefreshStatusAsync();
+        if (Behind == 0)
+        {
+            StatusMessage = string.Empty;
+            return true;
+        }
+
+        var upstream = await _git.GetUpstreamAsync(Path) ?? "The remote";
+        var answer = MessageBox.Show(
+            $"{upstream} has {Behind} commit{(Behind == 1 ? "" : "s")} that this PC doesn't have yet.\n\n" +
+            "Stash your changes, pull the latest, then put your changes back and commit?\n\n" +
+            "No commits on top of the old copy; the branch then needs a Rebase before it can be pulled or pushed.",
+            "Pull the latest first?", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+        if (answer == MessageBoxResult.Cancel)
+        {
+            StatusMessage = "Commit cancelled.";
+            return false;
+        }
+        if (answer == MessageBoxResult.No) return true;
+
+        IsBusy = true;
+        StatusMessage = "Pulling the latest first...";
+        try
+        {
+            var problem = await PullRebaseAsync(Branch);
+            await RefreshStatusAsync();
+            await LoadChangesAsync();
+            await LoadCommitsAsync();
+            if (problem != null)
+            {
+                StatusMessage = problem;
+                return false;
+            }
+            StatusMessage = string.Empty;
+            return true;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]

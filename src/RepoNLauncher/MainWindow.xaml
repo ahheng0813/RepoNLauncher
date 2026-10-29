@@ -499,6 +499,17 @@
                                                 <TextBlock Text="Push" Foreground="White" FontWeight="SemiBold"/>
                                             </StackPanel>
                                         </Button>
+                                        <!-- Both this branch and the remote one have commits the other doesn't, so pull and push both fail -->
+                                        <Button Style="{StaticResource Button.Primary}" Margin="10,0,0,0" Padding="12,5"
+                                                Command="{Binding RebaseCommand}" AutomationProperties.Name="Rebase"
+                                                Visibility="{Binding NeedsRebase, Converter={StaticResource BoolToVisibility}}"
+                                                ToolTip="Pull the remote's new commits and put the ones made here on top of them, so the branch can be pushed">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE8EE;" FontFamily="Segoe MDL2 Assets" Foreground="White" FontSize="12"
+                                                           VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                                <TextBlock Text="Rebase" Foreground="White" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                        </Button>
                                         <!-- A branch made here that the remote doesn't have yet -->
                                         <TextBlock Text="{Binding NotPublishedText}" Foreground="{StaticResource Warning}" FontSize="12"
                                                    VerticalAlignment="Center" Margin="16,0,10,0"

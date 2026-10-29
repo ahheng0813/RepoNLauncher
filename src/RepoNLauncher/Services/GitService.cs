@@ -12,6 +12,15 @@ public interface IGitService
     bool IsGitRepo(string path);
     bool HasMergeConflict(string path);
     Task<GitPullResult> PullAsync(string path, CancellationToken ct = default);
+
+    /// <summary>
+    /// Pulls, then puts the current branch's own commits back on top of what came in. Uncommitted changes are set aside
+    /// meanwhile and put back after; when they clash with what came in, the files are left conflicted and a copy stays
+    /// in the stash list. A rebase that stops on a clash is left in progress (<see cref="IsRebasing"/>).
+    /// </summary>
+    Task<GitPullResult> PullRebaseAsync(string path, CancellationToken ct = default);
+    bool IsRebasing(string path);
+    Task<GitPullResult> AbortRebaseAsync(string path, CancellationToken ct = default);
     Task<GitPullResult> MergeAsync(string path, string branch, CancellationToken ct = default);
     Task<GitPullResult> FetchAsync(string path, CancellationToken ct = default);
     Task<GitPullResult> PushAsync(string path, string remote, string branch, CancellationToken ct = default);
@@ -97,6 +106,15 @@ public class GitService : IGitService
 
     public async Task<GitPullResult> PullAsync(string path, CancellationToken ct = default) =>
         BuildResult(await _runner.RunCaptureAsync(path, "git pull --ff-only", ct));
+
+    public async Task<GitPullResult> PullRebaseAsync(string path, CancellationToken ct = default) =>
+        BuildResult(await _runner.RunCaptureAsync(path, "git pull --rebase --autostash", ct));
+
+    public bool IsRebasing(string path) =>
+        Directory.Exists(Path.Combine(path, ".git", "rebase-merge")) || Directory.Exists(Path.Combine(path, ".git", "rebase-apply"));
+
+    public async Task<GitPullResult> AbortRebaseAsync(string path, CancellationToken ct = default) =>
+        BuildResult(await _runner.RunCaptureAsync(path, "git rebase --abort", ct));
 
     // Commands go through cmd.exe, so branch names are quoted: git allows & ( ) and the like in them.
     public async Task<GitPullResult> MergeAsync(string path, string branch, CancellationToken ct = default) =>
