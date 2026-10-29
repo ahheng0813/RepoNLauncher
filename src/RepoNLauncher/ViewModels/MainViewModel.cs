@@ -35,6 +35,8 @@ public partial class MainViewModel : ObservableObject
 
     public PcReposViewModel PcRepos { get; }
 
+    public CloneReposViewModel CloneRepos { get; }
+
     public AiUsageViewModel AiUsage { get; }
 
     public AgentChatViewModel AgentChat { get; }
@@ -87,7 +89,7 @@ public partial class MainViewModel : ObservableObject
         _ides = ides;
         PhoneScreen = new PhoneScreenViewModel(scrcpy);
         GitHub = new GitHubAccountViewModel(gitHub);
-        PcRepos = new PcReposViewModel(GitHub, IsOnDashboard, AddProjectsFromPc);
+        PcRepos = new PcReposViewModel(GitHub, IsOnDashboard, paths => AddProjectsFrom("Repos on this PC", paths));
         AiUsage = aiUsage;
         Updates = updates;
         Emulators = new EmulatorsViewModel(emulators);
@@ -95,6 +97,8 @@ public partial class MainViewModel : ObservableObject
         AgentChat = new AgentChatViewModel(() => Projects.Select(p => new ProjectOption(p.Name, p.Path)), () => SelectedProject?.Path);
 
         _config = _configService.Load();
+        CloneRepos = new CloneReposViewModel(GitHub, git, IsOnDashboard, paths => AddProjectsFrom("Clone from GitHub", paths),
+            () => _config.Projects.Select(p => p.Path), DefaultCloneFolder(), SaveCloneFolder);
         LoadProjectsFromConfig();
         foreach (var app in _config.OpenWithApps) OpenWithApps.Add(app);
 
@@ -286,12 +290,24 @@ public partial class MainViewModel : ObservableObject
         GlobalStatus = $"Scan found {discovered.Count} repo(s), added {addedCount} new project(s).";
     }
 
-    private int AddProjectsFromPc(IReadOnlyList<string> paths)
+    private int AddProjectsFrom(string source, IReadOnlyList<string> paths)
     {
         var added = paths.Count(path => AddProjectIfNew(path, isAutoDiscovered: false));
         if (added > 0) RebuildProjectTree();
-        GlobalStatus = $"Added {added} repo(s) from Repos on this PC.";
+        GlobalStatus = $"Added {added} repo(s) from {source}.";
         return added;
+    }
+
+    // The folder used last time; at first the first scanned folder, so clones land in a section of the project list.
+    private string DefaultCloneFolder() =>
+        _config.CloneFolder ?? _config.ScanFolders.FirstOrDefault() ??
+        System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "source", "repos");
+
+    private void SaveCloneFolder(string folder)
+    {
+        if (string.Equals(_config.CloneFolder, folder, StringComparison.OrdinalIgnoreCase)) return;
+        _config.CloneFolder = folder;
+        PersistConfig();
     }
 
     private bool IsOnDashboard(string path) =>

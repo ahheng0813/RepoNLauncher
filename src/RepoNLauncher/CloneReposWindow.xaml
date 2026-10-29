@@ -1,0 +1,317 @@
+<Window x:Class="RepoNLauncher.CloneReposWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="clr-namespace:RepoNLauncher.Converters"
+        xmlns:vm="clr-namespace:RepoNLauncher.ViewModels"
+        Title="Clone from GitHub - Repo'N'Launcher" Width="1060" Height="740" MinWidth="760" MinHeight="460"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource Bg.App}"
+        FontFamily="Segoe UI">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+        <conv:InverseBooleanConverter x:Key="InverseBoolean"/>
+        <conv:NullToVisibilityConverter x:Key="NullToVisibility"/>
+        <conv:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibility"/>
+        <conv:EnumEqualsConverter x:Key="EnumEquals"/>
+
+        <!-- One segment of the All / Not on this PC / On this PC switch. Its text follows the button's Foreground. -->
+        <Style x:Key="FilterTab" TargetType="RadioButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="14,6" Margin="3">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Accent.Muted}"/>
+                                <Setter Property="Foreground" Value="{StaticResource Text.Primary}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="FilterTabText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/>
+        </Style>
+
+        <Style x:Key="FilterTabCount" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="Margin" Value="7,0,0,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="Badge" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource Bg.PanelAlt}"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="6,1"/>
+            <Setter Property="Margin" Value="8,0,0,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="BadgeText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="FontSize" Value="10.5"/>
+            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+        </Style>
+
+        <DataTemplate DataType="{x:Type vm:CloneRepoViewModel}">
+            <Border x:Name="Row" Background="Transparent" CornerRadius="7" Padding="10,8" Margin="0,0,0,2">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <CheckBox Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0"
+                              IsChecked="{Binding IsChecked, Mode=TwoWay}" IsEnabled="{Binding CanCheck}"
+                              AutomationProperties.Name="{Binding FullName, StringFormat='Select {0}'}"/>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding FullName}" FontWeight="SemiBold" FontSize="13.5"/>
+                            <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource Text.Muted}"
+                                       VerticalAlignment="Center" Margin="8,0,0,0" ToolTip="Private repo"
+                                       Visibility="{Binding Repo.IsPrivate, Converter={StaticResource BoolToVisibility}}"/>
+                            <Border Style="{StaticResource Badge}" Visibility="{Binding Repo.IsFork, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="Fork" Style="{StaticResource BadgeText}"/>
+                            </Border>
+                            <Border Style="{StaticResource Badge}" Visibility="{Binding Repo.IsArchived, Converter={StaticResource BoolToVisibility}}"
+                                    ToolTip="Read-only on GitHub">
+                                <TextBlock Text="Archived" Style="{StaticResource BadgeText}"/>
+                            </Border>
+                            <Border Style="{StaticResource Badge}" Visibility="{Binding IsOnDashboard, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="On dashboard" Style="{StaticResource BadgeText}"/>
+                            </Border>
+                        </StackPanel>
+                        <TextBlock FontSize="11.5" Foreground="{StaticResource Text.Muted}" TextTrimming="CharacterEllipsis" Margin="0,3,0,0">
+                            <Run Text="{Binding PushedText, Mode=OneWay}"/>
+                            <Run x:Name="DescriptionDot" Text=" · "/>
+                            <Run Text="{Binding Repo.Description, Mode=OneWay}" Foreground="{StaticResource Text.Secondary}"/>
+                        </TextBlock>
+                        <TextBlock x:Name="CloneText" Text="{Binding CloneText}" FontSize="12" Foreground="{StaticResource Cyan}"
+                                   TextWrapping="Wrap" Margin="0,4,0,0" ToolTip="{Binding CloneText}"
+                                   Visibility="{Binding CloneText, Converter={StaticResource StringNotEmptyToVisibility}}"/>
+                    </StackPanel>
+
+                    <!-- Not on this PC: the branch to check out once it's cloned -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0"
+                                Visibility="{Binding LocalPath, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}">
+                        <TextBlock Text="Branch" Foreground="{StaticResource Text.Muted}" FontSize="11.5" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <ComboBox Width="200" Height="30" ItemsSource="{Binding Branches}" SelectedItem="{Binding Branch}"
+                                  IsEnabled="{Binding CanPickBranch}" DropDownOpened="Branches_DropDownOpened"
+                                  AutomationProperties.Name="{Binding FullName, StringFormat='Branch for {0}'}"
+                                  ToolTip="The branch to check out. Opening the list gets the repo's branches from GitHub.">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock TextTrimming="CharacterEllipsis">
+                                        <Run Text="{Binding Name, Mode=OneWay}" FontFamily="Consolas"/>
+                                        <Run Text="{Binding Note, Mode=OneWay}" Foreground="{StaticResource Text.Muted}" FontSize="11"/>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- On this PC: where, and adding it to the dashboard -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0"
+                                Visibility="{Binding IsOnPc, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="{Binding LocalPath}" FontFamily="Consolas" FontSize="11" Foreground="{StaticResource Text.Secondary}"
+                                   VerticalAlignment="Center" MaxWidth="280" TextTrimming="CharacterEllipsis" ToolTip="{Binding LocalPath}"/>
+                        <Button Content="Add to dashboard" Style="{StaticResource Button.Secondary}" Margin="10,0,0,0" Padding="10,4"
+                                Command="{Binding DataContext.AddToDashboardCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="{Binding}"
+                                AutomationProperties.Name="{Binding FullName, StringFormat='Add {0} to dashboard'}"
+                                Visibility="{Binding CanAddToDashboard, Converter={StaticResource BoolToVisibility}}"/>
+                    </StackPanel>
+
+                    <Border Grid.Column="3" x:Name="Chip" CornerRadius="10" Padding="10,2" MinWidth="96" VerticalAlignment="Center"
+                            Background="{StaticResource Bg.PanelAlt}">
+                        <TextBlock x:Name="ChipText" Text="{Binding LocalLabel}" FontSize="11" FontWeight="SemiBold"
+                                   Foreground="{StaticResource Text.Muted}" HorizontalAlignment="Center"/>
+                    </Border>
+                </Grid>
+            </Border>
+            <DataTemplate.Triggers>
+                <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Row" Property="Background" Value="{StaticResource Bg.Hover}"/>
+                </Trigger>
+                <DataTrigger Binding="{Binding Repo.Description}" Value="{x:Null}">
+                    <Setter TargetName="DescriptionDot" Property="Text" Value=""/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsOnPc}" Value="True">
+                    <Setter TargetName="Chip" Property="Background" Value="{StaticResource Accent.Muted}"/>
+                    <Setter TargetName="ChipText" Property="Foreground" Value="{StaticResource Accent.Hover}"/>
+                    <Setter TargetName="Chip" Property="ToolTip" Value="{Binding LocalPath}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding CloneState}" Value="Failed">
+                    <Setter TargetName="CloneText" Property="Foreground" Value="{StaticResource Danger}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding CloneState}" Value="Done">
+                    <Setter TargetName="CloneText" Property="Foreground" Value="{StaticResource Success}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding CloneState}" Value="Waiting">
+                    <Setter TargetName="CloneText" Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+    </Window.Resources>
+
+    <DockPanel Margin="20">
+        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,14">
+            <TextBlock Text="Clone from GitHub" FontSize="17" FontWeight="SemiBold"/>
+            <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="12.5" TextWrapping="Wrap" Margin="0,6,0,0"
+                       Text="Every repo your GitHub account can see, and whether this PC has a clone of it. Tick the ones to clone, pick a branch for any that shouldn't use the default, and press Clone."/>
+        </StackPanel>
+
+        <!-- Shown when signed out: the list comes from the GitHub account -->
+        <Border DockPanel.Dock="Top" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"
+                BorderThickness="1" CornerRadius="10" Padding="14,10" Margin="0,0,0,12"
+                Visibility="{Binding Account.Login, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Style="{StaticResource Button.Primary}" Margin="0" Click="SignIn_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="{StaticResource GitHubMark}" Fill="White" Width="14" Height="14" Stretch="Uniform"
+                              VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="Sign in with GitHub" Foreground="White" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Button>
+                <TextBlock Text="Sign in to GitHub to list your repos." VerticalAlignment="Center"/>
+            </DockPanel>
+        </Border>
+
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+            <Button DockPanel.Dock="Left" Content="Refresh" Style="{StaticResource Button.Secondary}" Command="{Binding RefreshCommand}"
+                    ToolTip="Get the list from GitHub again, and look through this PC again"/>
+            <ProgressBar DockPanel.Dock="Left" Width="70" IsIndeterminate="True" VerticalAlignment="Center" Margin="4,0,10,0"
+                         Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"/>
+            <TextBlock x:Name="StatusText" Text="{Binding Status}" Foreground="{StaticResource Text.Secondary}" FontSize="12.5"
+                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="4,0,0,0" ToolTip="{Binding Status}"/>
+        </DockPanel>
+
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+            <Border DockPanel.Dock="Left" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"
+                    BorderThickness="1" CornerRadius="9">
+                <StackPanel Orientation="Horizontal">
+                    <RadioButton Style="{StaticResource FilterTab}" ToolTip="Every repo your GitHub account can see"
+                                 AutomationProperties.Name="All"
+                                 IsChecked="{Binding Filter, Converter={StaticResource EnumEquals}, ConverterParameter=All}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="All" Style="{StaticResource FilterTabText}"/>
+                            <TextBlock Text="{Binding Repos.Count}" Style="{StaticResource FilterTabCount}"/>
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton Style="{StaticResource FilterTab}" ToolTip="Repos this PC has no clone of"
+                                 AutomationProperties.Name="Not on this PC"
+                                 IsChecked="{Binding Filter, Converter={StaticResource EnumEquals}, ConverterParameter=NotOnPc}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Not on this PC" Style="{StaticResource FilterTabText}"/>
+                            <TextBlock Text="{Binding NotOnPcCount}" Style="{StaticResource FilterTabCount}"/>
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton Style="{StaticResource FilterTab}" ToolTip="Repos this PC already has a clone of"
+                                 AutomationProperties.Name="On this PC"
+                                 IsChecked="{Binding Filter, Converter={StaticResource EnumEquals}, ConverterParameter=OnPc}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="On this PC" Style="{StaticResource FilterTabText}"/>
+                            <TextBlock Text="{Binding OnPcCount}" Style="{StaticResource FilterTabCount}"/>
+                        </StackPanel>
+                    </RadioButton>
+                </StackPanel>
+            </Border>
+            <CheckBox DockPanel.Dock="Right" Content="Select all shown" IsChecked="{Binding AllShownChecked, Mode=TwoWay}"
+                      VerticalAlignment="Center" Margin="12,0,12,0"
+                      ToolTip="Tick every repo in this list that isn't on this PC yet"/>
+            <Grid Margin="12,0,0,0" MaxWidth="320" HorizontalAlignment="Right">
+                <TextBox Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Search repos" Width="300"
+                         VerticalAlignment="Center"/>
+                <TextBlock Text="Search by name or description" Foreground="{StaticResource Text.Muted}" FontSize="12"
+                           VerticalAlignment="Center" Margin="10,0,0,0" IsHitTestVisible="False">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Search}" Value="">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+        </DockPanel>
+
+        <!-- Where the clones go, and the buttons -->
+        <StackPanel DockPanel.Dock="Bottom" Margin="0,14,0,0">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Left" Text="Clone into" Foreground="{StaticResource Text.Secondary}"
+                           VerticalAlignment="Center" Margin="0,0,12,0"/>
+                <Button DockPanel.Dock="Right" Content="Browse…" Style="{StaticResource Button.Secondary}" Margin="8,0,0,0"
+                        Command="{Binding BrowseCloneFolderCommand}" IsEnabled="{Binding IsCloning, Converter={StaticResource InverseBoolean}}"/>
+                <TextBox Text="{Binding CloneFolder}" FontFamily="Consolas" VerticalAlignment="Center"
+                         AutomationProperties.Name="Clone into folder" IsEnabled="{Binding IsCloning, Converter={StaticResource InverseBoolean}}"
+                         ToolTip="Each repo is cloned into its own folder in here, named after the repo"/>
+            </DockPanel>
+            <DockPanel Margin="0,12,0,0">
+                <TextBlock DockPanel.Dock="Left" Text="{Binding CheckedCount, StringFormat='{}{0} selected'}"
+                           Foreground="{StaticResource Text.Secondary}" FontSize="12.5" VerticalAlignment="Center"/>
+                <CheckBox DockPanel.Dock="Left" Content="Add them to the dashboard" IsChecked="{Binding AddClonesToDashboard}"
+                          VerticalAlignment="Center" Margin="20,0,0,0"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="Close" Style="{StaticResource Button.Secondary}" IsCancel="True" Click="Close_Click"/>
+                    <Button Content="Stop" Style="{StaticResource Button.Secondary}" Command="{Binding StopCloningCommand}"
+                            AutomationProperties.Name="Stop cloning" ToolTip="Stop after cancelling the clone in progress"
+                            Visibility="{Binding IsCloning, Converter={StaticResource BoolToVisibility}}"/>
+                    <Button Content="Clone" Style="{StaticResource Button.Primary}" Margin="0" Command="{Binding CloneCommand}"
+                            ToolTip="Clone the ticked repos, one after another"/>
+                </StackPanel>
+            </DockPanel>
+        </StackPanel>
+
+        <Border Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
+                CornerRadius="10" Padding="6">
+            <Grid>
+                <TextBlock Text="No repos to show." Foreground="{StaticResource Text.Muted}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasItems, ElementName=RepoList}" Value="False">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <ItemsControl x:Name="RepoList" ItemsSource="{Binding VisibleRepos}" AutomationProperties.Name="GitHub repos"
+                              VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Pixel">
+                    <ItemsControl.Template>
+                        <ControlTemplate TargetType="ItemsControl">
+                            <ScrollViewer CanContentScroll="True" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                                <ItemsPresenter/>
+                            </ScrollViewer>
+                        </ControlTemplate>
+                    </ItemsControl.Template>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </Grid>
+        </Border>
+    </DockPanel>
+</Window>

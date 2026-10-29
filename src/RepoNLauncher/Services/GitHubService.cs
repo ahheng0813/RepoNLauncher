@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -13,6 +14,19 @@ namespace RepoNLauncher.Services;
 
 /// <summary>A GitHub repository as GitHub reports it now, after any rename or transfer.</summary>
 public record GitHubRepo(string Owner, string FullName, bool IsPrivate);
+
+/// <summary>A repository the signed-in account can see, as Clone from GitHub lists it.</summary>
+public record GitHubRepoListing(
+    string Owner,
+    string Name,
+    string FullName,
+    bool IsPrivate,
+    bool IsFork,
+    bool IsArchived,
+    string? Description,
+    string DefaultBranch,
+    string CloneUrl,
+    DateTimeOffset? PushedAt);
 
 /// <summary>A GitHub problem worth showing the user as is.</summary>
 public class GitHubException(string message) : Exception(message);
@@ -37,6 +51,12 @@ public interface IGitHubService
     /// <summary>The repository, or null when it doesn't exist or this account can't see it.</summary>
     Task<GitHubRepo?> GetRepoAsync(string owner, string name, CancellationToken ct);
 
+    /// <summary>Every repository the account owns, collaborates on or sees through its organizations, last pushed first.</summary>
+    Task<IReadOnlyList<GitHubRepoListing>> GetMyReposAsync(CancellationToken ct);
+
+    /// <summary>The names of the repository's branches.</summary>
+    Task<IReadOnlyList<string>> GetBranchNamesAsync(string owner, string name, CancellationToken ct);
+
     /// <summary>The open pull request from <paramref name="branch"/> of this repo, or null when there's none.</summary>
     Task<GitHubPullRequest?> FindOpenPullRequestAsync(string owner, string name, string branch, CancellationToken ct);
 
@@ -49,6 +69,10 @@ public class GitHubService : IGitHubService
 {
     private const string ApiHost = "api.github.com";
     private const string GitCredentialRequest = "protocol=https\nhost=github.com\n\n";
+
+    // Lists come 100 to a page; this stops at 5,000 items.
+    private const int PageSize = 100;
+    private const int MaxPages = 50;
 
     // Kept encrypted for this Windows user (DPAPI), apart from config.json so the settings file never holds the token.
     private static readonly string SavedSignInPath = Path.Combine(DashboardConfigService.AppDataDir, "github-sign-in.dat");
@@ -147,6 +171,17 @@ public class GitHubService : IGitHubService
             root.GetProperty("private").GetBoolean());
     }
 
+    public async Task<IReadOnlyList<GitHubRepoListing>> GetMyReposAsync(CancellationToken ct) =>
+        (await GetAllPagesAsync("user/repos?affiliation=owner,collaborator,organization_member&sort=pushed", ct))
+        .Select(ListingOf)
+        .ToList();
+
+    public async Task<IReadOnlyList<string>> GetBranchNamesAsync(string owner, string name, CancellationToken ct) =>
+        (await GetAllPagesAsync($"{RepoPath(owner, name)}/branches", ct))
+        .Select(branch => branch.GetProperty("name").GetString())
+        .OfType<string>()
+        .ToList();
+
     public async Task<GitHubPullRequest?> FindOpenPullRequestAsync(string owner, string name, string branch, CancellationToken ct)
     {
         var token = _token ?? throw new GitHubException("Sign in to GitHub first.");
@@ -190,6 +225,46 @@ public class GitHubService : IGitHubService
     }
 
     private static string RepoPath(string owner, string name) => $"repos/{Uri.EscapeDataString(owner)}/{Uri.EscapeDataString(name)}";
+
+    // Every item of a list GitHub hands out a page at a time; a page that isn't full is the last.
+    private async Task<List<JsonElement>> GetAllPagesAsync(string path, CancellationToken ct)
+    {
+        var token = _token ?? throw new GitHubException("Sign in to GitHub first.");
+        var items = new List<JsonElement>();
+        var separator = path.Contains('?') ? '&' : '?';
+        for (var page = 1; page <= MaxPages; page++)
+        {
+            using var response = await SendAsync($"{path}{separator}per_page={PageSize}&page={page}", token, ct);
+            ThrowIfSignedOut(response);
+            if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests && IsRateLimited(response))
+                throw new GitHubException("GitHub's hourly request limit is used up. Try again later.");
+
+            var list = await ReadJsonAsync(response, ct);
+            if (list.ValueKind != JsonValueKind.Array) break;
+            items.AddRange(list.EnumerateArray());
+            if (list.GetArrayLength() < PageSize) break;
+        }
+        return items;
+    }
+
+    private static GitHubRepoListing ListingOf(JsonElement repo) => new(
+        repo.GetProperty("owner").GetProperty("login").GetString()!,
+        repo.GetProperty("name").GetString()!,
+        repo.GetProperty("full_name").GetString()!,
+        repo.GetProperty("private").GetBoolean(),
+        repo.TryGetProperty("fork", out var fork) && fork.ValueKind == JsonValueKind.True,
+        repo.TryGetProperty("archived", out var archived) && archived.ValueKind == JsonValueKind.True,
+        repo.TryGetProperty("description", out var description) && description.ValueKind == JsonValueKind.String
+            ? description.GetString()
+            : null,
+        // An empty repo has no branch yet, but GitHub still names the one it will use.
+        repo.TryGetProperty("default_branch", out var branch) && branch.GetString() is { Length: > 0 } name ? name : "main",
+        repo.GetProperty("clone_url").GetString()!,
+        repo.TryGetProperty("pushed_at", out var pushed) &&
+        DateTimeOffset.TryParse(pushed.ValueKind == JsonValueKind.String ? pushed.GetString() : null, CultureInfo.InvariantCulture,
+            DateTimeStyles.None, out var pushedAt)
+            ? pushedAt
+            : null);
 
     private static GitHubPullRequest PullRequestOf(JsonElement pull) => new(
         pull.GetProperty("number").GetInt32(),

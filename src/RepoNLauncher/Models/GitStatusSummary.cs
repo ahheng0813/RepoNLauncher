@@ -6,6 +6,9 @@ public class GitStatusSummary
     public int Ahead { get; set; }
     public int Behind { get; set; }
     public bool IsDirty { get; set; }
+
+    /// <summary>The branch pulls from, and pushes to, a branch on a remote.</summary>
+    public bool HasUpstream { get; set; }
 }
 
 public class GitPullResult

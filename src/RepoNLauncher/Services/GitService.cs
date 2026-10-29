@@ -1,5 +1,8 @@
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Text;
 using RepoNLauncher.Models;
 
 namespace RepoNLauncher.Services;
@@ -13,6 +16,16 @@ public interface IGitService
     Task<GitPullResult> FetchAsync(string path, CancellationToken ct = default);
     Task<GitPullResult> PushAsync(string path, string remote, string branch, CancellationToken ct = default);
     Task<string> GetCurrentBranchAsync(string path, CancellationToken ct = default);
+
+    /// <summary>
+    /// Clones <paramref name="url"/> into <paramref name="folder"/> and checks out <paramref name="branch"/>, or the
+    /// remote's default branch when it's null. Each of git's progress lines goes to <paramref name="progress"/>.
+    /// Cancelling stops git and removes the folder it was making.
+    /// </summary>
+    Task<GitPullResult> CloneAsync(string url, string folder, string? branch, IProgress<string>? progress, CancellationToken ct = default);
+
+    /// <summary>The remote a new branch is published to: origin, else the first remote; null when the repo has none.</summary>
+    Task<string?> GetPublishRemoteAsync(string path, CancellationToken ct = default);
 
     /// <summary>The branch the current one pulls from, such as origin/main; null when it has none.</summary>
     Task<string?> GetUpstreamAsync(string path, CancellationToken ct = default);
@@ -92,6 +105,105 @@ public class GitService : IGitService
     public async Task<GitPullResult> PushAsync(string path, string remote, string branch, CancellationToken ct = default) =>
         BuildResult(await _runner.RunCaptureAsync(path, $"git push -u \"{remote}\" \"{branch}\"", ct));
 
+    public async Task<GitPullResult> CloneAsync(
+        string url, string folder, string? branch, IProgress<string>? progress, CancellationToken ct = default)
+    {
+        // Straight to git rather than through cmd.exe like the other commands, so nothing in the folder or branch name
+        // needs quoting for cmd.exe.
+        var startInfo = new ProcessStartInfo("git")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            WorkingDirectory = Path.GetDirectoryName(folder)!,
+        };
+        startInfo.ArgumentList.Add("clone");
+        startInfo.ArgumentList.Add("--progress");
+        if (branch != null)
+        {
+            startInfo.ArgumentList.Add("--branch");
+            startInfo.ArgumentList.Add(branch);
+        }
+        startInfo.ArgumentList.Add("--");
+        startInfo.ArgumentList.Add(url);
+        startInfo.ArgumentList.Add(folder);
+        // As in RunCaptureAsync: Git Credential Manager can still ask for a sign-in in its own window.
+        startInfo.Environment["GIT_TERMINAL_PROMPT"] = "0";
+
+        var existed = Directory.Exists(folder);
+        using var process = new Process { StartInfo = startInfo };
+        try { process.Start(); }
+        catch (Win32Exception) { return new GitPullResult { Output = "Git isn't installed, or isn't on the PATH." }; }
+
+        var output = new StringBuilder();
+        var stdOut = process.StandardOutput.ReadToEndAsync(CancellationToken.None);
+        var stdErr = ReadProgressAsync(process.StandardError, output, progress);
+        try
+        {
+            await process.WaitForExitAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            // git can't tidy up after being killed, so the half-made clone is removed here.
+            try { process.Kill(entireProcessTree: true); }
+            catch (InvalidOperationException) { }
+            await process.WaitForExitAsync(CancellationToken.None);
+            if (!existed) DeleteFolder(folder);
+            throw;
+        }
+
+        await Task.WhenAll(stdOut, stdErr);
+        output.Insert(0, await stdOut);
+        return new GitPullResult { Success = process.ExitCode == 0, Output = output.ToString().Trim() };
+    }
+
+    // git writes its progress to stderr, rewriting one line with \r as the percentage goes up. Each version of the line
+    // is reported; only finished lines (a progress line's last version, messages, errors) are kept in the output.
+    private static async Task ReadProgressAsync(StreamReader reader, StringBuilder output, IProgress<string>? progress)
+    {
+        var buffer = new char[1024];
+        var line = new StringBuilder();
+        int read;
+        while ((read = await reader.ReadAsync(buffer, CancellationToken.None)) > 0)
+        {
+            for (var i = 0; i < read; i++)
+            {
+                if (buffer[i] is not ('\r' or '\n'))
+                {
+                    line.Append(buffer[i]);
+                    continue;
+                }
+                if (line.Length == 0) continue;
+
+                var text = line.ToString();
+                progress?.Report(text);
+                if (buffer[i] == '\n') output.AppendLine(text);
+                line.Clear();
+            }
+        }
+        if (line.Length > 0) output.AppendLine(line.ToString());
+    }
+
+    // Git makes its object files read-only, which Directory.Delete won't remove.
+    private static void DeleteFolder(string folder)
+    {
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, FileAttributes.Normal);
+            Directory.Delete(folder, recursive: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+    }
+
+    public async Task<string?> GetPublishRemoteAsync(string path, CancellationToken ct = default)
+    {
+        var result = await _runner.RunCaptureAsync(path, "git remote", ct);
+        var remotes = result.StdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return remotes.Contains("origin") ? "origin" : remotes.FirstOrDefault();
+    }
+
     public async Task<string> GetCurrentBranchAsync(string path, CancellationToken ct = default)
     {
         var result = await _runner.RunCaptureAsync(path, "git rev-parse --abbrev-ref HEAD", ct);
@@ -133,7 +245,7 @@ public class GitService : IGitService
     }
 
     // --no-track: a branch started from origin/main would otherwise pull from main and push nowhere it could.
-    // It gets its own remote branch when it's first pushed (Create Pull Request does that).
+    // It gets its own remote branch when it's first pushed (Publish branch, or Create Pull Request, does that).
     public async Task<GitPullResult> CreateBranchAsync(string path, string name, string startPoint, bool switchTo, CancellationToken ct = default)
     {
         var command = switchTo
@@ -176,6 +288,8 @@ public class GitService : IGitService
         summary.IsDirty = !string.IsNullOrWhiteSpace(porcelain.StdOut);
 
         var aheadBehind = await _runner.RunCaptureAsync(path, "git rev-list --left-right --count HEAD...@{u}", ct);
+        // Fails when the branch pulls from nowhere: it was made here and never pushed, or its remote branch was deleted.
+        summary.HasUpstream = aheadBehind.ExitCode == 0;
         if (aheadBehind.ExitCode == 0)
         {
             var parts = aheadBehind.StdOut.Trim().Split('\t', ' ');

@@ -131,9 +131,21 @@ public partial class ProjectViewModel : ObservableObject
     [ObservableProperty] private bool _isSelected;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(DefaultMergeName), nameof(MergeFromHint), nameof(IsMergePickUnsaved))]
-    [NotifyCanExecuteChangedFor(nameof(SwitchBranchCommand), nameof(UpdateMergeDefaultCommand))]
+    [NotifyPropertyChangedFor(nameof(DefaultMergeName), nameof(MergeFromHint), nameof(IsMergePickUnsaved), nameof(NeedsPublish))]
+    [NotifyCanExecuteChangedFor(nameof(SwitchBranchCommand), nameof(UpdateMergeDefaultCommand), nameof(PublishBranchCommand))]
     private string _branch = string.Empty;
+
+    /// <summary>The current branch has a branch on a remote that it pulls from and pushes to.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NeedsPublish))]
+    [NotifyCanExecuteChangedFor(nameof(PublishBranchCommand))]
+    private bool _isPublished = true;
+
+    /// <summary>Where Publish branch pushes to: origin, else the repo's first remote; null when it has none.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NeedsPublish), nameof(NotPublishedText))]
+    [NotifyCanExecuteChangedFor(nameof(PublishBranchCommand))]
+    private string? _publishRemote;
     [ObservableProperty] private bool _isDirty;
     [ObservableProperty] private int _ahead;
     [ObservableProperty] private int _behind;
@@ -187,6 +199,11 @@ public partial class ProjectViewModel : ObservableObject
         ? $"Fetch Latest pulls {Branch}, then merges {source} into it."
         : $"Fetch Latest just pulls {Branch}.";
 
+    /// <summary>The current branch was made here and isn't on the remote yet, so Publish branch is offered.</summary>
+    public bool NeedsPublish => !IsPublished && PublishRemote != null && Branch is not ("" or "HEAD");
+
+    public string NotPublishedText => $"not on {PublishRemote} yet";
+
     /// <summary>A branch other than the default is picked and not saved.</summary>
     public bool IsMergePickUnsaved => SelectedMergeSource != null && SelectedMergeSource.Branch != MergeSourceFor(Branch);
 
@@ -239,9 +256,11 @@ public partial class ProjectViewModel : ObservableObject
             IsDirty = status.IsDirty;
             Ahead = status.Ahead;
             Behind = status.Behind;
+            IsPublished = status.HasUpstream;
             // Only the project on screen shows the pickers; Fetch All refreshes every project's status.
             if (IsSelected)
             {
+                PublishRemote = await _git.GetPublishRemoteAsync(Path);
                 await LoadBranchesAsync();
                 // A remote may have been added or changed since.
                 OnPropertyChanged(nameof(GitHubToolTip));
@@ -376,6 +395,31 @@ public partial class ProjectViewModel : ObservableObject
 
             await LoadChangesAsync();
             await LoadCommitsAsync();
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    /// <summary>
+    /// Pushes a branch made here to the remote for the first time, and has it pull from and push to that copy from
+    /// then on, so Fetch Latest pulls it.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(NeedsPublish))]
+    private async Task PublishBranchAsync()
+    {
+        var branch = Branch;
+        var remote = PublishRemote!;
+        IsBusy = true;
+        StatusMessage = $"Publishing {branch} to {remote}...";
+        try
+        {
+            var result = await _git.PushAsync(Path, remote, branch);
+            await RefreshStatusAsync();
+            StatusMessage = result.Success
+                ? $"Published {branch} to {remote}. Fetch Latest now pulls it from there."
+                : $"Couldn't publish {branch}: {result.Output}";
         }
         finally
         {
@@ -989,7 +1033,7 @@ public partial class ProjectViewModel : ObservableObject
     public async Task BranchCreatedAsync(string message)
     {
         await RefreshStatusAsync();
-        StatusMessage = message;
+        StatusMessage = NeedsPublish ? $"{message} Press Publish branch to put it on {PublishRemote}." : message;
         await LoadChangesAsync();
         await LoadCommitsAsync();
     }
