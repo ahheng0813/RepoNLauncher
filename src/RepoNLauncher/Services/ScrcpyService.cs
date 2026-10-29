@@ -7,32 +7,56 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using RepoNLauncher.Models;
 
 namespace RepoNLauncher.Services;
 
-/// <summary>A running scrcpy process mirroring one device.</summary>
+/// <summary>A running scrcpy process mirroring one device, recording it, or both.</summary>
 public class ScrcpySession
 {
+    private const uint CtrlCEvent = 0;
+
+    // e.g. "INFO: Texture (D3D11VA): 1024x576", printed again when the phone rotates.
+    private static readonly Regex TextureLine = new(@"^INFO: Texture\b[^:]*: (\d+)x(\d+)", RegexOptions.Compiled);
+
+    // Only one console can be joined at a time, so sending Ctrl+C to two sessions at once takes turns.
+    private static readonly SemaphoreSlim ConsoleGate = new(1, 1);
+
     private readonly Process _process;
-    private readonly string _windowTitle;
+    private readonly string? _windowTitle;
+    private string? _lastError;
+    private string? _deviceError;
 
     public string Serial { get; }
 
-    /// <summary>The last ERROR line scrcpy printed — usually why it exited.</summary>
-    public string? LastError { get; private set; }
+    public MirrorSource Source { get; }
+
+    /// <summary>The file it records to, or null when it only mirrors.</summary>
+    public string? RecordPath { get; }
+
+    /// <summary>
+    /// Why it exited, usually: the error the phone reported (e.g. that it's too old for camera mirroring), or else the
+    /// last ERROR line scrcpy printed.
+    /// </summary>
+    public string? LastError => _deviceError ?? _lastError;
 
     /// <summary>The last WARN line scrcpy printed, e.g. that audio isn't supported on the device.</summary>
     public string? LastWarning { get; private set; }
 
+    /// <summary>The size of the video it shows, once the first frame has arrived; the window letterboxes it.</summary>
+    public (int Width, int Height)? VideoSize { get; private set; }
+
     /// <summary>Raised on a worker thread when the scrcpy process ends, for whatever reason.</summary>
     public event Action? Exited;
 
-    internal ScrcpySession(Process process, string serial, string windowTitle)
+    internal ScrcpySession(Process process, string serial, string? windowTitle, MirrorSource source, string? recordPath)
     {
         _process = process;
         _windowTitle = windowTitle;
         Serial = serial;
+        Source = source;
+        RecordPath = recordPath;
 
         _process.OutputDataReceived += (_, e) => TrackProblem(e.Data);
         _process.ErrorDataReceived += (_, e) => TrackProblem(e.Data);
@@ -57,7 +81,18 @@ public class ScrcpySession
 
     internal void Start()
     {
-        _process.Start();
+        // scrcpy inherits whether Ctrl+C is ignored, and must not, or its recording can only be cut off. It's ignored here
+        // for a moment while one is sent, and the dashboard may have been started with it ignored too.
+        ConsoleGate.Wait();
+        try
+        {
+            SetConsoleCtrlHandler(IntPtr.Zero, false);
+            _process.Start();
+        }
+        finally
+        {
+            ConsoleGate.Release();
+        }
         _process.BeginOutputReadLine();
         _process.BeginErrorReadLine();
     }
@@ -65,8 +100,26 @@ public class ScrcpySession
     private void TrackProblem(string? line)
     {
         if (line == null) return;
-        if (line.StartsWith("ERROR:", StringComparison.Ordinal)) LastError = line["ERROR:".Length..].Trim();
-        else if (line.StartsWith("WARN:", StringComparison.Ordinal)) LastWarning = line["WARN:".Length..].Trim();
+
+        // The phone's own messages come first and say what went wrong; scrcpy's that follow only say that it then failed.
+        const string server = "[server] ";
+        var fromDevice = line.StartsWith(server, StringComparison.Ordinal);
+        if (fromDevice) line = line[server.Length..];
+
+        if (line.StartsWith("ERROR:", StringComparison.Ordinal))
+        {
+            var error = line["ERROR:".Length..].Trim();
+            if (fromDevice) _deviceError ??= error;
+            else _lastError = error;
+        }
+        else if (line.StartsWith("WARN:", StringComparison.Ordinal))
+        {
+            LastWarning = line["WARN:".Length..].Trim();
+        }
+        else if (TextureLine.Match(line) is { Success: true } texture)
+        {
+            VideoSize = (int.Parse(texture.Groups[1].Value), int.Parse(texture.Groups[2].Value));
+        }
     }
 
     /// <summary>
@@ -120,6 +173,64 @@ public class ScrcpySession
         catch { /* already exited */ }
     }
 
+    /// <summary>
+    /// Ends it the way Ctrl+C does in a terminal, which lets scrcpy finish its recording: an .mp4 that's cut off has no
+    /// index and won't play. Kills it if it hasn't ended within the timeout. True when it ended by itself.
+    /// </summary>
+    public async Task<bool> FinishAsync(TimeSpan timeout)
+    {
+        if (HasExited) return true;
+
+        var sent = false;
+        await ConsoleGate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            // The dashboard has no console of its own, so it can join scrcpy's (hidden) one and press Ctrl+C there.
+            // The press reaches every process on that console, this one included, so it's ignored here meanwhile.
+            if (AttachConsole(_process.Id))
+            {
+                SetConsoleCtrlHandler(IntPtr.Zero, true);
+                sent = GenerateConsoleCtrlEvent(CtrlCEvent, 0);
+                FreeConsole();
+                // The press reaches this process a moment later, on a thread of its own; only then can Ctrl+C be
+                // handled normally again. Starting scrcpy waits for that (see Start).
+                await Task.Delay(300).ConfigureAwait(false);
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            // exited meanwhile
+        }
+        finally
+        {
+            SetConsoleCtrlHandler(IntPtr.Zero, false);
+            ConsoleGate.Release();
+        }
+
+        if (sent)
+        {
+            using var wait = new CancellationTokenSource(timeout);
+            try { await _process.WaitForExitAsync(wait.Token).ConfigureAwait(false); }
+            catch (OperationCanceledException) { /* killed below */ }
+        }
+
+        var finished = HasExited;
+        Stop();
+        return finished;
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool AttachConsole(int processId);
+
+    [DllImport("kernel32.dll")]
+    private static extern bool FreeConsole();
+
+    [DllImport("kernel32.dll")]
+    private static extern bool SetConsoleCtrlHandler(IntPtr handler, bool add);
+
+    [DllImport("kernel32.dll")]
+    private static extern bool GenerateConsoleCtrlEvent(uint ctrlEvent, uint processGroupId);
+
     private delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
 
     [DllImport("user32.dll")]
@@ -143,10 +254,22 @@ public interface IScrcpyService
     /// <summary>Full path to scrcpy.exe, or null when it isn't installed.</summary>
     string? FindScrcpy();
 
+    /// <summary>The adb that scrcpy uses: Android Studio's when there is one, so two adb versions don't fight.</summary>
+    string FindAdb();
+
     /// <summary>Every device adb knows about, including ones not yet usable (unauthorized/offline).</summary>
     Task<List<AndroidDevice>> GetDevicesAsync(CancellationToken ct = default);
 
-    ScrcpySession Start(string scrcpyPath, string serial, bool forwardAudio);
+    /// <summary>
+    /// Mirrors the device's screen or a camera in a window, recording it to <paramref name="recordPath"/> as well when
+    /// given. For a camera, <paramref name="forwardAudio"/> is whether its recording has the microphone's sound: a camera
+    /// has none live, since an emulator's microphone is this PC's and would echo.
+    /// </summary>
+    ScrcpySession Start(string scrcpyPath, string serial, bool forwardAudio, MirrorSource source = MirrorSource.Screen,
+        string? recordPath = null);
+
+    /// <summary>Records the device's microphone to an .m4a file, with no window. Needs Android 11.</summary>
+    ScrcpySession StartVoiceRecording(string scrcpyPath, string serial, string path);
 
     /// <summary>Downloads the latest official Windows build from GitHub into the dashboard's tools folder.</summary>
     Task InstallAsync(IProgress<string> progress, CancellationToken ct = default);
@@ -179,9 +302,11 @@ public class ScrcpyService : IScrcpyService
         return new FileInfo(path).ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? path;
     }
 
+    public string FindAdb() => FindAdb(FindScrcpy());
+
     public async Task<List<AndroidDevice>> GetDevicesAsync(CancellationToken ct = default)
     {
-        var info = new ProcessStartInfo(FindAdb(FindScrcpy()), "devices -l")
+        var info = new ProcessStartInfo(FindAdb(), "devices -l")
         {
             UseShellExecute = false,
             CreateNoWindow = true,
@@ -219,18 +344,11 @@ public class ScrcpyService : IScrcpyService
         return devices;
     }
 
-    public ScrcpySession Start(string scrcpyPath, string serial, bool forwardAudio)
+    public ScrcpySession Start(string scrcpyPath, string serial, bool forwardAudio, MirrorSource source = MirrorSource.Screen,
+        string? recordPath = null)
     {
         var windowTitle = $"Repo'N'Launcher Phone Screen {serial}";
-        var info = new ProcessStartInfo(scrcpyPath)
-        {
-            WorkingDirectory = Path.GetDirectoryName(scrcpyPath)!,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-        };
-        info.ArgumentList.Add($"--serial={serial}");
+        var info = NewStartInfo(scrcpyPath, serial);
         info.ArgumentList.Add($"--window-title={windowTitle}");
         info.ArgumentList.Add("--window-borderless");
         // The dashboard pulls the window into itself as soon as it's shown; start it off-screen so it never flashes on the desktop.
@@ -241,12 +359,71 @@ public class ScrcpyService : IScrcpyService
         // every other frame would be encoded and sent only to be dropped.
         info.ArgumentList.Add("--max-size=1024");
         info.ArgumentList.Add("--max-fps=60");
-        if (!forwardAudio) info.ArgumentList.Add("--no-audio");
+
+        if (source == MirrorSource.Screen)
+        {
+            if (!forwardAudio) info.ArgumentList.Add("--no-audio");
+        }
+        else
+        {
+            // For a camera, --max-size picks the largest capture size that fits instead.
+            info.ArgumentList.Add("--video-source=camera");
+            info.ArgumentList.Add(source == MirrorSource.FrontCamera ? "--camera-facing=front" : "--camera-facing=back");
+            info.ArgumentList.Add("--no-control"); // there's nothing to tap
+            if (recordPath == null || !forwardAudio)
+            {
+                info.ArgumentList.Add("--no-audio");
+            }
+            else
+            {
+                info.ArgumentList.Add("--audio-source=mic");
+                info.ArgumentList.Add("--no-audio-playback");
+            }
+        }
+
+        if (recordPath != null)
+        {
+            // Opus, scrcpy's default, doesn't play in Windows' own players; AAC does.
+            info.ArgumentList.Add("--audio-codec=aac");
+            info.ArgumentList.Add($"--record={recordPath}");
+        }
+
+        return Launch(info, serial, windowTitle, source, recordPath);
+    }
+
+    public ScrcpySession StartVoiceRecording(string scrcpyPath, string serial, string path)
+    {
+        var info = NewStartInfo(scrcpyPath, serial);
+        info.ArgumentList.Add("--no-video");
+        info.ArgumentList.Add("--no-window");
+        info.ArgumentList.Add("--no-control");
+        info.ArgumentList.Add("--audio-source=mic");
+        info.ArgumentList.Add("--audio-codec=aac");
+        info.ArgumentList.Add("--require-audio"); // without sound there's nothing to record; fail rather than idle
+        info.ArgumentList.Add($"--record={path}");
+        return Launch(info, serial, windowTitle: null, MirrorSource.Screen, path);
+    }
+
+    private static ProcessStartInfo NewStartInfo(string scrcpyPath, string serial)
+    {
+        var info = new ProcessStartInfo(scrcpyPath)
+        {
+            WorkingDirectory = Path.GetDirectoryName(scrcpyPath)!,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        info.ArgumentList.Add($"--serial={serial}");
 
         // Use the same adb as Flutter/Android Studio: two different adb versions keep killing each other's server.
         info.Environment["ADB"] = FindAdb(scrcpyPath);
+        return info;
+    }
 
-        var session = new ScrcpySession(new Process { StartInfo = info, EnableRaisingEvents = true }, serial, windowTitle);
+    private static ScrcpySession Launch(ProcessStartInfo info, string serial, string? windowTitle, MirrorSource source, string? recordPath)
+    {
+        var session = new ScrcpySession(new Process { StartInfo = info, EnableRaisingEvents = true }, serial, windowTitle, source, recordPath);
         session.Start();
         AssignToKillOnCloseJob(session);
         return session;

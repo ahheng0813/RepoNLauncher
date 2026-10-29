@@ -84,7 +84,8 @@ public partial class PhoneScreenWindow : Window
 
     private void Toolbar_MouseLeave(object sender, MouseEventArgs e)
     {
-        if (!_phone.IsFullScreen) return;
+        // Moving into a tool's flyout leaves the toolbar too; hiding it then would take the flyout with it.
+        if (!_phone.IsFullScreen || Tools.IsFlyoutOpen) return;
         Toolbar.Visibility = Visibility.Collapsed;
         RevealStrip.Visibility = Visibility.Visible;
     }

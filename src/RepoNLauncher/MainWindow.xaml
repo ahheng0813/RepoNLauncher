@@ -1054,7 +1054,7 @@
                         <TextBlock Text="PHONE SCREEN" Style="{StaticResource SectionLabel}" Margin="0" VerticalAlignment="Center"/>
                     </DockPanel>
 
-                    <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
@@ -1088,6 +1088,9 @@
                                 Command="{Binding StopCommand}"
                                 Visibility="{Binding IsMirroring, Converter={StaticResource BoolToVisibility}}"/>
                     </Grid>
+
+                    <!-- Screenshot, recording, camera, location and sending files, for the device picked above -->
+                    <controls:DeviceTools DockPanel.Dock="Top" Margin="-6,0,0,8"/>
 
                     <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Foreground="{StaticResource Text.Secondary}"
                                FontSize="11" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="44" Margin="0,8,0,0"/>
