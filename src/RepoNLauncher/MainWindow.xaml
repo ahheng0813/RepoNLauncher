@@ -488,6 +488,17 @@
                                                 </MultiBinding>
                                             </TextBlock.Text>
                                         </TextBlock>
+                                        <!-- Commits made here that the remote branch doesn't have yet -->
+                                        <Button Style="{StaticResource Button.Primary}" Margin="10,0,0,0" Padding="12,5"
+                                                Command="{Binding PushCommand}" AutomationProperties.Name="Push"
+                                                Visibility="{Binding NeedsPush, Converter={StaticResource BoolToVisibility}}"
+                                                ToolTip="Push the commits made here to the remote branch, so GitHub and your other PCs get them">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE898;" FontFamily="Segoe MDL2 Assets" Foreground="White" FontSize="12"
+                                                           VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                                <TextBlock Text="Push" Foreground="White" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                        </Button>
                                         <!-- A branch made here that the remote doesn't have yet -->
                                         <TextBlock Text="{Binding NotPublishedText}" Foreground="{StaticResource Warning}" FontSize="12"
                                                    VerticalAlignment="Center" Margin="16,0,10,0"

@@ -137,8 +137,8 @@ public partial class ProjectViewModel : ObservableObject
 
     /// <summary>The current branch has a branch on a remote that it pulls from and pushes to.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(NeedsPublish))]
-    [NotifyCanExecuteChangedFor(nameof(PublishBranchCommand))]
+    [NotifyPropertyChangedFor(nameof(NeedsPublish), nameof(NeedsPush))]
+    [NotifyCanExecuteChangedFor(nameof(PublishBranchCommand), nameof(PushCommand))]
     private bool _isPublished = true;
 
     /// <summary>Where Publish branch pushes to: origin, else the repo's first remote; null when it has none.</summary>
@@ -147,7 +147,12 @@ public partial class ProjectViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(PublishBranchCommand))]
     private string? _publishRemote;
     [ObservableProperty] private bool _isDirty;
-    [ObservableProperty] private int _ahead;
+
+    /// <summary>Commits on the current branch that the remote branch it pulls from doesn't have yet.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NeedsPush))]
+    [NotifyCanExecuteChangedFor(nameof(PushCommand))]
+    private int _ahead;
     [ObservableProperty] private int _behind;
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string _statusMessage = string.Empty;
@@ -203,6 +208,9 @@ public partial class ProjectViewModel : ObservableObject
     public bool NeedsPublish => !IsPublished && PublishRemote != null && Branch is not ("" or "HEAD");
 
     public string NotPublishedText => $"not on {PublishRemote} yet";
+
+    /// <summary>The current branch is on the remote but has commits made here that the remote doesn't, so Push is offered.</summary>
+    public bool NeedsPush => IsPublished && Ahead > 0;
 
     /// <summary>A branch other than the default is picked and not saved.</summary>
     public bool IsMergePickUnsaved => SelectedMergeSource != null && SelectedMergeSource.Branch != MergeSourceFor(Branch);
@@ -427,6 +435,34 @@ public partial class ProjectViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Pushes the commits made here to the remote branch this one pulls from, so GitHub and other PCs get them. Until
+    /// then they're only on this PC, though the commit list shows them.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(NeedsPush))]
+    private async Task PushAsync()
+    {
+        var branch = Branch;
+        var count = Ahead;
+        IsBusy = true;
+        StatusMessage = $"Pushing {branch}...";
+        try
+        {
+            var result = await _git.PushToUpstreamAsync(Path);
+            await RefreshStatusAsync();
+            await LoadCommitsAsync();
+            // "[rejected]" is git turning the push down because the remote has commits this PC doesn't.
+            StatusMessage = result.Success ? $"Pushed {count} commit{(count == 1 ? "" : "s")} on {branch}."
+                : result.Output.Contains("[rejected]", StringComparison.Ordinal)
+                    ? $"Couldn't push {branch}: the remote has commits this PC doesn't have yet. Press Fetch Latest to bring them in, then push."
+                    : $"Couldn't push {branch}: {result.Output}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     [RelayCommand]
     public async Task FetchLatestAsync()
     {
@@ -561,6 +597,7 @@ public partial class ProjectViewModel : ObservableObject
 
         await LoadChangesAsync();
         await RefreshStatusAsync();
+        if (result.Success && NeedsPush) StatusMessage += " It's only on this PC until you press Push.";
         await LoadCommitsAsync();
     }
 

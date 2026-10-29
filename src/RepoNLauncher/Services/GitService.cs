@@ -15,6 +15,9 @@ public interface IGitService
     Task<GitPullResult> MergeAsync(string path, string branch, CancellationToken ct = default);
     Task<GitPullResult> FetchAsync(string path, CancellationToken ct = default);
     Task<GitPullResult> PushAsync(string path, string remote, string branch, CancellationToken ct = default);
+
+    /// <summary>Pushes the current branch to the remote branch it pulls from, even when that one has another name.</summary>
+    Task<GitPullResult> PushToUpstreamAsync(string path, CancellationToken ct = default);
     Task<string> GetCurrentBranchAsync(string path, CancellationToken ct = default);
 
     /// <summary>
@@ -104,6 +107,10 @@ public class GitService : IGitService
 
     public async Task<GitPullResult> PushAsync(string path, string remote, string branch, CancellationToken ct = default) =>
         BuildResult(await _runner.RunCaptureAsync(path, $"git push -u \"{remote}\" \"{branch}\"", ct));
+
+    // push.default=upstream sends only this branch, whatever the repo's own push.default says.
+    public async Task<GitPullResult> PushToUpstreamAsync(string path, CancellationToken ct = default) =>
+        BuildResult(await _runner.RunCaptureAsync(path, "git -c push.default=upstream push", ct));
 
     public async Task<GitPullResult> CloneAsync(
         string url, string folder, string? branch, IProgress<string>? progress, CancellationToken ct = default)
