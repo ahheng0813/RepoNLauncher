@@ -4,9 +4,10 @@ namespace RepoNLauncher.ViewModels;
 
 /// <summary>
 /// Arranges the flat project list into collapsible folder sections. Every scanned folder is a top-level section;
-/// inside it, a subfolder holding two or more repos (at any depth) gets its own nested section, while a subfolder
-/// with a single repo just lists that repo in the parent section. Projects outside every scanned folder stay at
-/// the top level. Each level lists its repos first, then its subsections.
+/// inside it, a subfolder holding two or more repos (at any depth, the subfolder itself counting when it's a repo)
+/// gets its own nested section, while a subfolder with a single repo just lists that repo in the parent section.
+/// Projects outside every scanned folder stay at the top level. Each level lists its repos first, the folder's own
+/// repo leading, then its subsections.
 /// </summary>
 public static class ProjectTreeBuilder
 {
@@ -36,9 +37,10 @@ public static class ProjectTreeBuilder
             if (!rootNodes.TryGetValue(root, out var node))
                 rootNodes[root] = node = new FolderNode(FolderName(root), root);
 
-            // Each folder between the scanned folder and the repo's own folder is a potential section.
+            // Each folder below the scanned folder down to the repo's own is a potential section; the repo's own one
+            // becomes a section when the repo holds repos of its own.
             var segments = path[root.Length..].Split(Separator, StringSplitOptions.RemoveEmptyEntries);
-            foreach (var segment in segments.SkipLast(1))
+            foreach (var segment in segments)
                 node = node.GetOrAddChild(segment);
             node.Repos.Add(project);
         }
@@ -63,25 +65,25 @@ public static class ProjectTreeBuilder
         }
 
         var group = new ProjectGroupViewModel(name, node.Path, node.AllRepos().ToList(), isExpanded(node.Path), expandedChanged);
-        foreach (var repo in SortByName(repos))
+        foreach (var repo in repos)
             group.Children.Add(repo);
         foreach (var section in sections.OrderBy(s => s.Name, StringComparer.OrdinalIgnoreCase))
             group.Children.Add(ToGroup(section, isExpanded, expandedChanged));
         return group;
     }
 
-    // A folder's contents as its section shows them: its own repos plus those of single-repo subfolders,
-    // and the subfolders with enough repos to be sections of their own.
+    // A folder's contents as its section shows them: the folder's own repo when it is one, then those of single-repo
+    // subfolders by name, and the subfolders with enough repos to be sections of their own.
     private static (List<ProjectViewModel> Repos, List<FolderNode> Sections) Split(FolderNode node)
     {
-        var repos = new List<ProjectViewModel>(node.Repos);
+        var inSubfolders = new List<ProjectViewModel>();
         var sections = new List<FolderNode>();
         foreach (var child in node.Children.Values)
         {
             if (child.RepoCount >= 2) sections.Add(child);
-            else repos.AddRange(child.AllRepos());
+            else inSubfolders.AddRange(child.AllRepos());
         }
-        return (repos, sections);
+        return (SortByName(node.Repos).Concat(SortByName(inSubfolders)).ToList(), sections);
     }
 
     private static IEnumerable<ProjectViewModel> SortByName(IEnumerable<ProjectViewModel> projects) =>
