@@ -11,7 +11,7 @@
     <AssemblyTitle>Repo'N'Launcher</AssemblyTitle>
     <Product>Repo'N'Launcher</Product>
     <!-- Raise for each release; release.ps1 builds the installers with it, and installed copies update to a higher one. -->
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <!-- Program.Main, not the one WPF generates: Velopack's install and update steps run before the app starts. -->
     <StartupObject>RepoNLauncher.Program</StartupObject>
   </PropertyGroup>
