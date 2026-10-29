@@ -205,9 +205,9 @@
                 </Button.Style>
             </Button>
 
-            <Button Content="&#xE8E5;" Style="{StaticResource Button.Ghost}" Command="{Binding ChooseFilesToSendCommand}"
-                    AutomationProperties.Name="Send files to the phone"
-                    ToolTip="Send files from this PC to the phone's Download folder. You can also drop files on this bar."/>
+            <Button Content="&#xE8B7;" Style="{StaticResource Button.Ghost}" Click="FilesButton_Click"
+                    AutomationProperties.Name="Phone files"
+                    ToolTip="Files: look through the phone's folders, send files to it from this PC and copy its files here. Files dropped on this bar go to its Download folder."/>
 
             <ProgressBar IsIndeterminate="True" Width="40" Height="3" VerticalAlignment="Center" Margin="6,0,0,0"
                          Visibility="{Binding IsSendingFiles, Converter={StaticResource BoolToVisibility}}"/>
