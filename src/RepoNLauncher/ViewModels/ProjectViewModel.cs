@@ -1038,7 +1038,7 @@ public partial class ProjectViewModel : ObservableObject
         await LoadCommitsAsync();
     }
 
-    /// <summary>The Create pull request dialog's view model, for this project's current branch.</summary>
+    /// <summary>The Create pull request dialog's view model, starting from this project's current branch.</summary>
     public CreatePullRequestViewModel NewPullRequest((string Owner, string Name) repo, IGitHubService gitHub) =>
         new(Path, Branch, repo, _git, gitHub);
 

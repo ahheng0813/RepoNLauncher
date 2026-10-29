@@ -52,7 +52,7 @@ The files aren't code-signed yet, so Windows may warn before the first run: choo
   - **Branch:** the branch checked out now. Pick another under **Switch to** and press **Switch**, or make one with **New branch…**.
   - **Publish branch:** shown while the current branch is only on this PC, such as one just made with **New branch…**. It pushes the branch to the remote, and **Fetch Latest** pulls it from there afterwards.
   - **Merge from:** the branch **Fetch Latest** merges in after pulling. Pick one and press **Update default** to keep it, or **Merge now** to merge it just once.
-  - **Create Pull Request:** from the current branch, with the title and description filled in from its commits.
+  - **Create Pull Request:** from the current branch, or another picked under **From** (one on this PC or one only GitHub has), with the title and description filled in from its commits. A branch GitHub doesn't have yet, or is missing commits of, is pushed first.
 - **Changes.** Changed files with diffs. Commit, discard, stash, and resolve merge conflicts.
 - **Commits.** Recent history.
 - **Run.** Starts the project with a live console: `flutter run` on a device, `dotnet run`, or your own command. **Choose file…** builds the command from a script.

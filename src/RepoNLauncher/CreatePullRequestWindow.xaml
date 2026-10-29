@@ -34,7 +34,7 @@
         <TextBlock Text="{Binding RepoText}" Foreground="{StaticResource Text.Muted}" FontFamily="Cascadia Mono, Consolas" FontSize="12"
                    Margin="0,6,0,18"/>
 
-        <!-- This branch, into the one picked -->
+        <!-- A branch here or on GitHub (the current one at first), into one GitHub has -->
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
@@ -43,11 +43,18 @@
             </Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0">
                 <TextBlock Text="FROM" Style="{StaticResource FieldLabel}"/>
-                <Border Background="{StaticResource Bg.PanelAlt}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
-                        CornerRadius="6" Height="32" Padding="10,0">
-                    <TextBlock Text="{Binding Branch}" FontFamily="Consolas" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                               ToolTip="{Binding Branch}"/>
-                </Border>
+                <ComboBox Height="32" ItemsSource="{Binding HeadBranches}" SelectedItem="{Binding HeadBranch}"
+                          AutomationProperties.Name="From branch"
+                          ToolTip="The branch with the changes: the current one, another one on this PC, or one only GitHub has">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock TextTrimming="CharacterEllipsis">
+                                <Run Text="{Binding Name, Mode=OneWay}" FontFamily="Consolas"/>
+                                <Run Text="{Binding Note, Mode=OneWay}" Foreground="{StaticResource Text.Muted}" FontSize="11"/>
+                            </TextBlock>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
             </StackPanel>
             <TextBlock Grid.Column="1" Text="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource Text.Muted}"
                        VerticalAlignment="Bottom" Margin="14,0,14,9"/>

@@ -6,7 +6,7 @@ using RepoNLauncher.ViewModels;
 
 namespace RepoNLauncher;
 
-/// <summary>Creates a pull request on GitHub from a project's current branch. DialogResult is true once it's done.</summary>
+/// <summary>Creates a pull request on GitHub from one of a project's branches. DialogResult is true once it's done.</summary>
 public partial class CreatePullRequestWindow : Window
 {
     public CreatePullRequestWindow(CreatePullRequestViewModel viewModel, IGitHubService gitHub)

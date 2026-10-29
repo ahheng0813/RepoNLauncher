@@ -223,18 +223,14 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog() == true && dialog.ViewModel.Result is { } message) await project.BranchCreatedAsync(message);
     }
 
-    // From the selected project's current branch. Creating one needs the GitHub sign-in; the dialog asks for it.
+    // From the selected project's current branch, or another picked in the dialog. Creating one needs the GitHub sign-in;
+    // the dialog asks for it.
     private void CreatePullRequest_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not MainViewModel vm || vm.SelectedProject is not { } project) return;
         if (GitHubRemote.Find(project.Path) is not { } repo)
         {
             project.StatusMessage = "This repo isn't on GitHub (it has no GitHub remote), so there's nowhere to open a pull request.";
-            return;
-        }
-        if (project.Branch is "" or "HEAD")
-        {
-            project.StatusMessage = "Switch to a branch first: a pull request is made from a branch.";
             return;
         }
 
