@@ -75,6 +75,18 @@ public interface IDeviceToolsService
     Task DeleteAsync(string serial, IReadOnlyList<string> paths, CancellationToken ct = default);
 
     /// <summary>
+    /// Copies a file from the device into <paramref name="destination"/>, reporting the bytes that have come so far, and
+    /// returns how many came: none when it can't be read.
+    /// </summary>
+    Task<long> ReadFileAsync(string serial, string path, Stream destination, IProgress<long>? progress = null, CancellationToken ct = default);
+
+    /// <summary>A file's first bytes, at least <paramref name="count"/> of them unless the file is shorter.</summary>
+    Task<byte[]> ReadFileStartAsync(string serial, string path, int count, CancellationToken ct = default);
+
+    /// <summary>The small copy the device's gallery keeps of a picture or video; null when it has none.</summary>
+    Task<byte[]?> GetMediaThumbnailAsync(string serial, string path, bool isVideo, CancellationToken ct = default);
+
+    /// <summary>
     /// Moves the device to a virtual location. An Android Studio emulator's GPS goes there. A phone (or another
     /// emulator) on Android 12 or later gets test location providers that report it, which apps see until
     /// <see cref="ClearPhoneLocationAsync"/>; it needs reporting again now and then, see <see cref="RefreshPhoneLocationAsync"/>.
@@ -241,6 +253,80 @@ public class DeviceToolsService(IScrcpyService scrcpy) : IDeviceToolsService
         if (paths.Count == 0) return;
         await RunShellAsync(serial, "rm -rf " + string.Join(' ', paths.Select(Quote)), ct).ConfigureAwait(false);
         await ScanMediaAsync(serial, paths, ct).ConfigureAwait(false);
+    }
+
+    // Big files take as long as they take, so only the caller can cancel this.
+    public Task<long> ReadFileAsync(string serial, string path, Stream destination, IProgress<long>? progress = null, CancellationToken ct = default) =>
+        CopyOutputAsync(serial, $"cat {Quote(path)} 2>/dev/null", destination, Timeout.InfiniteTimeSpan, progress, ct);
+
+    public async Task<byte[]> ReadFileStartAsync(string serial, string path, int count, CancellationToken ct = default)
+    {
+        // dd, as old devices' head can't count bytes. It counts reads rather than bytes, and a read of a phone's storage
+        // can come back short of a big block, but not of a 64 KB one.
+        const int block = 64 * 1024;
+        using var data = new MemoryStream();
+        await CopyOutputAsync(serial, $"dd if={Quote(path)} bs={block} count={(count + block - 1) / block} 2>/dev/null", data,
+            CommandTimeout, null, ct).ConfigureAwait(false);
+        return data.ToArray();
+    }
+
+    public async Task<byte[]?> GetMediaThumbnailAsync(string serial, string path, bool isVideo, CancellationToken ct = default)
+    {
+        var media = $"content://media/external/{(isVideo ? "video" : "images")}";
+        // The gallery knows a file by its real path, and /sdcard is a link (as some of its folders can be). The path goes
+        // in the query between SQL's quotes, so the quotes in it are doubled.
+        var script = "exec 2>/dev/null; "
+                     + $"d=$(cd {Quote(ParentOf(path))} && pwd -P) || exit; "
+                     + $"p=$(printf '%s' \"$d/\"{Quote(path[(path.LastIndexOf('/') + 1)..])} | sed \"s/'/''/g\"); "
+                     + $"id=$(content query --uri {media}/media --projection _id --where \"_data='$p'\" | sed -n 's/.*_id=\\([0-9]*\\).*/\\1/p' | head -n 1); "
+                     + "[ -n \"$id\" ] || exit; "
+                     // From Android 10 the gallery makes a thumbnail as it's read. Before, asking where one is waits for it to be made.
+                     + "if [ \"$(getprop ro.build.version.sdk)\" -ge 29 ]; then "
+                     + $"content read --uri {media}/media/$id/thumbnail; "
+                     + $"else t=$(content query --uri \"{media}/thumbnails?blocking=1&orig_id=$id&group_id=0\" --projection _data | sed -n 's/.*_data=//p' | head -n 1); "
+                     + "[ -n \"$t\" ] && cat \"$t\"; fi";
+        using var data = new MemoryStream();
+        await CopyOutputAsync(serial, script, data, CommandTimeout, null, ct).ConfigureAwait(false);
+        return data.Length > 0 ? data.ToArray() : null;
+    }
+
+    // Runs a command whose output is a file's bytes, copying them as they come. exec-out passes them through untouched,
+    // where "shell" would turn line endings into CRLF on some devices; what the command writes to stderr would be mixed
+    // in with them, so the commands send that nowhere.
+    private async Task<long> CopyOutputAsync(string serial, string command, Stream destination, TimeSpan timeout,
+        IProgress<long>? progress, CancellationToken ct)
+    {
+        using var process = StartAdb(NewAdbStartInfo("-s", serial, "exec-out", command));
+        using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        if (timeout != Timeout.InfiniteTimeSpan) limit.CancelAfter(timeout);
+
+        var errors = process.StandardError.ReadToEndAsync(limit.Token);
+        var buffer = new byte[81920];
+        long copied = 0, reported = 0;
+        try
+        {
+            int read;
+            while ((read = await process.StandardOutput.BaseStream.ReadAsync(buffer, limit.Token).ConfigureAwait(false)) > 0)
+            {
+                await destination.WriteAsync(buffer.AsMemory(0, read), limit.Token).ConfigureAwait(false);
+                copied += read;
+                // A megabyte at a time is often enough to move a progress bar.
+                if (progress != null && copied - reported >= 1024 * 1024) progress.Report(reported = copied);
+            }
+            await process.WaitForExitAsync(limit.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            Kill(process);
+            if (ct.IsCancellationRequested) throw;
+            throw new TimeoutException("The device didn't answer in time. Is it still connected?");
+        }
+
+        // adb's own problems, like the device having gone, are on its stderr.
+        if (copied == 0 && process.ExitCode != 0)
+            throw new InvalidOperationException(CleanAdbError(await errors.ConfigureAwait(false)) ?? "adb couldn't read the file.");
+        progress?.Report(copied);
+        return copied;
     }
 
     // Runs a command that prints nothing when it works, and throws with what it printed when it doesn't.

@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Windows.Media;
 using MessageBox = System.Windows.MessageBox;
 using MessageBoxButton = System.Windows.MessageBoxButton;
 using MessageBoxImage = System.Windows.MessageBoxImage;
@@ -19,6 +20,9 @@ public enum FileSort { Name, Size, Modified }
 /// <summary>What the name box under the files is for.</summary>
 public enum FileNaming { None, NewFolder, Rename }
 
+/// <summary>How the files are shown: rows with their details, or icons, pictures and videos showing what's in them.</summary>
+public enum FileView { Details, Icons }
+
 /// <summary>A shortcut beside the files: a storage, or a folder most files are in.</summary>
 public record PhonePlace(string Name, string Path, string Glyph)
 {
@@ -32,7 +36,7 @@ public record PathStep(string Name, string Path, bool HasArrow)
 }
 
 /// <summary>A file or folder in the Phone files list.</summary>
-public class PhoneFileItem(DeviceFile file)
+public partial class PhoneFileItem(DeviceFile file) : ObservableObject
 {
     private static readonly HashSet<string> Pictures = new(StringComparer.OrdinalIgnoreCase)
         { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif", ".bmp", ".dng", ".nef", ".cr2", ".arw" };
@@ -54,6 +58,15 @@ public class PhoneFileItem(DeviceFile file)
     public string Kind => File.IsFolder ? "Folder"
         : Path.GetExtension(File.Name) is { Length: > 1 } extension ? $"{extension[1..].ToUpperInvariant()} file"
         : "File";
+
+    public bool IsPicture => !File.IsFolder && Pictures.Contains(Path.GetExtension(File.Name));
+
+    public bool IsVideo => !File.IsFolder && Videos.Contains(Path.GetExtension(File.Name));
+
+    public bool IsPdf => !File.IsFolder && Path.GetExtension(File.Name).Equals(".pdf", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>What's in the picture or video, for the icon view while it's in view; null shows its icon.</summary>
+    [ObservableProperty] private ImageSource? _thumbnail;
 
     /// <summary>Its Segoe MDL2 Assets icon.</summary>
     public string Glyph
@@ -95,8 +108,12 @@ public partial class PhoneFilesViewModel : ObservableObject
         ("Music", "Music", ""),
     };
 
-    // Files opened on this PC are copies, kept here a day.
-    private static readonly string OpenedFilesDir = Path.Combine(Path.GetTempPath(), "RepoNLauncher", "Phone files");
+    // Files opened on this PC (or copied to preview) are copies, kept here a day.
+    internal static readonly string OpenedFilesDir = Path.Combine(Path.GetTempPath(), "RepoNLauncher", "Phone files");
+
+    // The next window opens the way the last was left.
+    private static FileView _lastView = FileView.Details;
+    private static bool _lastShowPreview = true;
 
     private readonly IDeviceToolsService _tools;
     private readonly List<string> _storages = new() { InternalStorage };
@@ -111,6 +128,8 @@ public partial class PhoneFilesViewModel : ObservableObject
     {
         _tools = tools;
         Device = device;
+        Thumbnails = new PhoneFileThumbnails(tools, device.Serial);
+        Preview = new PhoneFilePreviewViewModel(tools, device.Serial, Thumbnails);
         Places.Add(new PhonePlace("Internal storage", InternalStorage, ""));
         foreach (var (name, folder, glyph) in CommonFolders) Places.Add(new PhonePlace(name, $"{InternalStorage}/{folder}", glyph));
         _pathSteps = StepsTo(InternalStorage);
@@ -120,6 +139,15 @@ public partial class PhoneFilesViewModel : ObservableObject
     public AndroidDevice Device { get; }
 
     public string Title => $"Files on {Device.Model}";
+
+    public PhoneFileThumbnails Thumbnails { get; }
+
+    /// <summary>The pane beside the files, showing what's selected.</summary>
+    public PhoneFilePreviewViewModel Preview { get; }
+
+    [ObservableProperty] private FileView _view = _lastView;
+
+    [ObservableProperty] private bool _showPreview = _lastShowPreview;
 
     public ObservableCollection<PhonePlace> Places { get; } = new();
 
@@ -230,6 +258,20 @@ public partial class PhoneFilesViewModel : ObservableObject
     }
 
     partial void OnShowHiddenChanged(bool value) => ShowItems();
+
+    partial void OnViewChanged(FileView value) => _lastView = value;
+
+    // A hidden pane copies nothing from the phone.
+    partial void OnShowPreviewChanged(bool value)
+    {
+        _lastShowPreview = value;
+        Preview.Show(value ? Selection : Array.Empty<PhoneFileItem>());
+    }
+
+    partial void OnSelectionChanged(IReadOnlyList<PhoneFileItem> value)
+    {
+        if (ShowPreview) Preview.Show(value);
+    }
 
     private bool CanOpenItem(PhoneFileItem? item) => item != null && (item.IsFolder || !IsBusy);
 
@@ -491,8 +533,13 @@ public partial class PhoneFilesViewModel : ObservableObject
         await OpenFolderAsync(Folder);
     }
 
-    /// <summary>Stops a copy in progress, for the window closing.</summary>
-    public void Close() => _copying?.Cancel();
+    /// <summary>Stops a copy in progress, and the thumbnails and preview being made, for the window closing.</summary>
+    public void Close()
+    {
+        _copying?.Cancel();
+        Thumbnails.Close();
+        Preview.Close();
+    }
 
     private async Task OpenFolderAsync(string folder)
     {
@@ -592,7 +639,7 @@ public partial class PhoneFilesViewModel : ObservableObject
         }
     }
 
-    private static void TryDeleteOnPc(string path)
+    internal static void TryDeleteOnPc(string path)
     {
         try
         {
