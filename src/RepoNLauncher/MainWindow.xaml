@@ -884,6 +884,11 @@
                                                             <TextBlock Text="{Binding}" FontFamily="Cascadia Mono, Consolas"/>
                                                         </StackPanel>
                                                     </Button>
+                                                    <Button Content="&#xE8C8;" Style="{StaticResource Button.Ghost}" FontSize="11" Margin="4,0,0,0"
+                                                            Command="{Binding DataContext.CopySavedCommandCommand, ElementName=ProjectTabControl}"
+                                                            CommandParameter="{Binding}"
+                                                            AutomationProperties.Name="{Binding StringFormat=Copy {0}}"
+                                                            ToolTip="Copy the command"/>
                                                     <Button Content="✕" Style="{StaticResource Button.Icon}" Margin="2,0,0,0"
                                                             Command="{Binding DataContext.RemoveSavedCommandCommand, ElementName=ProjectTabControl}"
                                                             CommandParameter="{Binding}"

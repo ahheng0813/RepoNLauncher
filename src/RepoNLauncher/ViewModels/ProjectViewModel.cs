@@ -902,6 +902,10 @@ public partial class ProjectViewModel : ObservableObject
         SavedCommandsChanged();
     }
 
+    /// <summary>Puts a saved command on the clipboard, to run it in a terminal or paste it somewhere.</summary>
+    [RelayCommand]
+    private void CopySavedCommand(string command) => ClipboardText.Set(command);
+
     [RelayCommand]
     private void RemoveSavedCommand(string command)
     {
