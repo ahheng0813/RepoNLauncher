@@ -1,9 +1,18 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.Json;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using Clipboard = System.Windows.Clipboard;
+using DataFormats = System.Windows.DataFormats;
+using DataObject = System.Windows.DataObject;
+using IDataObject = System.Windows.IDataObject;
 using MessageBox = System.Windows.MessageBox;
 using MessageBoxButton = System.Windows.MessageBoxButton;
 using MessageBoxImage = System.Windows.MessageBoxImage;
@@ -59,9 +68,13 @@ public partial class PhoneFileItem(DeviceFile file) : ObservableObject
         : Path.GetExtension(File.Name) is { Length: > 1 } extension ? $"{extension[1..].ToUpperInvariant()} file"
         : "File";
 
-    public bool IsPicture => !File.IsFolder && Pictures.Contains(Path.GetExtension(File.Name));
+    public bool IsPicture => !File.IsFolder && IsPictureName(File.Name);
 
-    public bool IsVideo => !File.IsFolder && Videos.Contains(Path.GetExtension(File.Name));
+    public bool IsVideo => !File.IsFolder && IsVideoName(File.Name);
+
+    internal static bool IsPictureName(string name) => Pictures.Contains(Path.GetExtension(name));
+
+    internal static bool IsVideoName(string name) => Videos.Contains(Path.GetExtension(name));
 
     public bool IsPdf => !File.IsFolder && Path.GetExtension(File.Name).Equals(".pdf", StringComparison.OrdinalIgnoreCase);
 
@@ -69,19 +82,19 @@ public partial class PhoneFileItem(DeviceFile file) : ObservableObject
     [ObservableProperty] private ImageSource? _thumbnail;
 
     /// <summary>Its Segoe MDL2 Assets icon.</summary>
-    public string Glyph
+    public string Glyph => GlyphFor(File.Name, File.IsFolder);
+
+    /// <summary>The Segoe MDL2 Assets icon for a file or folder of this name.</summary>
+    internal static string GlyphFor(string name, bool isFolder)
     {
-        get
-        {
-            if (File.IsFolder) return "";
-            var extension = Path.GetExtension(File.Name);
-            if (Pictures.Contains(extension)) return "";
-            if (Videos.Contains(extension)) return "";
-            if (Sounds.Contains(extension)) return "";
-            if (Packages.Contains(extension)) return "";
-            if (Documents.Contains(extension)) return "";
-            return "";
-        }
+        if (isFolder) return "";
+        var extension = Path.GetExtension(name);
+        if (Pictures.Contains(extension)) return "";
+        if (Videos.Contains(extension)) return "";
+        if (Sounds.Contains(extension)) return "";
+        if (Packages.Contains(extension)) return "";
+        if (Documents.Contains(extension)) return "";
+        return "";
     }
 
     // What screen readers (and UI Automation) call its row.
@@ -89,9 +102,44 @@ public partial class PhoneFileItem(DeviceFile file) : ObservableObject
 }
 
 /// <summary>
+/// Files and folders from one folder on a device, copied or dragged from its files window for another device's files
+/// (or the same one's) to paste. <see cref="PcFolder"/> is where they've been copied to on this PC, once they have.
+/// </summary>
+public record DeviceFileSet(string Serial, string Model, string Folder, IReadOnlyList<DeviceFile> Files)
+{
+    /// <summary>Their format on the clipboard, and in a drag.</summary>
+    public const string Format = "RepoNLauncher.DeviceFiles";
+
+    public string? PcFolder { get; init; }
+
+    /// <summary>Puts them in a clipboard or drag's data. They go as bytes: WPF would put a string of its own format in .NET's own serialized form.</summary>
+    public void AddTo(DataObject data) => data.SetData(Format, new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(this))));
+
+    /// <summary>The device files in a clipboard or drag's data; null when it has none.</summary>
+    public static DeviceFileSet? From(IDataObject? data)
+    {
+        try
+        {
+            if (data?.GetDataPresent(Format) != true || data.GetData(Format) is not MemoryStream stream) return null;
+            // The clipboard can hand back more bytes than were put on it, as zeros.
+            return JsonSerializer.Deserialize<DeviceFileSet>(Encoding.UTF8.GetString(stream.ToArray()).TrimEnd('\0'));
+        }
+        catch (Exception e) when (e is JsonException or ExternalException or NotSupportedException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>The same files from the same device, though one may have been copied to this PC and the other not.</summary>
+    public bool IsSameAs(DeviceFileSet other) =>
+        Serial == other.Serial && Files.Select(f => f.Path).SequenceEqual(other.Files.Select(f => f.Path));
+}
+
+/// <summary>
 /// The Phone files window: a device's storage to look through, with files to send to it from this PC, copy from it to
-/// this PC or open here, and folders to make, rename and delete. One copy at a time, which Stop cancels, removing
-/// whatever it left half copied.
+/// this PC or open here, and folders to make, rename and delete. Files can be dropped or pasted on it from File Explorer
+/// or another device's files, and dragged or copied from it to those, asking first. One copy at a time, which Stop
+/// cancels, removing whatever it left half copied.
 /// </summary>
 public partial class PhoneFilesViewModel : ObservableObject
 {
@@ -119,9 +167,11 @@ public partial class PhoneFilesViewModel : ObservableObject
     private readonly List<string> _storages = new() { InternalStorage };
     private List<PhoneFileItem> _all = new();
     private CancellationTokenSource? _copying;
+    private bool _copyCanStop;
+    private CancellationTokenSource? _preparing; // copying what's on the clipboard to this PC, for File Explorer to paste
     private int _listRequest;
     private string? _pcFolder; // where Save to PC saved last, to start there next time
-    private string? _saved; // what Show in folder shows
+    private (string Path, bool Select)? _saved; // what Show in folder shows, and whether it's to be selected in its folder
     private PhoneFileItem? _renaming;
 
     public PhoneFilesViewModel(IDeviceToolsService tools, AndroidDevice device)
@@ -168,13 +218,27 @@ public partial class PhoneFilesViewModel : ObservableObject
 
     /// <summary>Copying, renaming, deleting or making a folder: one at a time.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanStop), nameof(ShowsProgress))]
     [NotifyCanExecuteChangedFor(nameof(ChooseFilesToSendCommand), nameof(ChooseFolderToSendCommand), nameof(SaveToPcCommand),
         nameof(OpenItemCommand), nameof(DeleteCommand), nameof(StartRenameCommand), nameof(StartNewFolderCommand),
-        nameof(ConfirmNameCommand))]
+        nameof(ConfirmNameCommand), nameof(PasteCommand))]
     private bool _isBusy;
 
+    /// <summary>
+    /// What was copied is being copied to this PC too, so File Explorer can paste it. Other work goes on meanwhile:
+    /// pasting it on a device doesn't need it.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanStop), nameof(ShowsProgress))]
+    private bool _isPreparing;
+
     /// <summary>The work under way is a copy, which Stop can cancel.</summary>
-    [ObservableProperty] private bool _canStop;
+    public bool CanStop => IsBusy && _copyCanStop || IsPreparing;
+
+    public bool ShowsProgress => IsBusy || IsPreparing;
+
+    /// <summary>Asks whether to paste, or drop, what it shows: set by the window, which shows it over itself.</summary>
+    public Func<PastePreview, bool>? ConfirmPaste { get; set; }
 
     [ObservableProperty] private string _status = string.Empty;
 
@@ -188,7 +252,7 @@ public partial class PhoneFilesViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SelectionText))]
-    [NotifyCanExecuteChangedFor(nameof(SaveToPcCommand), nameof(DeleteCommand), nameof(StartRenameCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveToPcCommand), nameof(DeleteCommand), nameof(StartRenameCommand), nameof(CopyCommand))]
     private IReadOnlyList<PhoneFileItem> _selection = Array.Empty<PhoneFileItem>();
 
     [ObservableProperty]
@@ -338,15 +402,19 @@ public partial class PhoneFilesViewModel : ObservableObject
         if (dialog.ShowDialog() == true) await SendAsync(dialog.FolderNames);
     }
 
-    /// <summary>Copies files and folders from this PC (chosen, or dropped on the window) into the folder shown.</summary>
-    public async Task SendAsync(IReadOnlyList<string> paths)
+    /// <summary>
+    /// Copies files and folders from this PC (chosen, dropped on the window or pasted) into a folder on the device: the
+    /// one shown, unless another is given.
+    /// </summary>
+    public async Task SendAsync(IReadOnlyList<string> paths, string? into = null)
     {
         if (paths.Count == 0 || IsBusy) return;
-        var folder = Folder;
+        var folder = into ?? Folder;
         static string NameOnPc(string path) => Path.GetFileName(path.TrimEnd('\\', '/'));
 
-        // The phone's storage ignores capitals, so "Photo.jpg" would replace "photo.jpg".
-        var taken = paths.Where(p => _all.Any(i => string.Equals(i.Name, NameOnPc(p), StringComparison.OrdinalIgnoreCase))).ToList();
+        var names = await NamesInAsync(folder);
+        if (IsBusy) return;
+        var taken = paths.Where(p => names.Contains(NameOnPc(p))).ToList();
         if (taken.Count > 0)
         {
             var keep = AskToReplace(taken.Select(NameOnPc).ToList(), paths.Count, $"{NameOf(folder)} on {Device.Model}", "Send to the phone");
@@ -395,8 +463,36 @@ public partial class PhoneFilesViewModel : ObservableObject
             InitialDirectory = _pcFolder ?? NativeMethods.DownloadsFolder,
         };
         if (dialog.ShowDialog() != true) return;
-        var target = _pcFolder = dialog.FolderName;
+        await SaveAsync(items, _pcFolder = dialog.FolderName);
+    }
 
+    /// <summary>
+    /// Files dragged out of the window and dropped on another program: asks, then copies them into the folder it shows,
+    /// when it's File Explorer or the desktop. Null when it's neither.
+    /// </summary>
+    public async Task DropOnPcAsync(IReadOnlyList<PhoneFileItem> items, string? pcFolder)
+    {
+        if (items.Count == 0) return;
+        if (pcFolder == null)
+        {
+            Status = "To copy them to this PC, drop them on a folder open in File Explorer, or on the desktop.";
+            return;
+        }
+        if (IsBusy)
+        {
+            Status = "Wait for what's under way to finish, then drop them again.";
+            return;
+        }
+        var from = $"From {Device.Model}, {ParentOf(items[0].File.Path)}";
+        if (!Confirm(new PastePreview(items.Select(PasteItemFor).ToList(), from, "This PC", pcFolder))) return;
+        await SaveAsync(items, pcFolder);
+    }
+
+    // Copies files and folders from the device into a folder on this PC, asking before replacing any.
+    private async Task SaveAsync(IReadOnlyList<PhoneFileItem> items, string target)
+    {
+        if (IsBusy) return;
+        var what = items.Count == 1 ? items[0].Name : $"{items.Count} items";
         var taken = items.Where(i => File.Exists(Path.Combine(target, i.Name)) || Directory.Exists(Path.Combine(target, i.Name))).ToList();
         if (taken.Count > 0)
         {
@@ -414,7 +510,7 @@ public partial class PhoneFilesViewModel : ObservableObject
         {
             var copied = await _tools.GetFilesAsync(Device.Serial, items.Select(i => i.File.Path).ToList(), target, stop);
             Status = $"Saved {what} to {target}" + (copied == null ? "." : $": {copied.Summary}.");
-            _saved = items.Count == 1 ? Path.Combine(target, items[0].Name) : target;
+            _saved = items.Count == 1 ? (Path.Combine(target, items[0].Name), true) : (target, false);
             CanShowSaved = true;
         }
         catch (OperationCanceledException)
@@ -435,14 +531,313 @@ public partial class PhoneFilesViewModel : ObservableObject
     [RelayCommand]
     private void ShowSaved()
     {
-        if (_saved == null) return;
-        Process.Start("explorer.exe", File.Exists(_saved) || Directory.Exists(_saved) && _saved != _pcFolder
-            ? $"/select,\"{_saved}\""
-            : $"\"{_saved}\"");
+        if (_saved is not { } saved) return;
+        var (path, select) = saved;
+        Process.Start("explorer.exe", select ? $"/select,\"{path}\"" : $"\"{path}\"");
     }
 
+    // The copy under way first, then getting what's copied ready for this PC.
     [RelayCommand]
-    private void StopCopying() => _copying?.Cancel();
+    private void StopCopying()
+    {
+        if (IsBusy && _copyCanStop) _copying?.Cancel();
+        else _preparing?.Cancel();
+    }
+
+    /// <summary>
+    /// Files and folders from this PC dropped on the window, or pasted, from File Explorer: asks, then sends them to the
+    /// folder given.
+    /// </summary>
+    public async Task PasteFromPcAsync(IReadOnlyList<string> paths, string folder)
+    {
+        if (paths.Count == 0 || IsBusy) return;
+        var parents = paths.Select(p => Path.GetDirectoryName(p.TrimEnd('\\', '/'))).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var from = parents is [{ } parent] ? $"From This PC, {parent}" : "From this PC";
+        if (!Confirm(new PastePreview(paths.Select(PasteItem.OnPc).ToList(), from, Device.Model, folder))) return;
+        await SendAsync(paths, folder);
+    }
+
+    /// <summary>
+    /// Files and folders from a device dropped on the window, or pasted, from its files window: asks, then copies them to
+    /// the folder given. The same device copies them itself; from another, they come through this PC.
+    /// </summary>
+    public async Task PasteFromDeviceAsync(DeviceFileSet set, string folder)
+    {
+        if (set.Files.Count == 0 || IsBusy) return;
+        var sameDevice = set.Serial == Device.Serial;
+        if (sameDevice && set.Files.Any(f => f.IsFolder && (folder == f.Path || folder.StartsWith(f.Path + "/", StringComparison.Ordinal))))
+        {
+            Status = "A folder can't be pasted inside itself.";
+            return;
+        }
+
+        var thumbnails = sameDevice ? Thumbnails : new PhoneFileThumbnails(_tools, set.Serial);
+        var items = set.Files.Select(f => PasteItem.OnDevice(new PhoneFileItem(f), thumbnails)).ToList();
+        if (!Confirm(new PastePreview(items, $"From {set.Model}, {set.Folder}", Device.Model, folder))) return;
+        if (sameDevice) await CopyOnDeviceAsync(set, folder);
+        else await CopyFromDeviceAsync(set, folder);
+    }
+
+    // Copies files to another folder on this device, or as copies beside themselves, named as File Explorer names copies.
+    private async Task CopyOnDeviceAsync(DeviceFileSet set, string folder)
+    {
+        var names = await NamesInAsync(folder);
+        if (IsBusy) return;
+        var files = set.Files.ToList();
+        var beside = set.Folder.TrimEnd('/') == folder.TrimEnd('/');
+        var taken = beside ? new List<DeviceFile>() : files.Where(f => names.Contains(f.Name)).ToList();
+        if (taken.Count > 0)
+        {
+            var keep = AskToReplace(taken.Select(f => f.Name).ToList(), files.Count, $"{NameOf(folder)} on {Device.Model}", "Paste");
+            if (keep == null) return;
+            if (keep == false) files = files.Except(taken).ToList();
+            if (files.Count == 0) return;
+        }
+
+        var copies = files.Select(f => (From: f.Path, To: Combine(folder, beside ? CopyName(f, names) : f.Name))).ToList();
+        var added = copies.Where((_, i) => !taken.Contains(files[i])).Select(c => c.To).ToList();
+        var what = files.Count == 1 ? files[0].Name : $"{files.Count} items";
+        var stop = Begin($"Copying {what} to {NameOf(folder)}…", canStop: true);
+        try
+        {
+            await _tools.CopyOnDeviceAsync(Device.Serial, copies, stop);
+            Status = $"Copied {what} to {NameOf(folder)}.";
+        }
+        catch (OperationCanceledException)
+        {
+            await TryDeleteOnPhoneAsync(added);
+            Status = $"Stopped copying {what}." + (added.Count < copies.Count ? " Files it was replacing may be half copied." : "");
+        }
+        catch (Exception e) when (e is InvalidOperationException or TimeoutException)
+        {
+            Status = $"Couldn't copy {what}: {e.Message.TrimEnd('.')}.";
+        }
+        finally
+        {
+            End();
+        }
+
+        if (Folder == folder) await OpenFolderAsync(folder);
+    }
+
+    // adb can't copy from one device to another, so the files come to this PC on the way, unless they're here already
+    // from being copied for File Explorer to paste.
+    private async Task CopyFromDeviceAsync(DeviceFileSet set, string folder)
+    {
+        var names = await NamesInAsync(folder);
+        if (IsBusy) return;
+        var files = set.Files.ToList();
+        var taken = files.Where(f => names.Contains(f.Name)).ToList();
+        if (taken.Count > 0)
+        {
+            var keep = AskToReplace(taken.Select(f => f.Name).ToList(), files.Count, $"{NameOf(folder)} on {Device.Model}", "Paste");
+            if (keep == null) return;
+            if (keep == false) files = files.Except(taken).ToList();
+            if (files.Count == 0) return;
+        }
+
+        var what = files.Count == 1 ? files[0].Name : $"{files.Count} items";
+        var added = files.Except(taken).Select(f => Combine(folder, f.Name)).ToList();
+        var stop = Begin($"Copying {what} from {set.Model} to {NameOf(folder)}…", canStop: true);
+        string? onPc = null;
+        try
+        {
+            var copies = set.PcFolder is { } ready && files.All(f => Path.Exists(Path.Combine(ready, f.Name))) ? ready : null;
+            if (copies == null)
+            {
+                copies = onPc = Path.Combine(OpenedFilesDir, Guid.NewGuid().ToString("N")[..8]);
+                Directory.CreateDirectory(onPc);
+                await _tools.GetFilesAsync(set.Serial, files.Select(f => f.Path).ToList(), onPc, stop);
+            }
+            var sent = await _tools.SendFilesAsync(Device.Serial, files.Select(f => Path.Combine(copies, f.Name)).ToList(), folder, stop);
+            Status = $"Copied {what} from {set.Model} to {NameOf(folder)}" + (sent == null ? "." : $": {sent.Summary}.");
+        }
+        catch (OperationCanceledException)
+        {
+            await TryDeleteOnPhoneAsync(added);
+            Status = $"Stopped copying {what}." + (added.Count < files.Count ? " Files it was replacing may be half copied." : "");
+        }
+        catch (Exception e) when (e is InvalidOperationException or TimeoutException or IOException or UnauthorizedAccessException)
+        {
+            Status = $"Couldn't copy {what} from {set.Model}: {e.Message.TrimEnd('.')}.";
+        }
+        finally
+        {
+            if (onPc != null) TryDeleteOnPc(onPc);
+            End();
+        }
+
+        if (Folder == folder) await OpenFolderAsync(folder);
+    }
+
+    /// <summary>
+    /// Copies what's selected, to paste in another folder, another device's files, or File Explorer. Explorer can only
+    /// paste files that are on this PC, so they're copied here straight away, which pasting on a device doesn't wait for.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanCopySelection))]
+    private void Copy()
+    {
+        var set = new DeviceFileSet(Device.Serial, Device.Model, Folder, Selection.Select(i => i.File).ToList());
+        if (!PutOnClipboard(set)) return;
+        _ = PrepareForPcAsync(set);
+    }
+
+    private bool CanCopySelection() => Selection.Count > 0;
+
+    /// <summary>Pastes what's on the clipboard into the folder shown: files from File Explorer or a device, or a picture.</summary>
+    [RelayCommand(CanExecute = nameof(CanCopy))]
+    private async Task PasteAsync()
+    {
+        IDataObject? data;
+        try
+        {
+            data = Clipboard.GetDataObject();
+        }
+        catch (ExternalException)
+        {
+            Status = "Couldn't read the clipboard: another app is using it. Try again.";
+            return;
+        }
+
+        var folder = Folder;
+        if (DeviceFileSet.From(data) is { } set) await PasteFromDeviceAsync(set, folder);
+        else if (data?.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } paths) await PasteFromPcAsync(paths, folder);
+        else if (SavePastedPicture(data) is { } picture) await PastePictureAsync(picture, folder);
+        else Status = "There's nothing to paste. Copy files, here or in File Explorer, or a picture first.";
+    }
+
+    // A picture copied in another app, such as a screenshot, is sent as a PNG.
+    private async Task PastePictureAsync(string path, string folder)
+    {
+        try
+        {
+            if (Confirm(new PastePreview([PasteItem.OnPc(path)], "From a picture you copied", Device.Model, folder)))
+                await SendAsync([path], folder);
+        }
+        finally
+        {
+            TryDeleteOnPc(Path.GetDirectoryName(path)!);
+        }
+    }
+
+    // A picture on the clipboard saved as a PNG on this PC, preferring the PNG snipping tools put there, as the bitmap can
+    // lose its see-through parts. Null when there's none.
+    private static string? SavePastedPicture(IDataObject? data)
+    {
+        if (data == null) return null;
+        var folder = Path.Combine(OpenedFilesDir, Guid.NewGuid().ToString("N")[..8]);
+        var path = Path.Combine(folder, $"Pasted {DateTime.Now:yyyyMMdd-HHmmss}.png");
+        try
+        {
+            if (data.GetDataPresent("PNG") && data.GetData("PNG") is MemoryStream png)
+            {
+                Directory.CreateDirectory(folder);
+                File.WriteAllBytes(path, png.ToArray());
+                return path;
+            }
+            if (data.GetDataPresent(DataFormats.Bitmap) && data.GetData(DataFormats.Bitmap) is BitmapSource image)
+            {
+                Directory.CreateDirectory(folder);
+                using var file = File.Create(path);
+                var encoder = new PngBitmapEncoder();
+                encoder.Frames.Add(BitmapFrame.Create(image));
+                encoder.Save(file);
+                return path;
+            }
+        }
+        catch (Exception e) when (e is ExternalException or IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            TryDeleteOnPc(folder);
+        }
+        return null;
+    }
+
+    // For a device's files to paste and, once they're copied to this PC, File Explorer (and other apps) too.
+    private bool PutOnClipboard(DeviceFileSet set)
+    {
+        var data = new DataObject();
+        set.AddTo(data);
+        if (set.PcFolder is { } folder)
+        {
+            var paths = new StringCollection();
+            paths.AddRange(set.Files.Select(f => Path.Combine(folder, f.Name)).ToArray());
+            data.SetFileDropList(paths);
+            // Copied, not moved: the copies here stay for pasting again.
+            data.SetData("Preferred DropEffect", new MemoryStream(BitConverter.GetBytes(1)));
+        }
+        try
+        {
+            Clipboard.SetDataObject(data, copy: true);
+            return true;
+        }
+        catch (ExternalException)
+        {
+            Status = "Couldn't copy: another app is using the clipboard. Try again.";
+            return false;
+        }
+    }
+
+    // Copies what was copied to this PC, then adds the copies to the clipboard, if it's still what's on it.
+    private async Task PrepareForPcAsync(DeviceFileSet set)
+    {
+        _preparing?.Cancel();
+        var preparing = _preparing = new CancellationTokenSource();
+        var folder = Path.Combine(OpenedFilesDir, Guid.NewGuid().ToString("N")[..8]);
+        var what = set.Files.Count == 1 ? set.Files[0].Name : $"{set.Files.Count} items";
+        var it = set.Files.Count == 1 ? "it" : "them";
+        IsPreparing = true;
+        if (!IsBusy) Status = $"Copied {what}. Getting {it} ready to paste on this PC too…";
+        try
+        {
+            Directory.CreateDirectory(folder);
+            await _tools.GetFilesAsync(Device.Serial, set.Files.Select(f => f.Path).ToList(), folder, preparing.Token);
+            if (!IsOnClipboard(set))
+            {
+                TryDeleteOnPc(folder);
+                return;
+            }
+            if (PutOnClipboard(set with { PcFolder = folder }) && !IsBusy)
+                Status = $"Copied {what}. Paste {it} in File Explorer, or in a device's files.";
+        }
+        catch (OperationCanceledException)
+        {
+            TryDeleteOnPc(folder);
+            if (preparing == _preparing && !IsBusy) Status = $"Copied {what}, to paste in a device's files only: stopped getting {it} ready for this PC.";
+        }
+        catch (Exception e) when (e is InvalidOperationException or TimeoutException or IOException or UnauthorizedAccessException)
+        {
+            TryDeleteOnPc(folder);
+            if (preparing == _preparing && !IsBusy)
+                Status = $"Copied {what}, to paste in a device's files. Couldn't get {it} ready to paste on this PC: {e.Message.TrimEnd('.')}.";
+        }
+        finally
+        {
+            if (preparing == _preparing)
+            {
+                _preparing = null;
+                IsPreparing = false;
+            }
+            preparing.Dispose();
+        }
+    }
+
+    private static bool IsOnClipboard(DeviceFileSet set)
+    {
+        try
+        {
+            return DeviceFileSet.From(Clipboard.GetDataObject()) is { } copied && copied.IsSameAs(set);
+        }
+        catch (ExternalException)
+        {
+            return false;
+        }
+    }
+
+    private bool Confirm(PastePreview preview) => ConfirmPaste?.Invoke(preview) ?? true;
+
+    // What the paste window shows of a file here: the picture the preview pane has of it, if it's the one selected.
+    private PasteItem PasteItemFor(PhoneFileItem item) =>
+        PasteItem.OnDevice(item, Thumbnails, Preview.Item == item ? Preview.Picture : null);
 
     [RelayCommand(CanExecute = nameof(CanChangeSelection))]
     private async Task DeleteAsync()
@@ -537,6 +932,7 @@ public partial class PhoneFilesViewModel : ObservableObject
     public void Close()
     {
         _copying?.Cancel();
+        _preparing?.Cancel();
         Thumbnails.Close();
         Preview.Close();
     }
@@ -583,13 +979,13 @@ public partial class PhoneFilesViewModel : ObservableObject
         Selection = Array.Empty<PhoneFileItem>();
         ListNote = Items.Count > 0 ? string.Empty
             : _all.Count > 0 ? "Only hidden files are in here. Tick Hidden files to see them."
-            : "This folder is empty. Drop files here to send them to it.";
+            : "This folder is empty. Drop or paste files here to send them to it.";
     }
 
     private CancellationToken Begin(string status, bool canStop)
     {
+        _copyCanStop = canStop;
         IsBusy = true;
-        CanStop = canStop;
         CanShowSaved = false;
         Status = status;
         _copying = new CancellationTokenSource();
@@ -599,9 +995,37 @@ public partial class PhoneFilesViewModel : ObservableObject
     private void End()
     {
         IsBusy = false;
-        CanStop = false;
         _copying?.Dispose();
         _copying = null;
+    }
+
+    // The names in a folder, to ask before replacing any. The phone's storage ignores capitals, so "Photo.jpg" would
+    // replace "photo.jpg". None when it can't be listed, which copying to it will say.
+    private async Task<HashSet<string>> NamesInAsync(string folder)
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            var files = folder == Folder ? _all.Select(i => i.File) : await _tools.ListFolderAsync(Device.Serial, folder);
+            names.UnionWith(files.Select(f => f.Name));
+        }
+        catch (Exception e) when (e is InvalidOperationException or TimeoutException)
+        {
+            // the copy says what's wrong
+        }
+        return names;
+    }
+
+    // "photo.jpg" → "photo - Copy.jpg", then "photo - Copy (2).jpg", as File Explorer names copies, taking the name.
+    private static string CopyName(DeviceFile file, HashSet<string> taken)
+    {
+        var extension = file.IsFolder ? "" : Path.GetExtension(file.Name);
+        if (extension.Length == file.Name.Length) extension = ""; // ".nomedia" is a name, not an extension
+        var stem = file.Name[..^extension.Length];
+        var name = $"{stem} - Copy{extension}";
+        for (var n = 2; taken.Contains(name); n++) name = $"{stem} - Copy ({n}){extension}";
+        taken.Add(name);
+        return name;
     }
 
     /// <summary>

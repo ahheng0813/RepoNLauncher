@@ -11,16 +11,24 @@ using Microsoft.Web.WebView2.Core;
 using RepoNLauncher.Services;
 using RepoNLauncher.ViewModels;
 using DataFormats = System.Windows.DataFormats;
+using DataObject = System.Windows.DataObject;
+using DragAction = System.Windows.DragAction;
 using DragDropEffects = System.Windows.DragDropEffects;
+using DragDropKeyStates = System.Windows.DragDropKeyStates;
 using DragEventArgs = System.Windows.DragEventArgs;
+using IDataObject = System.Windows.IDataObject;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using ListViewItem = System.Windows.Controls.ListViewItem;
+using MouseEventArgs = System.Windows.Input.MouseEventArgs;
+using Point = System.Windows.Point;
+using QueryContinueDragEventArgs = System.Windows.QueryContinueDragEventArgs;
 
 namespace RepoNLauncher;
 
 /// <summary>
-/// A device's files: double-click a folder to go in and a file to open a copy here, drop files from File Explorer to send
-/// them, and Save to PC to copy them off. Beside them, a preview of what's selected. One window per device.
+/// A device's files: double-click a folder to go in and a file to open a copy here, drop or paste files from File
+/// Explorer or another device's files to send them, and drag or copy them out to File Explorer, the desktop or another
+/// device's files, or Save to PC, to copy them off. Beside them, a preview of what's selected. One window per device.
 /// </summary>
 public partial class PhoneFilesWindow : Window
 {
@@ -37,6 +45,17 @@ public partial class PhoneFilesWindow : Window
     private readonly GridView _details;
     private readonly ItemsPanelTemplate _rows;
     private Task? _webViewReady;
+
+    // Dragging out: where the button went down, and a row pressed among others selected, which is selected alone if it
+    // isn't dragged. Then the program the files were dropped on, when it isn't the app.
+    private Point? _dragStart;
+    private ListViewItem? _pressed;
+    private IntPtr _droppedOn;
+
+    // Dragging in: the data dragged, the device files in it, and the folder row they'd be dropped in.
+    private IDataObject? _dragData;
+    private DeviceFileSet? _dragged;
+    private ListViewItem? _dropRow;
 
     private PhoneFilesWindow(PhoneFilesViewModel viewModel)
     {
@@ -58,11 +77,16 @@ public partial class PhoneFilesWindow : Window
         };
         viewModel.PropertyChanged += OnViewModelChanged;
         viewModel.Preview.PropertyChanged += OnPreviewChanged;
+        viewModel.ConfirmPaste = preview => PasteWindow.Ask(this, preview);
         PreviewKeyDown += (_, e) =>
         {
+            // Copying and pasting files, unless a name is being typed.
+            var files = Keyboard.Modifiers == ModifierKeys.Control && Keyboard.FocusedElement is not System.Windows.Controls.Primitives.TextBoxBase;
             if (e.Key == Key.F5) viewModel.RefreshCommand.Execute(null);
             // Alt+P, as in File Explorer.
             else if (e.Key == Key.System && e.SystemKey == Key.P) viewModel.ShowPreview = !viewModel.ShowPreview;
+            else if (files && e.Key == Key.C) Run(viewModel.CopyCommand);
+            else if (files && e.Key == Key.V) Run(viewModel.PasteCommand);
             else return;
             e.Handled = true;
         };
@@ -298,14 +322,127 @@ public partial class PhoneFilesWindow : Window
         e.Handled = true;
     }
 
-    private void Files_DragOver(object sender, DragEventArgs e)
+    private static void Run(ICommand command)
     {
-        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) && !_viewModel.IsBusy ? DragDropEffects.Copy : DragDropEffects.None;
+        if (command.CanExecute(null)) command.Execute(null);
+    }
+
+    // Pressing one of several selected rows keeps them all selected, so they can all be dragged, as in File Explorer.
+    private void FileList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _dragStart = null;
+        _pressed = null;
+        if (ItemsControl.ContainerFromElement(FileList, (DependencyObject)e.OriginalSource) is not ListViewItem row) return;
+        _dragStart = e.GetPosition(FileList);
+        if (e.ClickCount == 1 && row.IsSelected && FileList.SelectedItems.Count > 1 && Keyboard.Modifiers == ModifierKeys.None)
+        {
+            _pressed = row;
+            e.Handled = true;
+        }
+    }
+
+    private void FileList_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_pressed is { Content: PhoneFileItem item } row)
+        {
+            FileList.SelectedItem = item;
+            row.Focus();
+        }
+        _pressed = null;
+        _dragStart = null;
+    }
+
+    private void FileList_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (_dragStart is not { } start || e.LeftButton != MouseButtonState.Pressed) return;
+        var moved = e.GetPosition(FileList) - start;
+        if (Math.Abs(moved.X) < SystemParameters.MinimumHorizontalDragDistance
+            && Math.Abs(moved.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+        _dragStart = null;
+        _pressed = null;
+        DragOut();
+    }
+
+    // What's selected goes as device files, for another device's files (or this one's) to paste, and with their names
+    // for File Explorer, so it shows it would copy them.
+    private void DragOut()
+    {
+        var items = _viewModel.Selection.ToList();
+        if (items.Count == 0) return;
+        var data = new DataObject();
+        new DeviceFileSet(_viewModel.Device.Serial, _viewModel.Device.Model, _viewModel.Folder, items.Select(i => i.File).ToList()).AddTo(data);
+        data.SetData("FileGroupDescriptorW", WindowsShell.FileDescriptors(items.Select(i => (i.Name, i.IsFolder)).ToList()));
+        data.SetData("FileContents", new MemoryStream());
+
+        _droppedOn = IntPtr.Zero;
+        DragDrop.DoDragDrop(FileList, data, DragDropEffects.Copy);
+        if (_droppedOn != IntPtr.Zero) _ = _viewModel.DropOnPcAsync(items, WindowsShell.FolderOf(_droppedOn));
+    }
+
+    // Dropped on another program, the drop is called off, and the app copies the files itself once it's asked: File
+    // Explorer would want the files from the drag, and they're still on the device.
+    private void FileList_QueryContinueDrag(object sender, QueryContinueDragEventArgs e)
+    {
+        if (e.EscapePressed) e.Action = DragAction.Cancel;
+        else if ((e.KeyStates & DragDropKeyStates.LeftMouseButton) != 0) e.Action = DragAction.Continue;
+        else e.Action = (_droppedOn = WindowsShell.OtherWindowAtPointer()) != IntPtr.Zero ? DragAction.Cancel : DragAction.Drop;
         e.Handled = true;
     }
 
+    private void Files_DragOver(object sender, DragEventArgs e)
+    {
+        var folder = DropFolder(e, out var row);
+        ShowDropRow(row);
+        e.Effects = folder != null ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void Files_DragLeave(object sender, DragEventArgs e) => ShowDropRow(null);
+
+    // Asked about once the drop is over, so the program the files came from (File Explorer, say) isn't left waiting.
     private void Files_Drop(object sender, DragEventArgs e)
     {
-        if (e.Data.GetData(DataFormats.FileDrop) is string[] paths) _ = _viewModel.SendAsync(paths);
+        var folder = DropFolder(e, out _);
+        var set = _dragged;
+        var paths = set == null ? e.Data.GetData(DataFormats.FileDrop) as string[] : null;
+        ShowDropRow(null);
+        _dragData = null;
+        _dragged = null;
+        e.Handled = true;
+        if (folder == null) return;
+        Dispatcher.BeginInvoke(() => _ = set != null
+            ? _viewModel.PasteFromDeviceAsync(set, folder)
+            : _viewModel.PasteFromPcAsync(paths ?? [], folder));
+    }
+
+    // Where files dropped here go: into the folder row they're over, or else the folder shown. Null when they can't be
+    // dropped: they aren't files, something's under way, or they'd go back into the folder they're from.
+    private string? DropFolder(DragEventArgs e, out ListViewItem? row)
+    {
+        row = null;
+        if (!ReferenceEquals(e.Data, _dragData))
+        {
+            _dragData = e.Data;
+            _dragged = DeviceFileSet.From(e.Data);
+        }
+        if (_viewModel.IsBusy || _dragged == null && !e.Data.GetDataPresent(DataFormats.FileDrop)) return null;
+
+        var fromHere = _dragged?.Serial == _viewModel.Device.Serial;
+        if (ItemsControl.ContainerFromElement(FileList, (DependencyObject)e.OriginalSource) is ListViewItem { Content: PhoneFileItem { IsFolder: true } folder } over
+            && !(fromHere && _dragged!.Files.Any(f => f.Path == folder.File.Path)))
+        {
+            row = over;
+            return folder.File.Path;
+        }
+        return fromHere && _dragged!.Folder == _viewModel.Folder ? null : _viewModel.Folder;
+    }
+
+    // The folder row files would be dropped in is lit.
+    private void ShowDropRow(ListViewItem? row)
+    {
+        if (row == _dropRow) return;
+        _dropRow?.ClearValue(BackgroundProperty);
+        _dropRow = row;
+        row?.SetResourceReference(BackgroundProperty, "Bg.Hover");
     }
 }

@@ -75,6 +75,12 @@ public interface IDeviceToolsService
     Task DeleteAsync(string serial, IReadOnlyList<string> paths, CancellationToken ct = default);
 
     /// <summary>
+    /// Copies files and folders to other paths on the same device, replacing files with the same names and adding to
+    /// folders with the same names, as <see cref="SendFilesAsync"/> does.
+    /// </summary>
+    Task CopyOnDeviceAsync(string serial, IReadOnlyList<(string From, string To)> copies, CancellationToken ct = default);
+
+    /// <summary>
     /// Copies a file from the device into <paramref name="destination"/>, reporting the bytes that have come so far, and
     /// returns how many came: none when it can't be read.
     /// </summary>
@@ -255,6 +261,18 @@ public class DeviceToolsService(IScrcpyService scrcpy) : IDeviceToolsService
         await ScanMediaAsync(serial, paths, ct).ConfigureAwait(false);
     }
 
+    public async Task CopyOnDeviceAsync(string serial, IReadOnlyList<(string From, string To)> copies, CancellationToken ct = default)
+    {
+        if (copies.Count == 0) return;
+        // "folder/." copies what's in the folder, so one that's there already gets it added rather than a copy inside it.
+        var script = string.Join(" && ", copies.Select(c =>
+            $"if [ -d {Quote(c.From)} ]; then mkdir -p {Quote(c.To)} && cp -r {Quote(c.From + "/.")} {Quote(c.To + "/")}; "
+            + $"else cp {Quote(c.From)} {Quote(c.To)}; fi"));
+        // Big files take as long as they take, so only the caller can cancel this.
+        await RunShellAsync(serial, script, ct, Timeout.InfiniteTimeSpan).ConfigureAwait(false);
+        await ScanMediaAsync(serial, copies.Select(c => c.To), ct).ConfigureAwait(false);
+    }
+
     // Big files take as long as they take, so only the caller can cancel this.
     public Task<long> ReadFileAsync(string serial, string path, Stream destination, IProgress<long>? progress = null, CancellationToken ct = default) =>
         CopyOutputAsync(serial, $"cat {Quote(path)} 2>/dev/null", destination, Timeout.InfiniteTimeSpan, progress, ct);
@@ -330,9 +348,9 @@ public class DeviceToolsService(IScrcpyService scrcpy) : IDeviceToolsService
     }
 
     // Runs a command that prints nothing when it works, and throws with what it printed when it doesn't.
-    private async Task RunShellAsync(string serial, string command, CancellationToken ct)
+    private async Task RunShellAsync(string serial, string command, CancellationToken ct, TimeSpan? timeout = null)
     {
-        var result = await RunAdbAsync(ct, CommandTimeout, "-s", serial, "shell", $"{command} && echo {Done}").ConfigureAwait(false);
+        var result = await RunAdbAsync(ct, timeout ?? CommandTimeout, "-s", serial, "shell", $"{command} && echo {Done}").ConfigureAwait(false);
         if (!result.Output.Contains(Done, StringComparison.Ordinal))
             throw new InvalidOperationException(ShellProblem(result) ?? "the phone said no");
     }

@@ -228,7 +228,7 @@
                     Command="{Binding StopCopyingCommand}" ToolTip="Stop copying, and remove what it left half copied"
                     Visibility="{Binding CanStop, Converter={StaticResource BoolToVisibility}}"/>
             <ProgressBar DockPanel.Dock="Right" IsIndeterminate="True" Width="70" VerticalAlignment="Center" Margin="10,0,0,0"
-                         Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}"/>
+                         Visibility="{Binding ShowsProgress, Converter={StaticResource BoolToVisibility}}"/>
             <Button DockPanel.Dock="Right" Content="Show in folder" Style="{StaticResource TextLink}" VerticalAlignment="Center"
                     Margin="10,0,0,0" Command="{Binding ShowSavedCommand}"
                     Visibility="{Binding CanShowSaved, Converter={StaticResource BoolToVisibility}}"/>
@@ -238,11 +238,17 @@
 
         <WrapPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
             <Button Content="Send files here…" Style="{StaticResource Button.Primary}" Margin="0,0,8,0"
-                    Command="{Binding ChooseFilesToSendCommand}" ToolTip="Copy files from this PC into the folder shown. You can also drop them on the list."/>
+                    Command="{Binding ChooseFilesToSendCommand}"
+                    ToolTip="Copy files from this PC into the folder shown. You can also drop them on the list, or paste them."/>
             <Button Content="Send a folder…" Style="{StaticResource Button.Secondary}" Margin="0,0,8,0"
                     Command="{Binding ChooseFolderToSendCommand}" ToolTip="Copy folders from this PC, with everything in them, into the folder shown"/>
             <Button Content="Save to PC…" Style="{StaticResource Button.Secondary}" Margin="0,0,22,0"
-                    Command="{Binding SaveToPcCommand}" ToolTip="Copy what's selected to a folder on this PC"/>
+                    Command="{Binding SaveToPcCommand}"
+                    ToolTip="Copy what's selected to a folder on this PC. You can also drag it to File Explorer or the desktop."/>
+            <Button Content="Copy" Style="{StaticResource Button.Secondary}" Margin="0,0,8,0" Command="{Binding CopyCommand}"
+                    ToolTip="Copy what's selected, to paste in another folder, another device's files or File Explorer (Ctrl+C)"/>
+            <Button Content="Paste" Style="{StaticResource Button.Secondary}" Margin="0,0,22,0" Command="{Binding PasteCommand}"
+                    ToolTip="Paste files copied here, in another device's files or in File Explorer, or a picture, into the folder shown (Ctrl+V)"/>
             <Button Content="New folder" Style="{StaticResource Button.Secondary}" Margin="0,0,8,0" Command="{Binding StartNewFolderCommand}"/>
             <Button Content="Rename" Style="{StaticResource Button.Secondary}" Margin="0,0,8,0" Command="{Binding StartRenameCommand}"
                     ToolTip="Rename what's selected (F2)"/>
@@ -319,11 +325,13 @@
                     </ItemsControl>
                 </DockPanel>
 
-                <Grid AllowDrop="True" DragOver="Files_DragOver" Drop="Files_Drop" Background="Transparent">
+                <Grid AllowDrop="True" DragOver="Files_DragOver" DragLeave="Files_DragLeave" Drop="Files_Drop" Background="Transparent">
                     <ListView x:Name="FileList" ItemsSource="{Binding Items}" SelectionMode="Extended" ItemContainerStyle="{StaticResource FileRow}"
                               AutomationProperties.Name="Files" SelectionChanged="FileList_SelectionChanged"
                               MouseDoubleClick="FileList_MouseDoubleClick" KeyDown="FileList_KeyDown" SizeChanged="FileList_SizeChanged"
-                              GridViewColumnHeader.Click="FileList_HeaderClick">
+                              GridViewColumnHeader.Click="FileList_HeaderClick"
+                              PreviewMouseLeftButtonDown="FileList_PreviewMouseLeftButtonDown" PreviewMouseMove="FileList_PreviewMouseMove"
+                              PreviewMouseLeftButtonUp="FileList_PreviewMouseLeftButtonUp" QueryContinueDrag="FileList_QueryContinueDrag">
                         <ListView.View>
                             <GridView>
                                 <GridViewColumn x:Name="NameColumn" Width="300">

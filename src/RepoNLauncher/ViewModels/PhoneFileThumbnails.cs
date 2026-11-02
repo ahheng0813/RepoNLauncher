@@ -58,6 +58,32 @@ public sealed class PhoneFileThumbnails(IDeviceToolsService tools, string serial
     /// <summary>The item's thumbnail (a JPEG or PNG), if it's been made.</summary>
     public byte[]? Kept(PhoneFileItem item) => TryKept(Key(item), out var image) ? image : null;
 
+    /// <summary>The item's thumbnail, if it's been made, ready to show.</summary>
+    public BitmapSource? KeptImage(PhoneFileItem item) => Decode(Kept(item));
+
+    /// <summary>
+    /// What's in the picture or video, about as big as asked: a picture bigger than its thumbnail is read whole. Otherwise
+    /// its thumbnail, made now if it hasn't been; null when it has none.
+    /// </summary>
+    public async Task<BitmapSource?> GetAsync(PhoneFileItem item, int size, CancellationToken ct)
+    {
+        if (size > Size && item.IsPicture && item.File.Size <= WholePictureLimit)
+        {
+            using var data = new MemoryStream((int)item.File.Size);
+            await tools.ReadFileAsync(serial, item.File.Path, data, null, ct);
+            var whole = data.ToArray();
+            if (await Task.Run(() => PhonePictures.Decode(whole, size), ct) is { } picture) return picture.Image;
+        }
+
+        var key = Key(item);
+        if (!TryKept(key, out var image))
+        {
+            image = await FetchAsync(item, ct);
+            Keep(key, image);
+        }
+        return Decode(image);
+    }
+
     public void Close() => _closing.Cancel();
 
     private void MakeNext()
