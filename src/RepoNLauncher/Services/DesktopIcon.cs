@@ -33,6 +33,25 @@ public static class DesktopIcon
 
     public static bool Exists => LinkPath is { } link && File.Exists(link);
 
+    /// <summary>The desktop icon when it opens this copy, or null: one by the same name may open another (publish.ps1's does).</summary>
+    public static string? OwnLinkPath
+    {
+        get
+        {
+            if (LinkPath is not { } link || !File.Exists(link) || Type.GetTypeFromProgID("WScript.Shell") is not { } shellType) return null;
+            dynamic shell = Activator.CreateInstance(shellType)!;
+            try
+            {
+                string target = shell.CreateShortcut(link).TargetPath;
+                return string.Equals(target, LauncherPath, StringComparison.OrdinalIgnoreCase) ? link : null;
+            }
+            finally
+            {
+                Marshal.FinalReleaseComObject(shell);
+            }
+        }
+    }
+
     public static void Create()
     {
         var launcher = LauncherPath ?? throw new InvalidOperationException("The app isn't installed.");

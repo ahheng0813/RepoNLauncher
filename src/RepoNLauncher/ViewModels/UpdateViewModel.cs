@@ -16,7 +16,7 @@ public partial class UpdateViewModel : ObservableObject
 
     private readonly UpdateService _updates;
     private readonly DispatcherTimer _timer = new() { Interval = CheckEvery };
-    private UpdateInfo? _ready;
+    private VelopackAsset? _ready;
 
     public UpdateViewModel(UpdateService updates)
     {
@@ -28,6 +28,9 @@ public partial class UpdateViewModel : ObservableObject
 
     /// <summary>Only an installed copy can update itself.</summary>
     public bool CanUpdate => _updates.IsInstalled;
+
+    /// <summary>An installed copy, or one unzipped from the portable zip, can remove itself and everything it keeps.</summary>
+    public bool CanUninstall => _updates.IsInstalled;
 
     /// <summary>Installed by the Setup.exe or the .msi, not unzipped from the portable zip.</summary>
     public bool IsInstalledBySetup => _updates.IsInstalled && !_updates.IsPortable;
@@ -42,6 +45,9 @@ public partial class UpdateViewModel : ObservableObject
     /// <summary>Raised by Restart to update; the window closes the app cleanly, and the updater takes over.</summary>
     public event Action? RestartRequested;
 
+    /// <summary>Why the update the updater just tried wasn't installed, for the window to tell; null when none failed.</summary>
+    public string? InstallFailure { get; private set; }
+
     public void Start()
     {
         if (!CanUpdate)
@@ -49,7 +55,27 @@ public partial class UpdateViewModel : ObservableObject
             Status = "Updates come with the installed app";
             return;
         }
-        _ = CheckAsync();
+
+        if (_updates.FailedUpdate is { } failed)
+        {
+            // The updater couldn't apply it and started this version again, without saying so. It's still downloaded,
+            // so Restart to update can try again once whatever stopped it is out of the way.
+            _ready = failed;
+            ReadyVersion = failed.Version.ToString();
+            Status = $"Version {ReadyVersion} wasn't installed";
+            InstallFailure = _updates.NeedsAdminToUpdate
+                ? $"Version {ReadyVersion} wasn't installed, so this is still version {_updates.Version}.\n\n" +
+                  "Repo'N'Launcher is installed for everyone on this PC, so Windows asks for an administrator's approval to update it. " +
+                  "Click Restart to update and choose Yes when Windows asks.\n\n" +
+                  "If Windows didn't ask, a program was using Repo'N'Launcher's folder: close it, or restart Windows, and try again."
+                : $"Version {ReadyVersion} wasn't installed, so this is still version {_updates.Version}: another program was using " +
+                  "Repo'N'Launcher's folder, such as a console open in it.\n\n" +
+                  "Close that program, or restart Windows, then click Restart to update.";
+        }
+        else
+        {
+            _ = CheckAsync();
+        }
         _timer.Start();
     }
 
@@ -72,7 +98,7 @@ public partial class UpdateViewModel : ObservableObject
             var dispatcher = Dispatcher.CurrentDispatcher;
             Status = $"Downloading {version}…";
             await _updates.DownloadAsync(update, percent => dispatcher.InvokeAsync(() => Status = $"Downloading {version}… {percent}%"));
-            _ready = update;
+            _ready = update.TargetFullRelease;
             ReadyVersion = version;
             Status = $"Version {version} is ready";
         }

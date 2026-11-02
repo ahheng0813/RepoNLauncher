@@ -35,7 +35,9 @@ The installers add a Start menu icon. The first time the app starts, it asks whe
 
 The files aren't code-signed yet, so Windows may warn before the first run: choose **More info**, then **Run anyway**.
 
-**Updates:** every copy updates itself. The app checks for a new version when it starts and every 4 hours, downloads it in the background, and then shows **Restart to update** in the status bar. If you don't restart, the update is applied the next time the app starts. The status bar also shows your version and has **Check for updates**.
+**Updates:** every copy updates itself. The app checks for a new version when it starts and every 4 hours, downloads it in the background, and then shows **Restart to update** in the status bar. If you don't restart, the update is applied the next time the app starts. The status bar also shows your version and has **Check for updates**. If an update can't be installed, for example because another program is using the app's folder, the app says so and offers **Restart to update** again.
+
+**Uninstall:** **Uninstall…** in the status bar removes the app and everything it keeps on this PC: your project list and settings, the GitHub sign-in, the scrcpy it downloaded, its caches, temp files and update files, and its desktop icon. Your projects' own folders aren't touched. Uninstalling from Windows' **Settings > Apps** removes only the app.
 
 ### What else you need
 

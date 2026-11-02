@@ -32,6 +32,10 @@ Both installers add only a Start menu icon, since neither can offer a choice. Th
 
 The app checks the repo's GitHub releases when it starts and every 4 hours (`Services\UpdateService.cs`). Checking needs the releases to be public: while the repo is private, the status bar says it couldn't check.
 
+Velopack updates by renaming the install's `current` folder, and gives up if any program holds it open, then starts the old version again without saying so. A program's working folder counts, so `Program.Main` moves the app's out of `current` before it starts anything: IDEs, the emulator and consoles opened from the app would otherwise inherit it. When the updater does fail, the old version notices (it was restarted with a newer package still waiting) and says so.
+
+**Uninstall…** in the status bar (`Services\Uninstaller.cs`) hands over to a PowerShell script once the app has closed. The script runs the installer's own uninstall (msiexec for the .msi, `Update.exe uninstall` for the Setup.exe; for the portable zip it deletes only the zip's files). If that works, it deletes the app's settings, caches, temp files and Velopack log.
+
 `vpk` is pinned in `.config\dotnet-tools.json`, and `release.ps1` restores it.
 
 ## Making a release

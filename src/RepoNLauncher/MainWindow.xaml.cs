@@ -40,6 +40,9 @@ public partial class MainWindow : Window
             _ = vm.AiUsage.RefreshAsync(checkLimits: true);
             vm.Updates.RestartRequested += () => RestartToUpdate(vm);
             vm.Updates.Start();
+            if (vm.Updates.InstallFailure is { } failure)
+                Dispatcher.BeginInvoke(() => System.Windows.MessageBox.Show(this, failure, "Update not installed",
+                    MessageBoxButton.OK, MessageBoxImage.Warning), DispatcherPriority.ApplicationIdle);
             // Once the dashboard has drawn, so the question shows over it rather than before it.
             if (vm.ShouldAskAboutDesktopIcon())
                 Dispatcher.BeginInvoke(() => AskAboutDesktopIcon(vm), DispatcherPriority.ApplicationIdle);
@@ -68,6 +71,31 @@ public partial class MainWindow : Window
             return;
 
         vm.Updates.ApplyOnExit();
+        Close();
+    }
+
+    // The uninstall waits for the app to close; closing the window stops chats and the phone mirror on the way out.
+    private void Uninstall_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm) return;
+        if (System.Windows.MessageBox.Show(this,
+                "Uninstall Repo'N'Launcher and remove everything it keeps on this PC?\n\n" +
+                "That's your project list and settings, the GitHub sign-in, the scrcpy it downloaded, its map and preview " +
+                "caches, temp files, update files and the desktop icon. Your projects' own folders stay as they are." +
+                (vm.AgentChat.HasRunningChats ? "\n\nA chat is still running. Uninstalling stops it." : ""),
+                "Uninstall Repo'N'Launcher", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            Uninstaller.Start();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or Win32Exception)
+        {
+            System.Windows.MessageBox.Show(this, $"Repo'N'Launcher couldn't start uninstalling: {ex.Message}", "Uninstall Repo'N'Launcher",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
         Close();
     }
 
