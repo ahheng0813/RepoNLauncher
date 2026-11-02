@@ -407,15 +407,15 @@ public class DeviceToolsService(IScrcpyService scrcpy) : IDeviceToolsService
             throw new InvalidOperationException(
                 $"setting a location on it needs Android 12 or later, and it has {AndroidVersions.Name(api.ToString()) ?? $"API {api}"}");
 
-        // The shell may only add test providers once it's allowed to mock locations, as the mock location app in
-        // Developer options is.
-        var script = new StringBuilder("appops set com.android.shell android:mock_location allow");
+        await AllowShellToMockLocationAsync(serial, ct).ConfigureAwait(false);
+
+        var script = new StringBuilder();
         foreach (var provider in LocationProviders)
         {
-            script.Append($"; cmd location providers add-test-provider {provider}");
-            script.Append($"; cmd location providers set-test-provider-enabled {provider} true");
+            script.Append($"cmd location providers add-test-provider {provider}; ");
+            script.Append($"cmd location providers set-test-provider-enabled {provider} true; ");
         }
-        script.Append("; ").Append(ReportLocationScript(latitude, longitude));
+        script.Append(ReportLocationScript(latitude, longitude));
         script.Append("; cmd location is-location-enabled");
 
         var result = await RunAdbAsync(ct, CommandTimeout, "-s", serial, "shell", script.ToString()).ConfigureAwait(false);
@@ -423,6 +423,25 @@ public class DeviceToolsService(IScrcpyService scrcpy) : IDeviceToolsService
 
         var locationOff = result.Output.Split('\n').LastOrDefault(l => l.Trim().Length > 0)?.Trim() == "false";
         return new VirtualLocationResult(VirtualLocationKind.PhoneTestProviders, locationOff);
+    }
+
+    // The shell may only add test providers once it's allowed to mock locations, as the mock location app in Developer
+    // options is. Some makers' phones (Xiaomi's, OPPO's and others) don't let adb allow that until a setting of theirs
+    // is on; without it, the shell is fine if it's allowed already, by being picked as the mock location app.
+    private async Task AllowShellToMockLocationAsync(string serial, CancellationToken ct)
+    {
+        // get prints e.g. "MOCK_LOCATION: allow; time=+5m2s ago", whether set worked or not.
+        var result = await RunAdbAsync(ct, CommandTimeout, "-s", serial, "shell",
+            "appops set com.android.shell android:mock_location allow; appops get com.android.shell android:mock_location").ConfigureAwait(false);
+        if (result.Output.Contains("MOCK_LOCATION: allow", StringComparison.Ordinal)) return;
+
+        var error = ShellError(result);
+        if (error?.Contains("MANAGE_APP_OPS_MODES", StringComparison.Ordinal) == true)
+            throw new InvalidOperationException(
+                "the phone doesn't let adb allow mock locations. In its Developer options, turn on USB debugging (Security settings) "
+                + "on a Xiaomi, Redmi or POCO, or Disable permission monitoring on an OPPO, realme or OnePlus; "
+                + "or pick Shell as the mock location app, if it's listed there");
+        throw new InvalidOperationException(error ?? "the phone didn't let adb mock its location");
     }
 
     public async Task RefreshPhoneLocationAsync(string serial, double latitude, double longitude, CancellationToken ct = default)
@@ -433,8 +452,9 @@ public class DeviceToolsService(IScrcpyService scrcpy) : IDeviceToolsService
 
     public async Task ClearPhoneLocationAsync(string serial, CancellationToken ct = default)
     {
+        // A phone that didn't let adb allow mock locations doesn't let it put that back either; the providers go all the same.
         var script = string.Join("; ", LocationProviders.Select(p => $"cmd location providers remove-test-provider {p}"))
-                     + "; appops set com.android.shell android:mock_location default";
+                     + "; appops set com.android.shell android:mock_location default 2>/dev/null || true";
         var result = await RunAdbAsync(ct, CommandTimeout, "-s", serial, "shell", script).ConfigureAwait(false);
         if (result.ExitCode != 0 && CleanAdbError(result.Errors) is { } error) throw new InvalidOperationException(error);
     }

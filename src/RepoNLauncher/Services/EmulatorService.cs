@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -213,9 +214,17 @@ public class EmulatorService : IEmulatorService
 
         foreach (var serial in serials)
         {
-            // Prints the AVD name, then OK.
-            var name = (await RunAdbAsync($"-s {serial} emu avd name", ct)).Split('\n')[0].Trim();
-            if (name.Length > 0 && name != "OK") running[name] = serial;
+            // Asked of Android itself, not the console: the console can be this emulator's while adb, on the port above
+            // it, reaches another kind of emulator (LDPlayer, say) under the same serial. Android in these emulators knows
+            // its AVD name; in other kinds it doesn't, and isn't marked as qemu either.
+            var props = (await RunAdbAsync(
+                    $"-s {serial} shell \"getprop ro.boot.qemu.avd_name; getprop ro.kernel.qemu.avd_name; getprop ro.boot.qemu; getprop ro.kernel.qemu\"", ct))
+                .Split('\n').Select(l => l.Trim()).ToList();
+            var name = props.Take(2).FirstOrDefault(p => p.Length > 0);
+            // Images older than the name property only have the console to ask, which prints the name, then OK.
+            if (name == null && props.Skip(2).Contains("1"))
+                name = (await RunAdbAsync($"-s {serial} emu avd name", ct)).Split('\n')[0].Trim();
+            if (name is { Length: > 0 } and not "OK") running[name] = serial;
         }
         return running;
     }
@@ -231,7 +240,9 @@ public class EmulatorService : IEmulatorService
         Directory.CreateDirectory(logDir);
         var log = Path.Combine(logDir, $"emulator-{name}.log");
 
-        var info = new ProcessStartInfo("cmd.exe", $"/c \"\"{emulator}\" -avd {name} > \"{log}\" 2>&1\"")
+        // With no free ports, the emulator picks its own as it always has.
+        var port = FreePort() is { } free ? $" -port {free}" : "";
+        var info = new ProcessStartInfo("cmd.exe", $"/c \"\"{emulator}\" -avd {name}{port} > \"{log}\" 2>&1\"")
         {
             UseShellExecute = false,
             CreateNoWindow = true,
@@ -253,6 +264,18 @@ public class EmulatorService : IEmulatorService
             if ((await RunAdbAsync($"-s {serial} shell getprop sys.boot_completed", ct)).Trim() == "1") return;
         }
         throw new TimeoutException($"Android didn't finish starting within {BootTimeout.TotalMinutes:0} minutes. It may still be starting in the emulator's window.");
+    }
+
+    // An emulator's console port, and adb's one above it, that nothing on this PC listens on. The emulator only checks
+    // that it can listen on this PC's own address, so it takes 5554 and 5555 even when another kind of emulator listens
+    // on 5555 for all addresses, as LDPlayer does. adb then reaches that one as emulator-5554, and never this one.
+    // adb looks for emulators on 5555 to 5585.
+    private static int? FreePort()
+    {
+        var used = IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners().Select(e => e.Port).ToHashSet();
+        for (var port = 5554; port <= 5584; port += 2)
+            if (!used.Contains(port) && !used.Contains(port + 1)) return port;
+        return null;
     }
 
     // The emulator ends its output with what went wrong, e.g. that this PC can't run emulators.
