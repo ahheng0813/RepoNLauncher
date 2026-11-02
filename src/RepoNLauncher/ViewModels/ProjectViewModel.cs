@@ -177,7 +177,13 @@ public partial class ProjectViewModel : ObservableObject
 
     public bool IsSelectedFileConflicted => SelectedChangedFile?.Type == FileChangeType.Conflicted;
 
+    /// <summary>The commit picked in the Commits tab; the files it changed show under the list, a file's diff at a time.</summary>
+    [ObservableProperty] private CommitInfo? _selectedCommit;
+    [ObservableProperty] private FileChangeInfo? _selectedCommitFile;
+
     public ObservableCollection<CommitInfo> Commits { get; } = new();
+    public ObservableCollection<FileChangeInfo> CommitFiles { get; } = new();
+    public ObservableCollection<string> CommitDiffLines { get; } = new();
     public ObservableCollection<DeviceInfo> Devices { get; } = new();
     public ObservableCollection<string> ConsoleOutput { get; } = new();
     public ObservableCollection<string> DetectedUrls { get; } = new();
@@ -578,14 +584,51 @@ public partial class ProjectViewModel : ObservableObject
         IsBusy = true;
         try
         {
+            var selected = SelectedCommit?.Hash;
             var commits = await _git.GetRecentCommitsAsync(Path, 30);
             Commits.Clear();
             foreach (var c in commits) Commits.Add(c);
+            // The picked commit stays picked while it's still in the list.
+            SelectedCommit = Commits.FirstOrDefault(c => c.Hash == selected);
         }
         finally
         {
             IsBusy = false;
         }
+    }
+
+    partial void OnSelectedCommitChanged(CommitInfo? value)
+    {
+        SelectedCommitFile = null;
+        CommitFiles.Clear();
+        if (value == null) return;
+        _ = LoadCommitFilesAsync(value);
+    }
+
+    private async Task LoadCommitFilesAsync(CommitInfo commit)
+    {
+        var files = await _git.GetCommitFilesAsync(Path, commit);
+        if (SelectedCommit != commit) return; // a newer selection's files are already loading
+
+        CommitFiles.Clear();
+        foreach (var f in files) CommitFiles.Add(f);
+        SelectedCommitFile = CommitFiles.FirstOrDefault();
+    }
+
+    partial void OnSelectedCommitFileChanged(FileChangeInfo? value)
+    {
+        CommitDiffLines.Clear();
+        if (value == null || SelectedCommit == null) return;
+        _ = LoadCommitDiffAsync(SelectedCommit, value);
+    }
+
+    private async Task LoadCommitDiffAsync(CommitInfo commit, FileChangeInfo file)
+    {
+        var diff = await _git.GetCommitFileDiffAsync(Path, commit, file);
+        if (SelectedCommitFile != file) return; // a newer selection's diff is already loading
+
+        CommitDiffLines.Clear();
+        foreach (var line in diff.Replace("\r\n", "\n").Split('\n')) CommitDiffLines.Add(line);
     }
 
     partial void OnSelectedChangedFileChanged(FileChangeInfo? value)

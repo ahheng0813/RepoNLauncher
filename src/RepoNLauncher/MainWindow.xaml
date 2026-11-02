@@ -140,6 +140,36 @@
             </Style.Triggers>
         </Style>
 
+        <!-- A diff a line at a time: the Changes tab's, and a commit's in the Commits tab -->
+        <Style x:Key="DiffList" TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel"/>
+            <Setter Property="ItemTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}" Style="{StaticResource DiffLine}"/>
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="0"/>
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <ContentPresenter/>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- One tool in the AI usage bar: tile, name, plan, then the session and week limits as small meters -->
         <DataTemplate x:Key="UsageBarTool" DataType="{x:Type vm:AiToolCardViewModel}">
             <StackPanel Orientation="Horizontal">
@@ -780,29 +810,7 @@
                                             <TextBlock Text="Select a file to view its changes." Foreground="{StaticResource Text.Muted}"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
                                                        Visibility="{Binding SelectedChangedFile, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}"/>
-                                            <ListBox ItemsSource="{Binding DiffLines}" Background="Transparent" Padding="10" BorderThickness="0"
-                                                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                                     VirtualizingPanel.ScrollUnit="Pixel">
-                                                <ListBox.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <TextBlock Text="{Binding}" Style="{StaticResource DiffLine}"/>
-                                                    </DataTemplate>
-                                                </ListBox.ItemTemplate>
-                                                <ListBox.ItemContainerStyle>
-                                                    <Style TargetType="ListBoxItem">
-                                                        <Setter Property="Padding" Value="0"/>
-                                                        <Setter Property="Background" Value="Transparent"/>
-                                                        <Setter Property="Template">
-                                                            <Setter.Value>
-                                                                <ControlTemplate TargetType="ListBoxItem">
-                                                                    <ContentPresenter/>
-                                                                </ControlTemplate>
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </Style>
-                                                </ListBox.ItemContainerStyle>
-                                            </ListBox>
+                                            <ListBox ItemsSource="{Binding DiffLines}" Style="{StaticResource DiffList}"/>
                                           </Grid>
                                         </Border>
                                     </Grid>
@@ -810,21 +818,107 @@
                             </DockPanel>
                         </TabItem>
 
-                        <!-- Commits -->
+                        <!-- Commits: picking one shows the files it changed underneath, a file's diff at a time as in Changes -->
                         <TabItem Header="Commits">
                             <DockPanel Margin="4,0">
                                 <Button DockPanel.Dock="Top" Content="Refresh Commits" Style="{StaticResource Button.Secondary}"
                                         HorizontalAlignment="Left" Margin="0,0,0,12" Command="{Binding LoadCommitsCommand}"/>
-                                <ListView ItemsSource="{Binding Commits}" BorderThickness="1">
-                                    <ListView.View>
-                                        <GridView>
-                                            <GridViewColumn Header="Hash" Width="80" DisplayMemberBinding="{Binding ShortHash}"/>
-                                            <GridViewColumn Header="Author" Width="140" DisplayMemberBinding="{Binding Author}"/>
-                                            <GridViewColumn Header="Date" Width="170" DisplayMemberBinding="{Binding Date}"/>
-                                            <GridViewColumn Header="Message" Width="420" DisplayMemberBinding="{Binding Message}"/>
-                                        </GridView>
-                                    </ListView.View>
-                                </ListView>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*" MinHeight="90"/>
+                                        <RowDefinition Height="12"/>
+                                        <RowDefinition Height="2*" MinHeight="160"/>
+                                    </Grid.RowDefinitions>
+
+                                    <ListView Grid.Row="0" ItemsSource="{Binding Commits}" SelectedItem="{Binding SelectedCommit}"
+                                              SelectionMode="Single" BorderThickness="1">
+                                        <ListView.ItemContainerStyle>
+                                            <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                        <Setter Property="Background" Value="{StaticResource Accent.Muted}"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ListView.ItemContainerStyle>
+                                        <ListView.View>
+                                            <GridView>
+                                                <GridViewColumn Header="Hash" Width="80" DisplayMemberBinding="{Binding ShortHash}"/>
+                                                <GridViewColumn Header="Author" Width="140" DisplayMemberBinding="{Binding Author}"/>
+                                                <GridViewColumn Header="Date" Width="170" DisplayMemberBinding="{Binding Date}"/>
+                                                <GridViewColumn Header="Message" Width="420" DisplayMemberBinding="{Binding Message}"/>
+                                            </GridView>
+                                        </ListView.View>
+                                    </ListView>
+
+                                    <GridSplitter Grid.Row="1" HorizontalAlignment="Stretch" Background="Transparent"
+                                                  ResizeBehavior="PreviousAndNext" ResizeDirection="Rows" Focusable="False"/>
+
+                                    <TextBlock Grid.Row="2" Text="Select a commit to see what it changed." Foreground="{StaticResource Text.Muted}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Visibility="{Binding SelectedCommit, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}"/>
+
+                                    <DockPanel Grid.Row="2" Visibility="{Binding SelectedCommit, Converter={StaticResource NullToVisibility}}">
+                                        <Border DockPanel.Dock="Top" Margin="0,0,0,12" Padding="12,10" Background="{StaticResource Bg.PanelAlt}"
+                                                CornerRadius="8" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
+                                            <StackPanel DataContext="{Binding SelectedCommit}">
+                                                <TextBlock Text="{Binding Message}" FontWeight="SemiBold" FontSize="13.5" TextWrapping="Wrap"/>
+                                                <ScrollViewer MaxHeight="52" Margin="0,6,0,0" VerticalScrollBarVisibility="Auto"
+                                                              HorizontalScrollBarVisibility="Disabled"
+                                                              Visibility="{Binding Body, Converter={StaticResource StringNotEmptyToVisibility}}">
+                                                    <TextBlock Text="{Binding Body}" Foreground="{StaticResource Text.Secondary}" FontSize="12"
+                                                               TextWrapping="Wrap"/>
+                                                </ScrollViewer>
+                                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                                    <TextBlock Text="{Binding Hash}" FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                                                               Foreground="{StaticResource Text.Muted}"/>
+                                                    <TextBlock Text="{Binding Author}" FontSize="12" Foreground="{StaticResource Text.Secondary}" Margin="16,0,0,0"/>
+                                                    <TextBlock Text="{Binding Date}" FontSize="12" Foreground="{StaticResource Text.Muted}" Margin="16,0,0,0"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="300"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <Border Grid.Column="0" Margin="0,0,12,0" Padding="4" Background="{StaticResource Bg.PanelAlt}"
+                                                    CornerRadius="8" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
+                                                <DockPanel>
+                                                    <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionLabel}" Margin="6,6,0,4"
+                                                               Text="{Binding CommitFiles.Count, StringFormat='FILES CHANGED ({0})'}"/>
+                                                    <ListBox ItemsSource="{Binding CommitFiles}" SelectedItem="{Binding SelectedCommitFile}"
+                                                             BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                                        <ListBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Grid Margin="2,4">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <Border Grid.Column="0" Style="{StaticResource ChangeTypeBadge}" Margin="0,0,8,0">
+                                                                        <TextBlock Text="{Binding Type, Converter={StaticResource ChangeTypeToLetter}}"
+                                                                                   FontSize="10" FontWeight="Bold" Foreground="#0D0F14"
+                                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                    </Border>
+                                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayPath}" FontSize="12"
+                                                                               TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ListBox.ItemTemplate>
+                                                    </ListBox>
+                                                </DockPanel>
+                                            </Border>
+
+                                            <Border Grid.Column="1" Background="{StaticResource Bg.Console}" CornerRadius="8"
+                                                    BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
+                                                <ListBox ItemsSource="{Binding CommitDiffLines}" Style="{StaticResource DiffList}"/>
+                                            </Border>
+                                        </Grid>
+                                    </DockPanel>
+                                </Grid>
                             </DockPanel>
                         </TabItem>
 

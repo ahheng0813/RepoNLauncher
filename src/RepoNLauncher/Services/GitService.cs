@@ -64,6 +64,10 @@ public interface IGitService
     Task<GitStatusSummary> GetStatusAsync(string path, CancellationToken ct = default);
     Task<List<CommitInfo>> GetRecentCommitsAsync(string path, int count = 30, CancellationToken ct = default);
 
+    /// <summary>The files a commit changed, against its first parent.</summary>
+    Task<List<FileChangeInfo>> GetCommitFilesAsync(string path, CommitInfo commit, CancellationToken ct = default);
+    Task<string> GetCommitFileDiffAsync(string path, CommitInfo commit, FileChangeInfo file, CancellationToken ct = default);
+
     Task<List<FileChangeInfo>> GetChangedFilesAsync(string path, CancellationToken ct = default);
     Task<string> GetFileDiffAsync(string path, FileChangeInfo file, CancellationToken ct = default);
     Task<GitPullResult> DiscardFileAsync(string path, FileChangeInfo file, CancellationToken ct = default);
@@ -330,7 +334,7 @@ public class GitService : IGitService
 
     public async Task<List<CommitInfo>> GetRecentCommitsAsync(string path, int count = 30, CancellationToken ct = default)
     {
-        var format = $"%H{FieldSep}%an{FieldSep}%aI{FieldSep}%s{RecordSep}";
+        var format = $"%H{FieldSep}%P{FieldSep}%an{FieldSep}%aI{FieldSep}%s{FieldSep}%b{RecordSep}";
         var result = await _runner.RunCaptureAsync(path, $"git log -n {count} --pretty=format:{format}", ct);
 
         var commits = new List<CommitInfo>();
@@ -340,20 +344,76 @@ public class GitService : IGitService
         foreach (var record in records)
         {
             var fields = record.Split(FieldSep);
-            if (fields.Length < 4) continue;
+            if (fields.Length < 6) continue;
 
             commits.Add(new CommitInfo
             {
                 Hash = fields[0],
-                Author = fields[1],
-                Date = DateTimeOffset.TryParse(fields[2], CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
+                // %P lists every parent, a merge's first parent first; the repo's first commit has none.
+                ParentHash = fields[1].Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault(),
+                Author = fields[2],
+                Date = DateTimeOffset.TryParse(fields[3], CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
                     ? date
                     : DateTimeOffset.MinValue,
-                Message = fields[3],
+                Message = fields[4],
+                Body = fields[5].Trim(),
             });
         }
 
         return commits;
+    }
+
+    // Against the first parent, so a merge shows what it brought into the branch; the first commit is shown against
+    // nothing (--root). diff-tree is plumbing, so a diff.external tool or color setting doesn't change its output.
+    private static string CommitDiffTrees(CommitInfo commit) =>
+        commit.ParentHash == null ? $"--root \"{commit.Hash}\"" : $"\"{commit.ParentHash}\" \"{commit.Hash}\"";
+
+    public async Task<List<FileChangeInfo>> GetCommitFilesAsync(string path, CommitInfo commit, CancellationToken ct = default)
+    {
+        var result = await _runner.RunCaptureAsync(
+            path, $"git diff-tree -r -z -M --name-status --no-commit-id {CommitDiffTrees(commit)}", ct);
+        var files = new List<FileChangeInfo>();
+        if (result.ExitCode != 0) return files;
+
+        // Each status is followed by its path, or for a rename by the old path then the new one.
+        var tokens = result.StdOut.Split('\0', StringSplitOptions.RemoveEmptyEntries);
+        for (var i = 0; i + 1 < tokens.Length; i += 2)
+        {
+            var status = tokens[i][0];
+            string? originalPath = null;
+            if (status is 'R' or 'C')
+            {
+                if (i + 2 >= tokens.Length) break;
+                originalPath = tokens[++i];
+            }
+
+            files.Add(new FileChangeInfo
+            {
+                Path = tokens[i + 1],
+                OriginalPath = originalPath,
+                Type = status switch
+                {
+                    'A' => FileChangeType.Added,
+                    'D' => FileChangeType.Deleted,
+                    'R' => FileChangeType.Renamed,
+                    'C' => FileChangeType.Copied,
+                    _ => FileChangeType.Modified,
+                },
+            });
+        }
+
+        return files;
+    }
+
+    public async Task<string> GetCommitFileDiffAsync(string path, CommitInfo commit, FileChangeInfo file, CancellationToken ct = default)
+    {
+        // A rename is only found as one when both its paths are given. Literal pathspecs: a file such as [id].tsx
+        // would otherwise be read as a pattern.
+        var paths = file.OriginalPath != null ? $"\"{file.OriginalPath}\" \"{file.Path}\"" : $"\"{file.Path}\"";
+        var result = await _runner.RunCaptureAsync(
+            path, $"git --literal-pathspecs diff-tree -r -p -M --no-commit-id {CommitDiffTrees(commit)} -- {paths}", ct);
+        var diff = result.StdOut.Trim();
+        return string.IsNullOrEmpty(diff) ? "(no textual changes — possibly a binary file)" : diff;
     }
 
     public async Task<List<FileChangeInfo>> GetChangedFilesAsync(string path, CancellationToken ct = default)
