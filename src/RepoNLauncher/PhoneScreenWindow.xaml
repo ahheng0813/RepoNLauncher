@@ -4,6 +4,7 @@
         xmlns:controls="clr-namespace:RepoNLauncher.Controls"
         Title="Phone Screen - Repo'N'Launcher" Height="860" Width="420"
         WindowStartupLocation="CenterScreen"
+        Topmost="{Binding IsPinnedOnTop}"
         Background="Black"
         FontFamily="Segoe UI">
 
@@ -26,6 +27,22 @@
             <DockPanel>
                 <controls:DeviceTools x:Name="Tools" DockPanel.Dock="Bottom" Margin="-6,4,0,0"/>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Command="{Binding TogglePinnedOnTopCommand}" Margin="0,0,6,0" VerticalAlignment="Center">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
+                                <Setter Property="Content" Value="&#xE718;"/>
+                                <Setter Property="ToolTip" Value="Pin on top of other windows"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsPinnedOnTop}" Value="True">
+                                        <Setter Property="Content" Value="&#xE840;"/>
+                                        <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                                        <Setter Property="Background" Value="{StaticResource Accent.Muted}"/>
+                                        <Setter Property="ToolTip" Value="Pinned on top — click to unpin"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                     <Button Command="{Binding ToggleFullScreenCommand}">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource Button.Secondary}">

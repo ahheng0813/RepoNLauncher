@@ -51,6 +51,8 @@ public partial class PhoneScreenViewModel : ObservableObject
     [ObservableProperty] private bool _isInstalling;
     [ObservableProperty] private bool _isMirroring;
     [ObservableProperty] private bool _isFullScreen;
+    /// <summary>Keeps the popped-out window above every other window, even when it isn't the active one.</summary>
+    [ObservableProperty] private bool _isPinnedOnTop;
     [ObservableProperty] private string _status = string.Empty;
 
     /// <summary>What the mirror shows, or will once it starts: the screen or a camera.</summary>
@@ -183,6 +185,9 @@ public partial class PhoneScreenViewModel : ObservableObject
 
     [RelayCommand]
     public void TogglePopOut() => IsPoppedOut = !IsPoppedOut;
+
+    [RelayCommand]
+    public void TogglePinnedOnTop() => IsPinnedOnTop = !IsPinnedOnTop;
 
     /// <summary>Full screen only exists for the popped-out window, so going full screen from the panel pops it out first.</summary>
     [RelayCommand]
