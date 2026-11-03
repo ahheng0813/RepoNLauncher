@@ -66,6 +66,12 @@ public interface IProcessRunner
     Task<CaptureResult> RunCaptureAsync(string workingDirectory, string command, CancellationToken ct = default);
 
     /// <summary>
+    /// Runs a program directly, not through cmd.exe, each argument passed as is: for text the user typed, whose quotes,
+    /// &amp; or % would otherwise break the cmd.exe command line. Only for .exe programs such as git.
+    /// </summary>
+    Task<CaptureResult> RunCaptureAsync(string workingDirectory, string fileName, IEnumerable<string> arguments, CancellationToken ct = default);
+
+    /// <summary>
     /// Starts a long-running shell command whose input <see cref="RunningProcessHandle.SendInput"/> writes to,
     /// streaming its output to the callback as it arrives. Each call gives a line and whether it's partial: the start
     /// of a line, such as a prompt waiting for an answer, that the next call replaces.
@@ -93,14 +99,43 @@ public class ProcessRunnerService : IProcessRunner
         };
     }
 
-    public async Task<CaptureResult> RunCaptureAsync(string workingDirectory, string command, CancellationToken ct = default)
+    public Task<CaptureResult> RunCaptureAsync(string workingDirectory, string command, CancellationToken ct = default) =>
+        CaptureAsync(BuildStartInfo(workingDirectory, command, redirectOutput: true), ct);
+
+    public async Task<CaptureResult> RunCaptureAsync(
+        string workingDirectory, string fileName, IEnumerable<string> arguments, CancellationToken ct = default)
     {
-        var startInfo = BuildStartInfo(workingDirectory, command, redirectOutput: true);
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = fileName,
+            WorkingDirectory = workingDirectory,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+        foreach (var argument in arguments) startInfo.ArgumentList.Add(argument);
+
+        try
+        {
+            return await CaptureAsync(startInfo, ct);
+        }
+        catch (System.ComponentModel.Win32Exception ex)
+        {
+            // Not installed: fail the way cmd.exe does for a missing program, rather than throw.
+            return new CaptureResult(-1, string.Empty, ex.Message);
+        }
+    }
+
+    private static async Task<CaptureResult> CaptureAsync(ProcessStartInfo startInfo, CancellationToken ct)
+    {
         // Nobody can answer a prompt in the hidden console, so git fails instead of waiting forever for a password.
         // Git Credential Manager still opens its own sign-in window.
         startInfo.Environment["GIT_TERMINAL_PROMPT"] = "0";
         using var process = new Process { StartInfo = startInfo };
         process.Start();
+        // Cancelling stops the program too, rather than leaving it to finish for nobody (a search through a long history).
+        using var stop = ct.Register(() => AgentCli.Kill(process));
 
         var stdOutTask = process.StandardOutput.ReadToEndAsync(ct);
         var stdErrTask = process.StandardError.ReadToEndAsync(ct);

@@ -818,11 +818,44 @@
                             </DockPanel>
                         </TabItem>
 
-                        <!-- Commits: picking one shows the files it changed underneath, a file's diff at a time as in Changes -->
+                        <!-- Commits: picking one shows the files it changed underneath, a file's diff at a time as in Changes.
+                             Searching narrows the list to the commits with the text in their message, author, files or changed lines;
+                             the arrows (Enter / Shift+Enter, F3 / Shift+F3) step through where it is, file by file and commit by commit. -->
                         <TabItem Header="Commits">
                             <DockPanel Margin="4,0">
-                                <Button DockPanel.Dock="Top" Content="Refresh Commits" Style="{StaticResource Button.Secondary}"
-                                        HorizontalAlignment="Left" Margin="0,0,0,12" Command="{Binding LoadCommitsCommand}"/>
+                                <DockPanel.InputBindings>
+                                    <KeyBinding Key="F3" Command="{Binding NextCommitMatchCommand}"/>
+                                    <KeyBinding Key="F3" Modifiers="Shift" Command="{Binding PreviousCommitMatchCommand}"/>
+                                </DockPanel.InputBindings>
+                                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+                                    <Button DockPanel.Dock="Left" Content="Refresh Commits" Style="{StaticResource Button.Secondary}"
+                                            Command="{Binding LoadCommitsCommand}"/>
+                                    <Grid DockPanel.Dock="Left" Width="380" Margin="12,0,0,0">
+                                        <TextBox Text="{Binding CommitSearch, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"
+                                                 AutomationProperties.Name="Search commits"
+                                                 ToolTip="Shows the commits with this in their message, author or hash, a file's path, or a line they added or removed">
+                                            <TextBox.InputBindings>
+                                                <KeyBinding Key="Enter" Command="{Binding NextCommitMatchCommand}"/>
+                                                <KeyBinding Key="Enter" Modifiers="Shift" Command="{Binding PreviousCommitMatchCommand}"/>
+                                            </TextBox.InputBindings>
+                                        </TextBox>
+                                        <TextBlock Text="Search messages, authors, files and changed code" Foreground="{StaticResource Text.Muted}"
+                                                   FontSize="12.5" VerticalAlignment="Center" Margin="11,0,0,0" IsHitTestVisible="False"
+                                                   Visibility="{Binding CommitSearch, Converter={StaticResource StringNotEmptyToVisibility}, ConverterParameter=Invert}"/>
+                                    </Grid>
+                                    <Button DockPanel.Dock="Left" Content="&#xE70E;" Style="{StaticResource Button.Ghost}" Margin="6,0,0,0"
+                                            Command="{Binding PreviousCommitMatchCommand}" AutomationProperties.Name="Previous match"
+                                            ToolTip="Previous match (Shift+Enter or Shift+F3)"/>
+                                    <Button DockPanel.Dock="Left" Content="&#xE70D;" Style="{StaticResource Button.Ghost}" Margin="2,0,0,0"
+                                            Command="{Binding NextCommitMatchCommand}" AutomationProperties.Name="Next match"
+                                            ToolTip="Next match (Enter or F3)"/>
+                                    <StackPanel Orientation="Horizontal" Margin="10,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding CommitSearchNote}" Foreground="{StaticResource Text.Muted}" FontSize="12.5"/>
+                                        <TextBlock Text="{Binding CommitMatchNote, StringFormat='  ·  Match {0}'}" FontSize="12.5"
+                                                   Foreground="{StaticResource Text.Secondary}"
+                                                   Visibility="{Binding CommitMatchNote, Converter={StaticResource StringNotEmptyToVisibility}}"/>
+                                    </StackPanel>
+                                </DockPanel>
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="*" MinHeight="90"/>
@@ -831,7 +864,8 @@
                                     </Grid.RowDefinitions>
 
                                     <ListView Grid.Row="0" ItemsSource="{Binding Commits}" SelectedItem="{Binding SelectedCommit}"
-                                              SelectionMode="Single" BorderThickness="1">
+                                              SelectionMode="Single" BorderThickness="1"
+                                              controls:ScrollToItem.Item="{Binding SelectedCommit}">
                                         <ListView.ItemContainerStyle>
                                             <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
                                                 <Style.Triggers>
@@ -890,22 +924,35 @@
                                                     <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionLabel}" Margin="6,6,0,4"
                                                                Text="{Binding CommitFiles.Count, StringFormat='FILES CHANGED ({0})'}"/>
                                                     <ListBox ItemsSource="{Binding CommitFiles}" SelectedItem="{Binding SelectedCommitFile}"
-                                                             BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                                             BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                             controls:ScrollToItem.Item="{Binding SelectedCommitFile}">
                                                         <ListBox.ItemTemplate>
+                                                            <!-- A file with the searched text in its path or changed lines is marked -->
                                                             <DataTemplate>
                                                                 <Grid Margin="2,4">
                                                                     <Grid.ColumnDefinitions>
                                                                         <ColumnDefinition Width="Auto"/>
                                                                         <ColumnDefinition Width="*"/>
+                                                                        <ColumnDefinition Width="Auto"/>
                                                                     </Grid.ColumnDefinitions>
                                                                     <Border Grid.Column="0" Style="{StaticResource ChangeTypeBadge}" Margin="0,0,8,0">
                                                                         <TextBlock Text="{Binding Type, Converter={StaticResource ChangeTypeToLetter}}"
                                                                                    FontSize="10" FontWeight="Bold" Foreground="#0D0F14"
                                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                     </Border>
-                                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayPath}" FontSize="12"
+                                                                    <TextBlock x:Name="FilePath" Grid.Column="1" Text="{Binding DisplayPath}" FontSize="12"
                                                                                TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                                                    <TextBlock Grid.Column="2" Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="11"
+                                                                               Foreground="{StaticResource Warning}" VerticalAlignment="Center" Margin="8,0,2,0"
+                                                                               ToolTip="Has the searched text"
+                                                                               Visibility="{Binding IsSearchMatch, Converter={StaticResource BoolToVisibility}}"/>
                                                                 </Grid>
+                                                                <DataTemplate.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsSearchMatch}" Value="True">
+                                                                        <Setter TargetName="FilePath" Property="Foreground" Value="{StaticResource Warning}"/>
+                                                                        <Setter TargetName="FilePath" Property="FontWeight" Value="SemiBold"/>
+                                                                    </DataTrigger>
+                                                                </DataTemplate.Triggers>
                                                             </DataTemplate>
                                                         </ListBox.ItemTemplate>
                                                     </ListBox>
@@ -914,7 +961,25 @@
 
                                             <Border Grid.Column="1" Background="{StaticResource Bg.Console}" CornerRadius="8"
                                                     BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
-                                                <ListBox ItemsSource="{Binding CommitDiffLines}" Style="{StaticResource DiffList}"/>
+                                                <ListBox ItemsSource="{Binding CommitDiffLines}" Style="{StaticResource DiffList}"
+                                                         controls:ScrollToItem.Item="{Binding CurrentCommitMatch}" controls:ScrollToItem.Center="True">
+                                                    <ListBox.ItemTemplate>
+                                                        <!-- The searched text is marked wherever it is; the line the arrows are on stands out -->
+                                                        <DataTemplate>
+                                                            <Border x:Name="Line" BorderThickness="2,0,0,0" BorderBrush="Transparent" Padding="4,0,0,0">
+                                                                <TextBlock DataContext="{Binding Text}" Style="{StaticResource DiffLine}"
+                                                                           controls:TextHighlight.Text="{Binding}"
+                                                                           controls:TextHighlight.Match="{Binding DataContext.Match, ElementName=Line}"/>
+                                                            </Border>
+                                                            <DataTemplate.Triggers>
+                                                                <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                                    <Setter TargetName="Line" Property="Background" Value="{StaticResource Accent.Muted}"/>
+                                                                    <Setter TargetName="Line" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                                                                </DataTrigger>
+                                                            </DataTemplate.Triggers>
+                                                        </DataTemplate>
+                                                    </ListBox.ItemTemplate>
+                                                </ListBox>
                                             </Border>
                                         </Grid>
                                     </DockPanel>

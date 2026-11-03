@@ -40,6 +40,27 @@ public sealed class MergeSourceOption(string? branch, string label)
     public override string ToString() => Label;
 }
 
+/// <summary>
+/// A line of a commit's diff in the Commits tab. An object rather than the string, so lines that read the same are
+/// still told apart when one of them is scrolled to.
+/// </summary>
+public sealed partial class CommitDiffLine : ObservableObject
+{
+    public CommitDiffLine(string text, string search)
+    {
+        Text = text;
+        if (search.Length > 0 && text.Contains(search, StringComparison.OrdinalIgnoreCase)) Match = search;
+    }
+
+    public string Text { get; }
+
+    /// <summary>The searched text, marked wherever it is in the line; null when the line doesn't have it.</summary>
+    public string? Match { get; }
+
+    /// <summary>The match Next and Previous are on.</summary>
+    [ObservableProperty] private bool _isCurrent;
+}
+
 public partial class ProjectViewModel : ObservableObject
 {
     // heng_main is a personal branch some repos use that should always track development, so until another choice
@@ -55,6 +76,9 @@ public partial class ProjectViewModel : ObservableObject
     private static readonly Regex AnsiEscape = new(@"\x1B\[[0-9;]*[A-Za-z]", RegexOptions.Compiled);
 
     public static IReadOnlyList<ProjectKind> AllKinds { get; } = Enum.GetValues<ProjectKind>();
+
+    private const int CommitSearchMax = 200;
+    private static readonly TimeSpan CommitSearchPause = TimeSpan.FromMilliseconds(450);
 
     private readonly IGitService _git;
     private readonly IFlutterService _flutter;
@@ -181,9 +205,42 @@ public partial class ProjectViewModel : ObservableObject
     [ObservableProperty] private CommitInfo? _selectedCommit;
     [ObservableProperty] private FileChangeInfo? _selectedCommitFile;
 
+    /// <summary>
+    /// Narrows the Commits tab to the commits with this in their message, author, hash, changed file paths or changed
+    /// lines; empty lists the recent ones.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(NextCommitMatchCommand), nameof(PreviousCommitMatchCommand))]
+    private string _commitSearch = string.Empty;
+
+    /// <summary>How the search went: searching, how many commits matched, or that none did.</summary>
+    [ObservableProperty] private string _commitSearchNote = string.Empty;
+
+    /// <summary>The diff line Next and Previous are on, scrolled to.</summary>
+    [ObservableProperty] private CommitDiffLine? _currentCommitMatch;
+
+    /// <summary>Where that line is among the shown file's matches.</summary>
+    [ObservableProperty] private string _commitMatchNote = string.Empty;
+
+    private CancellationTokenSource? _commitSearchTyping;
+    private CancellationTokenSource? _commitsLoading;
+
+    // What the commit list was found with; the files and diffs shown are marked with the same.
+    private string _commitsSearchedFor = string.Empty;
+
+    // What's shown under the list, so Next and Previous wait while a step's commit or file is still opening.
+    private CommitInfo? _commitFilesShownFor;
+    private FileChangeInfo? _commitDiffShownFor;
+
+    private readonly List<CommitDiffLine> _commitDiffMatches = new();
+    private int _commitDiffMatchIndex = -1;
+
+    // Previous stepped back into another file or commit, so it opens on its last match rather than its first.
+    private bool _landOnLastMatch;
+
     public ObservableCollection<CommitInfo> Commits { get; } = new();
     public ObservableCollection<FileChangeInfo> CommitFiles { get; } = new();
-    public ObservableCollection<string> CommitDiffLines { get; } = new();
+    public ObservableCollection<CommitDiffLine> CommitDiffLines { get; } = new();
     public ObservableCollection<DeviceInfo> Devices { get; } = new();
     public ObservableCollection<string> ConsoleOutput { get; } = new();
     public ObservableCollection<string> DetectedUrls { get; } = new();
@@ -581,24 +638,73 @@ public partial class ProjectViewModel : ObservableObject
     {
         if (!_git.IsGitRepo(Path)) return;
 
+        // A newer load (more typing, a refresh) takes over from one still running, and its git searches are stopped.
+        _commitsLoading?.Cancel();
+        var loading = _commitsLoading = new CancellationTokenSource();
+        var search = CommitSearch.Trim();
+        CommitSearchNote = search.Length > 0 ? "Searching..." : string.Empty;
         IsBusy = true;
         try
         {
             var selected = SelectedCommit?.Hash;
-            var commits = await _git.GetRecentCommitsAsync(Path, 30);
+            var commits = search.Length > 0
+                ? await _git.SearchCommitsAsync(Path, search, CommitSearchMax, loading.Token)
+                : await _git.GetRecentCommitsAsync(Path, 30, loading.Token);
+            if (loading.IsCancellationRequested) return;
+
+            _commitsSearchedFor = search;
             Commits.Clear();
             foreach (var c in commits) Commits.Add(c);
             // The picked commit stays picked while it's still in the list.
             SelectedCommit = Commits.FirstOrDefault(c => c.Hash == selected);
+            if (search.Length > 0)
+            {
+                CommitSearchNote = commits.Count switch
+                {
+                    0 => "No commits match.",
+                    1 => "1 commit matches.",
+                    >= CommitSearchMax => $"The newest {CommitSearchMax} commits that match.",
+                    _ => $"{commits.Count} commits match.",
+                };
+            }
+        }
+        catch (OperationCanceledException)
+        {
         }
         finally
         {
-            IsBusy = false;
+            if (_commitsLoading == loading)
+            {
+                _commitsLoading = null;
+                IsBusy = false;
+            }
+            loading.Dispose();
         }
+    }
+
+    partial void OnCommitSearchChanged(string value)
+    {
+        _commitSearchTyping?.Cancel();
+        var typing = _commitSearchTyping = new CancellationTokenSource();
+        _ = SearchCommitsAfterTypingAsync(typing.Token);
+    }
+
+    private async Task SearchCommitsAfterTypingAsync(CancellationToken typing)
+    {
+        try
+        {
+            await Task.Delay(CommitSearchPause, typing);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        await LoadCommitsAsync();
     }
 
     partial void OnSelectedCommitChanged(CommitInfo? value)
     {
+        _commitFilesShownFor = null;
         SelectedCommitFile = null;
         CommitFiles.Clear();
         if (value == null) return;
@@ -607,17 +713,34 @@ public partial class ProjectViewModel : ObservableObject
 
     private async Task LoadCommitFilesAsync(CommitInfo commit)
     {
+        var search = _commitsSearchedFor;
         var files = await _git.GetCommitFilesAsync(Path, commit);
+        var changing = search.Length > 0 ? await _git.GetCommitFilesChangingAsync(Path, commit, search) : [];
         if (SelectedCommit != commit) return; // a newer selection's files are already loading
 
         CommitFiles.Clear();
-        foreach (var f in files) CommitFiles.Add(f);
-        SelectedCommitFile = CommitFiles.FirstOrDefault();
+        foreach (var f in files)
+        {
+            f.IsSearchMatch = search.Length > 0
+                && (f.Path.Contains(search, StringComparison.OrdinalIgnoreCase)
+                    || f.OriginalPath?.Contains(search, StringComparison.OrdinalIgnoreCase) == true
+                    || changing.Contains(f.Path));
+            CommitFiles.Add(f);
+        }
+        _commitFilesShownFor = commit;
+
+        // A commit the search found opens on the file it was found in; its last one when Previous stepped back into it.
+        var matching = CommitFiles.Where(f => f.IsSearchMatch);
+        SelectedCommitFile = (_landOnLastMatch ? matching.LastOrDefault() : matching.FirstOrDefault()) ?? CommitFiles.FirstOrDefault();
+        if (SelectedCommitFile == null) _landOnLastMatch = false;
     }
 
     partial void OnSelectedCommitFileChanged(FileChangeInfo? value)
     {
+        _commitDiffShownFor = null;
         CommitDiffLines.Clear();
+        _commitDiffMatches.Clear();
+        GoToCommitMatch(-1);
         if (value == null || SelectedCommit == null) return;
         _ = LoadCommitDiffAsync(SelectedCommit, value);
     }
@@ -628,7 +751,97 @@ public partial class ProjectViewModel : ObservableObject
         if (SelectedCommitFile != file) return; // a newer selection's diff is already loading
 
         CommitDiffLines.Clear();
-        foreach (var line in diff.Replace("\r\n", "\n").Split('\n')) CommitDiffLines.Add(line);
+        _commitDiffMatches.Clear();
+        foreach (var text in diff.Replace("\r\n", "\n").Split('\n'))
+        {
+            var line = new CommitDiffLine(text, _commitsSearchedFor);
+            CommitDiffLines.Add(line);
+            if (line.Match != null) _commitDiffMatches.Add(line);
+        }
+        _commitDiffShownFor = file;
+
+        GoToCommitMatch(_landOnLastMatch ? _commitDiffMatches.Count - 1 : 0);
+        _landOnLastMatch = false;
+    }
+
+    // Marks the shown diff's match at this index as the current one and scrolls to it; -1 or past the end for none.
+    private void GoToCommitMatch(int index)
+    {
+        if (CurrentCommitMatch != null) CurrentCommitMatch.IsCurrent = false;
+        _commitDiffMatchIndex = index >= 0 && index < _commitDiffMatches.Count ? index : -1;
+        CurrentCommitMatch = _commitDiffMatchIndex >= 0 ? _commitDiffMatches[_commitDiffMatchIndex] : null;
+        if (CurrentCommitMatch != null) CurrentCommitMatch.IsCurrent = true;
+        CommitMatchNote = CurrentCommitMatch == null ? string.Empty : $"{_commitDiffMatchIndex + 1} of {_commitDiffMatches.Count} in this file";
+    }
+
+    [RelayCommand(CanExecute = nameof(CanStepCommitMatch))]
+    private Task NextCommitMatchAsync() => StepCommitMatchAsync(forward: true);
+
+    [RelayCommand(CanExecute = nameof(CanStepCommitMatch))]
+    private Task PreviousCommitMatchAsync() => StepCommitMatchAsync(forward: false);
+
+    private bool CanStepCommitMatch() => CommitSearch.Trim().Length > 0;
+
+    // Steps to the next (or previous) line with the searched text: in the diff shown, then in the commit's next file
+    // that has it, then in the next commit the search found, round to the first one after the last.
+    private async Task StepCommitMatchAsync(bool forward)
+    {
+        if (CommitSearch.Trim() != _commitsSearchedFor)
+        {
+            // Enter pressed before the search caught up with the typing.
+            _commitSearchTyping?.Cancel();
+            await LoadCommitsAsync();
+        }
+        if (_commitsSearchedFor.Length == 0 || Commits.Count == 0) return;
+        // The commit or file the last step moved to is still opening.
+        if (SelectedCommit != null && (_commitFilesShownFor != SelectedCommit || _commitDiffShownFor != SelectedCommitFile)) return;
+
+        var match = _commitDiffMatchIndex + (forward ? 1 : -1);
+        if (_commitDiffMatchIndex >= 0 && match >= 0 && match < _commitDiffMatches.Count)
+        {
+            GoToCommitMatch(match);
+            return;
+        }
+
+        if (SelectedCommit != null)
+        {
+            var at = SelectedCommitFile == null ? -1 : CommitFiles.IndexOf(SelectedCommitFile);
+            var file = forward
+                ? CommitFiles.Skip(at + 1).FirstOrDefault(f => f.IsSearchMatch)
+                : CommitFiles.Take(Math.Max(at, 0)).LastOrDefault(f => f.IsSearchMatch);
+            if (file != null)
+            {
+                _landOnLastMatch = !forward;
+                SelectedCommitFile = file;
+                return;
+            }
+        }
+
+        var next = SelectedCommit == null ? -1 : Commits.IndexOf(SelectedCommit);
+        next = forward ? next + 1 : next < 0 ? Commits.Count - 1 : next - 1;
+        OpenCommitMatch(Commits[(next + Commits.Count) % Commits.Count], forward);
+    }
+
+    // Opens a commit on its first match, or its last going backwards.
+    private void OpenCommitMatch(CommitInfo commit, bool forward)
+    {
+        _landOnLastMatch = !forward;
+        if (commit != SelectedCommit)
+        {
+            SelectedCommit = commit;
+            return;
+        }
+
+        // Came round to the commit already open: the only one the search found.
+        var matching = CommitFiles.Where(f => f.IsSearchMatch);
+        var file = (forward ? matching.FirstOrDefault() : matching.LastOrDefault()) ?? SelectedCommitFile;
+        if (file != SelectedCommitFile)
+        {
+            SelectedCommitFile = file;
+            return;
+        }
+        _landOnLastMatch = false;
+        GoToCommitMatch(forward ? 0 : _commitDiffMatches.Count - 1);
     }
 
     partial void OnSelectedChangedFileChanged(FileChangeInfo? value)

@@ -64,8 +64,17 @@ public interface IGitService
     Task<GitStatusSummary> GetStatusAsync(string path, CancellationToken ct = default);
     Task<List<CommitInfo>> GetRecentCommitsAsync(string path, int count = 30, CancellationToken ct = default);
 
+    /// <summary>
+    /// The newest commits on the current branch, at most <paramref name="max"/>, with <paramref name="text"/> in their
+    /// message, author, hash, the paths of the files they changed, or the lines they added or removed; ignoring case.
+    /// </summary>
+    Task<List<CommitInfo>> SearchCommitsAsync(string path, string text, int max, CancellationToken ct = default);
+
     /// <summary>The files a commit changed, against its first parent.</summary>
     Task<List<FileChangeInfo>> GetCommitFilesAsync(string path, CommitInfo commit, CancellationToken ct = default);
+
+    /// <summary>Paths of the files a commit added or removed a line with <paramref name="text"/> in, ignoring case.</summary>
+    Task<List<string>> GetCommitFilesChangingAsync(string path, CommitInfo commit, string text, CancellationToken ct = default);
     Task<string> GetCommitFileDiffAsync(string path, CommitInfo commit, FileChangeInfo file, CancellationToken ct = default);
 
     Task<List<FileChangeInfo>> GetChangedFilesAsync(string path, CancellationToken ct = default);
@@ -332,11 +341,64 @@ public class GitService : IGitService
         return summary;
     }
 
+    private const string CommitFormat = $"%H{FieldSep}%P{FieldSep}%an{FieldSep}%aI{FieldSep}%s{FieldSep}%b{RecordSep}";
+
     public async Task<List<CommitInfo>> GetRecentCommitsAsync(string path, int count = 30, CancellationToken ct = default)
     {
-        var format = $"%H{FieldSep}%P{FieldSep}%an{FieldSep}%aI{FieldSep}%s{FieldSep}%b{RecordSep}";
-        var result = await _runner.RunCaptureAsync(path, $"git log -n {count} --pretty=format:{format}", ct);
+        var result = await _runner.RunCaptureAsync(path, $"git log -n {count} --pretty=format:{CommitFormat}", ct);
+        return ParseCommits(result);
+    }
 
+    public async Task<List<CommitInfo>> SearchCommitsAsync(string path, string text, int max, CancellationToken ct = default)
+    {
+        // git log only finds commits matching every search it's given, so each is its own run and the results are put
+        // together. The text goes to git as typed, not through cmd.exe, so quotes, & or % in it are just searched for.
+        string[] log = ["log", $"-n{max}", $"--pretty=format:{CommitFormat}", "-i"];
+        var glob = EscapeGlob(text);
+        var searches = new List<Task<CaptureResult>>
+        {
+            _runner.RunCaptureAsync(path, "git", [.. log, "-F", $"--grep={text}"], ct),
+            _runner.RunCaptureAsync(path, "git", [.. log, "-F", $"--author={text}"], ct),
+            // The lines a commit added or removed; -G takes a regex, so the text's own . * ( and such are escaped.
+            _runner.RunCaptureAsync(path, "git", [.. log, $"-G{EscapeRegex(text)}"], ct),
+            // A file's name, or a folder's anywhere in its path.
+            _runner.RunCaptureAsync(path, "git", [.. log, "--", $":(icase,glob)**/*{glob}*", $":(icase,glob)**/*{glob}*/**"], ct),
+        };
+        if (text.Length >= 4 && text.All(char.IsAsciiHexDigit))
+            searches.Add(_runner.RunCaptureAsync(path, "git", ["log", "-n1", $"--pretty=format:{CommitFormat}", text, "--"], ct));
+
+        var results = await Task.WhenAll(searches);
+        return results.SelectMany(ParseCommits)
+            .DistinctBy(c => c.Hash)
+            .OrderByDescending(c => c.Date)
+            .Take(max)
+            .ToList();
+    }
+
+    private static string EscapeRegex(string text)
+    {
+        var escaped = new StringBuilder(text.Length * 2);
+        foreach (var c in text)
+        {
+            if (@"\.^$|()[]{}*+?".Contains(c)) escaped.Append('\\');
+            escaped.Append(c);
+        }
+        return escaped.ToString();
+    }
+
+    private static string EscapeGlob(string text)
+    {
+        var escaped = new StringBuilder(text.Length * 2);
+        foreach (var c in text)
+        {
+            if (@"\*?[]".Contains(c)) escaped.Append('\\');
+            escaped.Append(c);
+        }
+        return escaped.ToString();
+    }
+
+    private static List<CommitInfo> ParseCommits(CaptureResult result)
+    {
         var commits = new List<CommitInfo>();
         if (result.ExitCode != 0) return commits;
 
@@ -403,6 +465,14 @@ public class GitService : IGitService
         }
 
         return files;
+    }
+
+    public async Task<List<string>> GetCommitFilesChangingAsync(string path, CommitInfo commit, string text, CancellationToken ct = default)
+    {
+        string[] trees = commit.ParentHash == null ? ["--root", commit.Hash] : [commit.ParentHash, commit.Hash];
+        var result = await _runner.RunCaptureAsync(
+            path, "git", ["diff-tree", "-r", "-z", "-M", "--name-only", "--no-commit-id", "-i", $"-G{EscapeRegex(text)}", .. trees], ct);
+        return result.ExitCode != 0 ? [] : [.. result.StdOut.Split('\0', StringSplitOptions.RemoveEmptyEntries)];
     }
 
     public async Task<string> GetCommitFileDiffAsync(string path, CommitInfo commit, FileChangeInfo file, CancellationToken ct = default)
