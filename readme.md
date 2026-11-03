@@ -61,7 +61,11 @@ The files aren't code-signed yet, so Windows may warn before the first run: choo
 - **Run.** Starts the project with a live console: `flutter run` on a device, `dotnet run`, or your own command. **Choose file…** builds the command from a script.
   - **Save** keeps the typed command in a list under it, so a project can have several: each saved command has its own ▶ to run it with one click, and ✕ to remove it.
   - Type in the box under the console to answer the app's prompts. Flutter projects also get **Hot reload** and **Hot restart**.
-  - A button opens any local URL the app prints, and you're warned when its ports are already in use.
+  - You're warned when the app's ports are already in use.
+  - **Site:** when the app prints the local address it serves on (a dev server such as Vite or Next, `dotnet run`, Django, Flask, or Flutter's web server), the site opens by itself, and the address becomes a button that opens it again. Untick **Open it when the app starts serving it** to open it only from the button.
+    - **Open in** picks where: a browser window of the dashboard's own, on another screen than the dashboard's (the default), on a screen you pick, or your default browser. It's the same for every project, and picking another screen moves the open windows there.
+    - The browser window fills a screen of its own; on the dashboard's screen it leaves the dashboard showing around it. Each project has one, so running it again shows the new run's site in the same window. If the server takes a moment to answer, the window waits for it.
+    - It has back, forward, reload, the address (Ctrl+L), **Open in your default browser**, developer tools (F12), **Move to the next screen**, **Pin on top**, and **Full screen** (F11, Esc to leave). A local site's own HTTPS certificate, such as ASP.NET's development one, is accepted.
 - **Environment.** The values from `.env` and `appsettings*.json`.
 - **Phone screen.** Mirrors an Android phone or emulator beside the dashboard through [scrcpy](https://github.com/Genymobile/scrcpy). The buttons under the device list work on the device picked there, docked or popped out:
   - **Screenshot:** saves the screen at full resolution to `Pictures\Repo'N'Launcher` and copies it, ready to paste.

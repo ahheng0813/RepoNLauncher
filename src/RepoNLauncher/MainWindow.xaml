@@ -1089,8 +1089,9 @@
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
                                                     <Button Content="{Binding}" Style="{StaticResource Button.Secondary}" Margin="0,0,8,0"
-                                                            Command="{Binding DataContext.OpenUrlCommand, ElementName=ProjectTabControl}"
-                                                            CommandParameter="{Binding}"/>
+                                                            Command="{Binding DataContext.OpenSiteCommand, ElementName=ProjectTabControl}"
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip="Open the site, where Open in below says"/>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
@@ -1100,6 +1101,20 @@
                                             Command="{Binding RunCommand}" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolean}}"/>
                                     <Button Content="■  Stop" Style="{StaticResource Button.Danger}"
                                             Command="{Binding StopCommand}" IsEnabled="{Binding IsRunning}"/>
+                                </StackPanel>
+
+                                <!-- Where the site the app serves opens (the same for every project), and whether a run opens it by itself -->
+                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
+                                    <TextBlock Text="SITE" Style="{StaticResource SectionLabel}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                    <TextBlock Text="Open in" Foreground="{StaticResource Text.Secondary}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <ComboBox Width="330" Height="32" AutomationProperties.Name="Open the site in"
+                                              DataContext="{Binding DataContext.SiteBrowser, RelativeSource={RelativeSource AncestorType=Window}}"
+                                              ItemsSource="{Binding Targets}" SelectedItem="{Binding SelectedTarget}"
+                                              DropDownOpened="SiteTargets_DropDownOpened"
+                                              ToolTip="The dashboard's browser window, on a screen of its own, or your default browser. The same for every project."/>
+                                    <CheckBox Content="Open it when the app starts serving it" Margin="16,0,0,0" VerticalAlignment="Center"
+                                              IsChecked="{Binding OpenSiteOnRun}"
+                                              ToolTip="Opens the first address the app prints, such as http://localhost:5173, as soon as it prints it"/>
                                 </StackPanel>
 
                                 <!-- The running app's input, as if typed in its terminal: answers to its prompts, flutter run's keys -->

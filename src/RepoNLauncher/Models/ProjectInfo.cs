@@ -12,6 +12,8 @@ public class ProjectInfo
 
     /// <summary>Start commands kept in the Run tab's list, each run with one click. Null when none were saved.</summary>
     public List<string>? SavedRunCommands { get; set; }
+    /// <summary>A run opens the site it serves as soon as it prints the address; off, only the Run tab's button opens it.</summary>
+    public bool OpenSiteOnRun { get; set; } = true;
     public string? CsprojOverride { get; set; }
     public string? EnvFileOverride { get; set; }
     public bool IsAutoDiscovered { get; set; }

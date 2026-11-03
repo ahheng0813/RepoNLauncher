@@ -45,6 +45,9 @@ public partial class MainViewModel : ObservableObject
 
     public EmulatorsViewModel Emulators { get; }
 
+    /// <summary>Where the Run tab opens the site a project serves, for every project.</summary>
+    public SiteBrowserViewModel SiteBrowser { get; }
+
     [ObservableProperty] private ProjectViewModel? _selectedProject;
     [ObservableProperty] private bool _isFetchingAll;
     [ObservableProperty] private string _globalStatus = string.Empty;
@@ -97,6 +100,7 @@ public partial class MainViewModel : ObservableObject
         AgentChat = new AgentChatViewModel(() => Projects.Select(p => new ProjectOption(p.Name, p.Path)), () => SelectedProject?.Path);
 
         _config = _configService.Load();
+        SiteBrowser = new SiteBrowserViewModel(_config.SiteScreen, _config.OpenSitesInDefaultBrowser, SaveSiteTarget);
         CloneRepos = new CloneReposViewModel(GitHub, git, IsOnDashboard, paths => AddProjectsFrom("Clone from GitHub", paths),
             () => _config.Projects.Select(p => p.Path), DefaultCloneFolder(), SaveCloneFolder);
         LoadProjectsFromConfig();
@@ -191,6 +195,7 @@ public partial class MainViewModel : ObservableObject
     {
         var project = new ProjectViewModel(info, _git, _flutter, _dotNet, _envParser, _processRunner, _ports, _ides);
         project.RunStartedOnDevice += device => _ = PhoneScreen.ShowRunDeviceAsync(device);
+        project.SiteOpenRequested += (url, activate) => SiteBrowser.Open(project.Path, project.Name, url, activate);
         project.SettingsChanged += PersistConfig; // the project edits its ProjectInfo, which is part of _config
         project.PropertyChanged += (_, e) =>
         {
@@ -210,6 +215,13 @@ public partial class MainViewModel : ObservableObject
     }
 
     private void PersistConfig() => _configService.Save(_config);
+
+    private void SaveSiteTarget(string? screen, bool inDefaultBrowser)
+    {
+        _config.SiteScreen = screen;
+        _config.OpenSitesInDefaultBrowser = inDefaultBrowser;
+        PersistConfig();
+    }
 
     [RelayCommand]
     public async Task FetchAllAsync()

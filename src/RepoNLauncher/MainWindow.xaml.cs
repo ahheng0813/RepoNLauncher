@@ -36,6 +36,8 @@ public partial class MainWindow : Window
         {
             if (DataContext is not MainViewModel vm) return;
             vm.PhoneScreen.PropertyChanged += OnPhoneScreenPropertyChanged;
+            vm.SiteBrowser.WindowRequested += BrowserWindow.Open;
+            vm.SiteBrowser.ScreenPicked += BrowserWindow.MoveAllTo;
 
             _ = vm.AiUsage.RefreshAsync(checkLimits: true);
             vm.Updates.RestartRequested += () => RestartToUpdate(vm);
@@ -55,6 +57,7 @@ public partial class MainWindow : Window
         Closing += (_, _) =>
         {
             _usageTimer.Stop();
+            BrowserWindow.CloseAll();
             if (DataContext is not MainViewModel vm) return;
             vm.AgentChat.StopAll();
             vm.PhoneScreen.Shutdown();
@@ -80,8 +83,8 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel vm) return;
         if (System.Windows.MessageBox.Show(this,
                 "Uninstall Repo'N'Launcher and remove everything it keeps on this PC?\n\n" +
-                "That's your project list and settings, the GitHub sign-in, the scrcpy it downloaded, its map and preview " +
-                "caches, temp files, update files and the desktop icon. Your projects' own folders stay as they are." +
+                "That's your project list and settings, the GitHub sign-in, the scrcpy it downloaded, its map, preview and " +
+                "browser window caches, temp files, update files and the desktop icon. Your projects' own folders stay as they are." +
                 (vm.AgentChat.HasRunningChats ? "\n\nA chat is still running. Uninstalling stops it." : ""),
                 "Uninstall Repo'N'Launcher", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
             return;
@@ -273,4 +276,7 @@ public partial class MainWindow : Window
     // Re-list devices whenever the picker opens, so a phone plugged in a moment ago is already there.
     private void DeviceCombo_DropDownOpened(object sender, EventArgs e) =>
         (DataContext as MainViewModel)?.PhoneScreen.RefreshDevicesCommand.Execute(null);
+
+    // Likewise for screens: one plugged in a moment ago is there to open sites on.
+    private void SiteTargets_DropDownOpened(object sender, EventArgs e) => (DataContext as MainViewModel)?.SiteBrowser.ListTargets();
 }

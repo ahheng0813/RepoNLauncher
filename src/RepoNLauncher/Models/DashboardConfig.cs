@@ -11,6 +11,15 @@ public class DashboardConfig
 
     public List<OpenWithApp> OpenWithApps { get; set; } = new();
 
+    /// <summary>
+    /// The screen the browser window opens a project's site on, such as \\.\DISPLAY2. Null puts it on another screen than
+    /// the dashboard's, when there is one.
+    /// </summary>
+    public string? SiteScreen { get; set; }
+
+    /// <summary>Sites open in the PC's default browser instead of the dashboard's browser window.</summary>
+    public bool OpenSitesInDefaultBrowser { get; set; }
+
     /// <summary>The folder Clone from GitHub last cloned into; null until it has.</summary>
     public string? CloneFolder { get; set; }
 

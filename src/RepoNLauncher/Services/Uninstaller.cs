@@ -75,7 +75,8 @@ public static class Uninstaller
         var remove = new List<string>
         {
             DashboardConfigService.AppDataDir, // settings, the GitHub sign-in, the downloaded scrcpy
-            // Map tiles, the file preview's WebView2 data, and the update packages of a copy installed for everyone.
+            // Map tiles, the file preview's and browser window's WebView2 data, and the update packages of a copy installed
+            // for everyone.
             Path.Combine(localAppData, Path.GetFileName(DashboardConfigService.AppDataDir)),
             Path.Combine(Path.GetTempPath(), "RepoNLauncher"), // pasted pictures, opened phone files, emulator logs
             Path.Combine(Path.GetTempPath(), "velopack_" + appId),

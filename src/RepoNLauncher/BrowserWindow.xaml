@@ -1,0 +1,79 @@
+<Window x:Class="RepoNLauncher.BrowserWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="Repo'N'Launcher" Height="800" Width="1200"
+        WindowStartupLocation="Manual"
+        Background="{StaticResource Bg.App}"
+        FontFamily="Segoe UI"
+        PreviewKeyDown="Window_PreviewKeyDown">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- In full screen the toolbar hides; touching the top edge of the screen (this strip) brings it back -->
+        <Border x:Name="RevealStrip" Grid.Row="0" Height="4" Background="Transparent" Visibility="Collapsed"
+                MouseEnter="RevealStrip_MouseEnter"/>
+
+        <Border x:Name="Toolbar" Grid.Row="0" Background="{StaticResource Bg.Elevated}" BorderBrush="{StaticResource Border.Subtle}"
+                BorderThickness="0,0,0,1" Padding="8,6" MouseLeave="Toolbar_MouseLeave">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                    <Button x:Name="BackButton" Content="&#xE72B;" Style="{StaticResource Button.Ghost}" IsEnabled="False"
+                            ToolTip="Back (Alt+Left)" AutomationProperties.Name="Back" Click="Back_Click"/>
+                    <Button x:Name="ForwardButton" Content="&#xE72A;" Style="{StaticResource Button.Ghost}" IsEnabled="False"
+                            ToolTip="Forward (Alt+Right)" AutomationProperties.Name="Forward" Click="Forward_Click"/>
+                    <Button x:Name="ReloadButton" Content="&#xE72C;" Style="{StaticResource Button.Ghost}"
+                            ToolTip="Reload (F5)" AutomationProperties.Name="Reload" Click="Reload_Click"/>
+                </StackPanel>
+
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Content="&#xE774;" Style="{StaticResource Button.Ghost}" Margin="0,0,2,0"
+                            ToolTip="Open this page in your default browser" AutomationProperties.Name="Open in default browser"
+                            Click="OpenInDefaultBrowser_Click"/>
+                    <Button Content="&#xEC7A;" Style="{StaticResource Button.Ghost}" Margin="0,0,2,0"
+                            ToolTip="Developer tools (F12)" AutomationProperties.Name="Developer tools" Click="DevTools_Click"/>
+                    <Button x:Name="NextScreenButton" Content="&#xE7F4;" Style="{StaticResource Button.Ghost}" Margin="0,0,2,0"
+                            ToolTip="Move to the next screen" AutomationProperties.Name="Move to the next screen"
+                            Click="NextScreen_Click"/>
+                    <Button Margin="0,0,2,0" AutomationProperties.Name="Pin on top" Click="Pin_Click">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
+                                <Setter Property="Content" Value="&#xE718;"/>
+                                <Setter Property="ToolTip" Value="Pin on top of other windows"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Topmost, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                                        <Setter Property="Content" Value="&#xE840;"/>
+                                        <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                                        <Setter Property="Background" Value="{StaticResource Accent.Muted}"/>
+                                        <Setter Property="ToolTip" Value="Pinned on top — click to unpin"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button Content="&#xE740;" Style="{StaticResource Button.Ghost}"
+                            ToolTip="Full screen (F11)" AutomationProperties.Name="Full screen" Click="FullScreen_Click"/>
+                </StackPanel>
+
+                <!-- The page's address; type another and press Enter to go there -->
+                <TextBox x:Name="Address" Margin="8,0" FontFamily="Cascadia Mono, Consolas" VerticalContentAlignment="Center"
+                         AutomationProperties.Name="Address" KeyDown="Address_KeyDown"
+                         GotKeyboardFocus="Address_GotKeyboardFocus"/>
+            </DockPanel>
+        </Border>
+
+        <!-- Shown instead of the page while the app's server doesn't answer yet -->
+        <StackPanel x:Name="WaitingNote" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24"
+                    Visibility="Collapsed">
+            <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="34" Foreground="{StaticResource Text.Muted}"
+                       HorizontalAlignment="Center" Margin="0,0,0,12"/>
+            <TextBlock x:Name="WaitingText" Foreground="{StaticResource Text.Secondary}" TextWrapping="Wrap" TextAlignment="Center"/>
+        </StackPanel>
+
+        <wv2:WebView2 x:Name="Web" Grid.Row="1"/>
+    </Grid>
+</Window>

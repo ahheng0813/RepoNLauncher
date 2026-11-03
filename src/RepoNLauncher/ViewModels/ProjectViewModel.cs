@@ -75,6 +75,11 @@ public partial class ProjectViewModel : ObservableObject
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex AnsiEscape = new(@"\x1B\[[0-9;]*[A-Za-z]", RegexOptions.Compiled);
 
+    // A server listening on every interface prints 0.0.0.0, [::], * or + (Kestrel) as its host: not an address a
+    // browser can open, but localhost reaches the server.
+    private static readonly Regex AnyInterfaceHost = new(@"^(https?://)(?:0\.0\.0\.0|\[::\]|\*|\+)(?=[:/]|$)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     public static IReadOnlyList<ProjectKind> AllKinds { get; } = Enum.GetValues<ProjectKind>();
 
     private const int CommitSearchMax = 200;
@@ -141,6 +146,25 @@ public partial class ProjectViewModel : ObservableObject
         ProjectKind.Python => "e.g. python main.py, or choose the file to run",
         _ => "The command that starts this project, or choose the file to run",
     };
+
+    /// <summary>A run opens its site as soon as it prints the address, where the Run tab's Open in picker says.</summary>
+    public bool OpenSiteOnRun
+    {
+        get => Info.OpenSiteOnRun;
+        set
+        {
+            if (value == Info.OpenSiteOnRun) return;
+            Info.OpenSiteOnRun = value;
+            OnPropertyChanged();
+            SettingsChanged?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// Raised to show the project's site: true when its button was pressed, so the browser comes to the front; false when
+    /// a run just started serving it.
+    /// </summary>
+    public event Action<string, bool>? SiteOpenRequested;
 
     /// <summary>Flutter and .NET start from their project files; the other kinds often start from one script.</summary>
     public bool CanChooseStartFile => Kind is not (ProjectKind.Flutter or ProjectKind.DotNet);
@@ -1229,14 +1253,23 @@ public partial class ProjectViewModel : ObservableObject
             {
                 ShowOutput(line, partial);
                 if (partial) return;
-                // Flutter prints VM-service and DevTools addresses, which aren't the app; leave those out.
+                // Flutter prints VM-service and DevTools addresses, which aren't the app; only its web server's
+                // "lib/main.dart is being served at ..." is.
                 var url = Kind switch
                 {
                     ProjectKind.DotNet => _dotNet.TryExtractListeningUrl(line),
-                    ProjectKind.Flutter => null,
+                    ProjectKind.Flutter => line.Contains("is being served at", StringComparison.OrdinalIgnoreCase)
+                        ? TryExtractLocalUrl(line)
+                        : null,
                     _ => TryExtractLocalUrl(line),
                 };
-                if (url != null && !DetectedUrls.Contains(url)) DetectedUrls.Add(url);
+                if (url == null) return;
+                url = AnyInterfaceHost.Replace(url, "$1localhost");
+                if (DetectedUrls.Contains(url)) return;
+
+                DetectedUrls.Add(url);
+                // The first address is the site; any after it (https beside http, say) stay buttons.
+                if (DetectedUrls.Count == 1 && OpenSiteOnRun) SiteOpenRequested?.Invoke(url, false);
             }),
             onExit: code => Application.Current.Dispatcher.Invoke(() =>
             {
@@ -1251,12 +1284,7 @@ public partial class ProjectViewModel : ObservableObject
     private static string? TryExtractLocalUrl(string line)
     {
         var match = LocalUrlPattern.Match(AnsiEscape.Replace(line, string.Empty));
-        if (!match.Success) return null;
-
-        // 0.0.0.0 and [::] mean "every interface": not an address a browser can open, but localhost reaches the server.
-        return match.Value.TrimEnd('.', ',', ')')
-            .Replace("0.0.0.0", "localhost")
-            .Replace("[::]", "localhost");
+        return match.Success ? match.Value.TrimEnd('.', ',', ')') : null;
     }
 
     // A server left over from a crashed run or started from another terminal keeps the port bound,
@@ -1449,8 +1477,11 @@ public partial class ProjectViewModel : ObservableObject
     public CreatePullRequestViewModel NewPullRequest((string Owner, string Name) repo, IGitHubService gitHub) =>
         new(Path, Branch, repo, _git, gitHub);
 
+    /// <summary>A URL button in the Run tab: the site, where the Open in picker says.</summary>
     [RelayCommand]
-    public void OpenUrl(string? url)
+    private void OpenSite(string url) => SiteOpenRequested?.Invoke(url, true);
+
+    private static void OpenUrl(string? url)
     {
         if (string.IsNullOrEmpty(url)) return;
         Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
