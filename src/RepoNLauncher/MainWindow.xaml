@@ -110,18 +110,6 @@
             <Setter Property="Margin" Value="0,0,10,6"/>
         </Style>
 
-        <Style x:Key="ConsoleLine" TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="Cascadia Mono, Consolas"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="#C7CCD6"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding Converter={StaticResource StartsWith}, ConverterParameter='[dashboard]'}" Value="True">
-                    <Setter Property="Foreground" Value="{StaticResource Cyan}"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
         <Style x:Key="DiffLine" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="Cascadia Mono, Consolas"/>
             <Setter Property="FontSize" Value="12"/>
@@ -1118,60 +1106,8 @@
                                               ToolTip="Opens the first address the app prints, such as http://localhost:5173, as soon as it prints it"/>
                                 </StackPanel>
 
-                                <!-- The running app's input, as if typed in its terminal: answers to its prompts, flutter run's keys -->
-                                <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
-                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                        <Button Content="Send" Style="{StaticResource Button.Secondary}" Margin="8,0,0,0"
-                                                Command="{Binding SendInputCommand}"
-                                                ToolTip="Send the line to the app, as if typed in its terminal and Enter pressed"/>
-                                        <StackPanel Orientation="Horizontal"
-                                                    Visibility="{Binding Kind, Converter={StaticResource EnumToVisibility}, ConverterParameter=Flutter}">
-                                            <Button Content="Hot reload" Style="{StaticResource Button.Secondary}" Margin="8,0,0,0"
-                                                    Command="{Binding SendKeyCommand}" CommandParameter="r"
-                                                    ToolTip="Sends r to flutter run: loads your code changes and keeps the app's state"/>
-                                            <Button Content="Hot restart" Style="{StaticResource Button.Secondary}" Margin="8,0,0,0"
-                                                    Command="{Binding SendKeyCommand}" CommandParameter="R"
-                                                    ToolTip="Sends R to flutter run: loads your code changes and restarts the app"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                    <Grid>
-                                        <TextBox x:Name="ConsoleInputBox" FontFamily="Cascadia Mono, Consolas"
-                                                 Text="{Binding ConsoleInput, UpdateSourceTrigger=PropertyChanged}"
-                                                 IsEnabled="{Binding IsRunning}" AutomationProperties.Name="Input for the app">
-                                            <TextBox.InputBindings>
-                                                <KeyBinding Key="Return" Command="{Binding SendInputCommand}"/>
-                                            </TextBox.InputBindings>
-                                        </TextBox>
-                                        <TextBlock Text="{Binding ConsoleInputHint}" Foreground="{StaticResource Text.Muted}" FontSize="12.5"
-                                                   VerticalAlignment="Center" Margin="11,0,0,0" IsHitTestVisible="False"
-                                                   Visibility="{Binding Text, ElementName=ConsoleInputBox, Converter={StaticResource StringNotEmptyToVisibility}, ConverterParameter=Invert}"/>
-                                    </Grid>
-                                </DockPanel>
-
-                                <Border Background="{StaticResource Bg.Console}" CornerRadius="8" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
-                                    <ListBox ItemsSource="{Binding ConsoleOutput}" Background="Transparent" Padding="10"
-                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                             ScrollViewer.ScrollChanged="Console_ScrollChanged" AutomationProperties.Name="Console output">
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding}" Style="{StaticResource ConsoleLine}"/>
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                        <ListBox.ItemContainerStyle>
-                                            <Style TargetType="ListBoxItem">
-                                                <Setter Property="Padding" Value="0,1"/>
-                                                <Setter Property="Background" Value="Transparent"/>
-                                                <Setter Property="Template">
-                                                    <Setter.Value>
-                                                        <ControlTemplate TargetType="ListBoxItem">
-                                                            <ContentPresenter Margin="{TemplateBinding Padding}"/>
-                                                        </ControlTemplate>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Style>
-                                        </ListBox.ItemContainerStyle>
-                                    </ListBox>
-                                </Border>
+                                <!-- The output (select, copy, search, open in its own window) and the line typed to the app -->
+                                <controls:RunConsole/>
                             </DockPanel>
                         </TabItem>
 

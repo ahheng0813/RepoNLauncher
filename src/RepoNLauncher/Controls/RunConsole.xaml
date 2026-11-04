@@ -1,0 +1,149 @@
+<!-- A project's Run console: its output, selectable and searchable, and the line typed to the running app. The Run tab
+     shows one, and so does the project's console window. DataContext is the ProjectViewModel. -->
+<UserControl x:Class="RepoNLauncher.Controls.RunConsole"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:RepoNLauncher.Converters"
+             xmlns:ae="http://icsharpcode.net/sharpdevelop/avalonedit"
+             PreviewKeyDown="RunConsole_PreviewKeyDown">
+
+    <UserControl.Resources>
+        <conv:EnumToVisibilityConverter x:Key="EnumToVisibility"/>
+        <conv:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibility"/>
+
+        <!-- The output's right-click menu, dark like the rest of the dashboard -->
+        <Style x:Key="ConsoleMenu" TargetType="ContextMenu">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Border Background="{StaticResource Bg.Elevated}" BorderBrush="{StaticResource Border.Strong}"
+                                BorderThickness="1" CornerRadius="6" Padding="4" MinWidth="220">
+                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ConsoleMenuItem" TargetType="MenuItem">
+            <Setter Property="Foreground" Value="{StaticResource Text.Primary}"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="4" Padding="10,6">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Text="{TemplateBinding InputGestureText}" Margin="24,0,0,0"
+                                           Foreground="{StaticResource Text.Muted}" FontSize="12"/>
+                                <ContentPresenter ContentSource="Header" RecognizesAccessKey="True"/>
+                            </DockPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ConsoleMenuSeparator" TargetType="Separator">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Separator">
+                        <Border Height="1" Margin="6,4" Background="{StaticResource Border.Subtle}"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <DockPanel>
+        <!-- Search the output: every match is marked, the arrows (Enter / Shift+Enter, F3 / Shift+F3) step through them -->
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Content="&#xE8C8;" Style="{StaticResource Button.Ghost}" Margin="4,0,0,0"
+                        AutomationProperties.Name="Copy all the output" ToolTip="Copy all the output"
+                        Click="CopyAll_Click"/>
+                <Button x:Name="PopOutButton" Content="&#xE8A7;" Style="{StaticResource Button.Ghost}" Margin="2,0,0,0"
+                        AutomationProperties.Name="Open the console in its own window"
+                        ToolTip="Open this console in a window of its own, to keep it on another screen"
+                        Click="PopOut_Click"/>
+            </StackPanel>
+            <Grid DockPanel.Dock="Left" Width="300">
+                <TextBox x:Name="SearchBox" FontFamily="Cascadia Mono, Consolas" VerticalAlignment="Center"
+                         AutomationProperties.Name="Search the output"
+                         ToolTip="Marks every place the output has this, ignoring case"
+                         TextChanged="SearchBox_TextChanged" PreviewKeyDown="SearchBox_PreviewKeyDown"/>
+                <TextBlock Text="Search the output (Ctrl+F)" Foreground="{StaticResource Text.Muted}" FontSize="12.5"
+                           VerticalAlignment="Center" Margin="11,0,0,0" IsHitTestVisible="False"
+                           Visibility="{Binding Text, ElementName=SearchBox, Converter={StaticResource StringNotEmptyToVisibility}, ConverterParameter=Invert}"/>
+            </Grid>
+            <Button Content="&#xE70E;" Style="{StaticResource Button.Ghost}" Margin="6,0,0,0" VerticalAlignment="Center"
+                    AutomationProperties.Name="Previous match" ToolTip="Previous match (Shift+Enter or Shift+F3)"
+                    Click="PreviousMatch_Click"/>
+            <Button Content="&#xE70D;" Style="{StaticResource Button.Ghost}" Margin="2,0,0,0" VerticalAlignment="Center"
+                    AutomationProperties.Name="Next match" ToolTip="Next match (Enter or F3)"
+                    Click="NextMatch_Click"/>
+            <TextBlock x:Name="MatchNote" Foreground="{StaticResource Text.Secondary}" FontSize="12.5"
+                       VerticalAlignment="Center" Margin="10,0,0,0"/>
+        </DockPanel>
+
+        <!-- The running app's input, as if typed in its terminal: answers to its prompts, flutter run's keys -->
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Content="Send" Style="{StaticResource Button.Secondary}" Margin="8,0,0,0"
+                        Command="{Binding SendInputCommand}"
+                        ToolTip="Send the line to the app, as if typed in its terminal and Enter pressed"/>
+                <StackPanel Orientation="Horizontal"
+                            Visibility="{Binding Kind, Converter={StaticResource EnumToVisibility}, ConverterParameter=Flutter}">
+                    <Button Content="Hot reload" Style="{StaticResource Button.Secondary}" Margin="8,0,0,0"
+                            Command="{Binding SendKeyCommand}" CommandParameter="r"
+                            ToolTip="Sends r to flutter run: loads your code changes and keeps the app's state"/>
+                    <Button Content="Hot restart" Style="{StaticResource Button.Secondary}" Margin="8,0,0,0"
+                            Command="{Binding SendKeyCommand}" CommandParameter="R"
+                            ToolTip="Sends R to flutter run: loads your code changes and restarts the app"/>
+                </StackPanel>
+            </StackPanel>
+            <Grid>
+                <TextBox x:Name="ConsoleInputBox" FontFamily="Cascadia Mono, Consolas"
+                         Text="{Binding ConsoleInput, UpdateSourceTrigger=PropertyChanged}"
+                         IsEnabled="{Binding IsRunning}" AutomationProperties.Name="Input for the app">
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Return" Command="{Binding SendInputCommand}"/>
+                    </TextBox.InputBindings>
+                </TextBox>
+                <TextBlock Text="{Binding ConsoleInputHint}" Foreground="{StaticResource Text.Muted}" FontSize="12.5"
+                           VerticalAlignment="Center" Margin="11,0,0,0" IsHitTestVisible="False"
+                           Visibility="{Binding Text, ElementName=ConsoleInputBox, Converter={StaticResource StringNotEmptyToVisibility}, ConverterParameter=Invert}"/>
+            </Grid>
+        </DockPanel>
+
+        <!-- The output: drag to select, Ctrl+C copies, Ctrl+A selects it all, Ctrl+click opens an address -->
+        <Border Background="{StaticResource Bg.Console}" CornerRadius="8" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
+            <ae:TextEditor x:Name="Output" IsReadOnly="True" WordWrap="True"
+                           Background="Transparent" Foreground="#C7CCD6" Padding="10,8"
+                           FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                           HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
+                           AutomationProperties.Name="Console output">
+                <ae:TextEditor.ContextMenu>
+                    <ContextMenu Style="{StaticResource ConsoleMenu}" Opened="OutputMenu_Opened">
+                        <MenuItem x:Name="CopyMenuItem" Header="Copy" InputGestureText="Ctrl+C"
+                                  Style="{StaticResource ConsoleMenuItem}" Click="Copy_Click"/>
+                        <MenuItem Header="Copy all" Style="{StaticResource ConsoleMenuItem}" Click="CopyAll_Click"/>
+                        <MenuItem Header="Select all" InputGestureText="Ctrl+A"
+                                  Style="{StaticResource ConsoleMenuItem}" Click="SelectAll_Click"/>
+                        <Separator Style="{StaticResource ConsoleMenuSeparator}"/>
+                        <MenuItem x:Name="SearchMenuItem" Header="Search the output" InputGestureText="Ctrl+F"
+                                  Style="{StaticResource ConsoleMenuItem}" Click="Search_Click"/>
+                    </ContextMenu>
+                </ae:TextEditor.ContextMenu>
+            </ae:TextEditor>
+        </Border>
+    </DockPanel>
+</UserControl>

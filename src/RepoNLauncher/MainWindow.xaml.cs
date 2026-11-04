@@ -47,6 +47,8 @@ public partial class MainWindow : Window
             vm.PhoneScreen.PropertyChanged += OnPhoneScreenPropertyChanged;
             vm.SiteBrowser.WindowRequested += BrowserWindow.Open;
             vm.SiteBrowser.ScreenPicked += BrowserWindow.MoveAllTo;
+            // A project taken off the dashboard takes its console window with it.
+            vm.Projects.CollectionChanged += (_, _) => RunConsoleWindow.CloseRemoved(vm.Projects);
 
             _ = vm.AiUsage.RefreshAsync(checkLimits: true);
             vm.Updates.RestartRequested += () => RestartToUpdate(vm);
@@ -67,6 +69,7 @@ public partial class MainWindow : Window
         {
             _usageTimer.Stop();
             BrowserWindow.CloseAll();
+            RunConsoleWindow.CloseAll();
             if (DataContext is not MainViewModel vm) return;
             vm.AgentChat.StopAll();
             vm.PhoneScreen.Shutdown();
@@ -209,15 +212,6 @@ public partial class MainWindow : Window
     {
         if (e.NewValue is ProjectViewModel project && DataContext is MainViewModel vm)
             vm.SelectedProject = project;
-    }
-
-    // Like a terminal, the Run console follows new output while it's scrolled to the bottom, so a prompt is in view
-    // when it asks; scrolled up to read, it stays put.
-    private void Console_ScrollChanged(object sender, System.Windows.Controls.ScrollChangedEventArgs e)
-    {
-        if (e.ExtentHeightChange <= 0 || e.OriginalSource is not System.Windows.Controls.ScrollViewer viewer) return;
-        var wasAtBottom = e.VerticalOffset + e.ViewportHeight >= e.ExtentHeight - e.ExtentHeightChange - 1;
-        if (wasAtBottom) viewer.ScrollToEnd();
     }
 
     private void EditOpenWithApps_Click(object sender, RoutedEventArgs e)

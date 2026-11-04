@@ -61,6 +61,9 @@ The files aren't code-signed yet, so Windows may warn before the first run: choo
 - **Run.** Starts the project with a live console: `flutter run` on a device, `dotnet run`, or your own command. **Choose file…** builds the command from a script.
   - **Save** keeps the typed command in a list under it, so a project can have several: each saved command has its own ▶ to run it with one click, and ✕ to remove it.
   - Type in the box under the console to answer the app's prompts. Flutter projects also get **Hot reload** and **Hot restart**.
+  - Drag over the output to select it, and **Ctrl+C** to copy (or right-click: **Copy**, **Copy all**, **Select all**). **Ctrl+click** an address the app printed to open it.
+  - **Search the output** (**Ctrl+F**) marks every match; **Enter** / **Shift+Enter** (or **F3** / **Shift+F3**) step through them.
+  - The ⧉ button opens the console in a window of its own, to keep on another screen. Each project has its own window, so several runs can be watched side by side; each has **Run** / **Stop**, moves to the next screen, and can be pinned on top.
   - You're warned when the app's ports are already in use.
   - **Site:** when the app prints the local address it serves on (a dev server such as Vite or Next, `dotnet run`, Django, Flask, or Flutter's web server), the site opens by itself, and the address becomes a button that opens it again. Untick **Open it when the app starts serving it** to open it only from the button.
     - **Open in** picks where: a browser window of the dashboard's own, on another screen than the dashboard's (the default), on a screen you pick, or your default browser. It's the same for every project, and picking another screen moves the open windows there.
