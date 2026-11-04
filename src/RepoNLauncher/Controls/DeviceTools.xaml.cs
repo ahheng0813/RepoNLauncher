@@ -13,8 +13,8 @@ using RepoNLauncher.ViewModels;
 namespace RepoNLauncher.Controls;
 
 /// <summary>
-/// The Phone screen's tool buttons, with the recordings in progress and the file saved last under them. Files dropped on
-/// it are sent to the phone.
+/// A device's tool buttons, with the recordings in progress and the file saved last under them. Files dropped on it are
+/// sent to the device.
 /// </summary>
 public partial class DeviceTools : UserControl
 {
@@ -61,9 +61,7 @@ public partial class DeviceTools : UserControl
 
     private void FilesButton_Click(object sender, RoutedEventArgs e)
     {
-        if (DataContext is not PhoneScreenViewModel phone) return;
-        if (phone.SelectedDevice is { } device) PhoneFilesWindow.ShowFor(device.Serial, phone.OpenFiles);
-        else phone.OpenFiles(); // says to pick one
+        if (DataContext is DeviceScreenViewModel screen) PhoneFilesWindow.ShowFor(screen.Device.Serial, screen.OpenFiles);
     }
 
     private void CameraChoice_Click(object sender, RoutedEventArgs e) => CameraPopup.IsOpen = false;
@@ -103,7 +101,7 @@ public partial class DeviceTools : UserControl
 
     private void OnDrop(object sender, DragEventArgs e)
     {
-        if (DataContext is PhoneScreenViewModel phone && e.Data.GetData(DataFormats.FileDrop) is string[] paths)
-            _ = phone.SendFilesAsync(paths);
+        if (DataContext is DeviceScreenViewModel screen && e.Data.GetData(DataFormats.FileDrop) is string[] paths)
+            _ = screen.SendFilesAsync(paths);
     }
 }

@@ -64,8 +64,21 @@
         </Border>
 
         <!-- Only visible while there's no screen: the host's native window covers it otherwise -->
-        <TextBlock Grid.Row="1" Text="{Binding Status}" Foreground="{StaticResource Text.Secondary}" Margin="24"
-                   HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/>
+        <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="24">
+            <TextBlock Text="{Binding Status}" Foreground="{StaticResource Text.Secondary}"
+                       HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/>
+            <Button Content="▶  Show" HorizontalAlignment="Center" Margin="0,14,0,0" Command="{Binding ShowCommand}">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource Button.Primary}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsMirroring}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </StackPanel>
 
         <controls:ScreenHost x:Name="Screen" Grid.Row="1" ScreenHandle="{Binding PopOutScreenHandle}"
                              Visibility="{Binding HasScreen, Converter={StaticResource BoolToVisibility}}"/>

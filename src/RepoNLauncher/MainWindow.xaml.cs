@@ -1,8 +1,10 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
+using RepoNLauncher.Controls;
 using RepoNLauncher.Services;
 using RepoNLauncher.ViewModels;
 
@@ -10,7 +12,8 @@ namespace RepoNLauncher;
 
 public partial class MainWindow : Window
 {
-    private PhoneScreenWindow? _phoneWindow;
+    // The devices popped out of the phone panel, each in a window of its own.
+    private readonly Dictionary<DeviceScreenViewModel, PhoneScreenWindow> _phoneWindows = new();
     private PcReposWindow? _pcReposWindow;
     private CloneReposWindow? _cloneReposWindow;
     private AiUsageWindow? _aiUsageWindow;
@@ -19,6 +22,11 @@ public partial class MainWindow : Window
 
     // Keeps the AI usage bar current while the dashboard is open; plan limits are checked again every few minutes.
     private readonly DispatcherTimer _usageTimer = new() { Interval = TimeSpan.FromMinutes(1) };
+
+    // How many devices the phone panel's width is for, and the width it was given for one when it last changed.
+    private int _phonePanelFits = 1;
+    private double _phoneWidthEach;
+    private double _phoneWidthSet = double.NaN;
 
     public MainWindow()
     {
@@ -35,6 +43,7 @@ public partial class MainWindow : Window
         Loaded += (_, _) =>
         {
             if (DataContext is not MainViewModel vm) return;
+            vm.PhoneScreen.PopOutChanged += OnPhonePopOutChanged;
             vm.PhoneScreen.PropertyChanged += OnPhoneScreenPropertyChanged;
             vm.SiteBrowser.WindowRequested += BrowserWindow.Open;
             vm.SiteBrowser.ScreenPicked += BrowserWindow.MoveAllTo;
@@ -61,7 +70,7 @@ public partial class MainWindow : Window
             if (DataContext is not MainViewModel vm) return;
             vm.AgentChat.StopAll();
             vm.PhoneScreen.Shutdown();
-            vm.PhoneScreen.IsPoppedOut = false; // closes the pop-out window so the app can exit
+            vm.PhoneScreen.DockAll(); // closes the pop-out windows so the app can exit
         };
     }
 
@@ -120,29 +129,79 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnPhoneScreenPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    private void OnPhonePopOutChanged(DeviceScreenViewModel screen)
     {
-        if (e.PropertyName != nameof(PhoneScreenViewModel.IsPoppedOut) || sender is not PhoneScreenViewModel phone) return;
-
-        if (phone.IsPoppedOut && _phoneWindow == null)
+        if (screen.IsPoppedOut && !_phoneWindows.ContainsKey(screen))
         {
-            var window = new PhoneScreenWindow(phone);
+            var window = new PhoneScreenWindow(screen);
+            PlaceBesideOtherPhones(window);
             window.Closing += (_, _) =>
             {
                 // Closing the pop-out puts the screen back in the panel rather than losing it.
-                _phoneWindow = null;
-                phone.IsPoppedOut = false;
+                _phoneWindows.Remove(screen);
+                screen.IsPoppedOut = false;
             };
-            _phoneWindow = window;
+            _phoneWindows[screen] = window;
             window.Show();
         }
-        else if (!phone.IsPoppedOut && _phoneWindow != null)
+        else if (!screen.IsPoppedOut && _phoneWindows.Remove(screen, out var window))
         {
-            var window = _phoneWindow;
-            _phoneWindow = null;
             window.Close();
         }
     }
+
+    // Another device's window opens to the right of those already open rather than on top of them, while that fits on
+    // the screens; otherwise it's centred as usual.
+    private void PlaceBesideOtherPhones(Window window)
+    {
+        var rightmost = _phoneWindows.Values.Where(w => w.WindowState == WindowState.Normal).MaxBy(w => w.Left + w.ActualWidth);
+        if (rightmost == null) return;
+
+        var left = rightmost.Left + rightmost.ActualWidth + 8;
+        if (left + window.Width > SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth) return;
+        window.WindowStartupLocation = WindowStartupLocation.Manual;
+        window.Left = left;
+        window.Top = rightmost.Top;
+    }
+
+    private void OnPhoneScreenPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PhoneScreenViewModel.DockedScreenCount) && sender is PhoneScreenViewModel phone)
+            FitPhonePanel(phone.DockedScreenCount);
+    }
+
+    // Devices side by side in the phone panel each get about the width one had, so a second one doesn't squeeze the
+    // first to half its size, while the project details keep their minimum width.
+    private void FitPhonePanel(int docked)
+    {
+        docked = Math.Max(docked, 1);
+        if (docked == _phonePanelFits) return;
+
+        // The width for one: from what the panel was dragged to, unless it's still the width set here last, which the
+        // room may have cut short.
+        var width = PhoneColumn.Width.Value;
+        var each = width == _phoneWidthSet ? _phoneWidthEach : width / _phonePanelFits;
+        var room = PhoneColumn.ActualWidth + DetailsColumn.ActualWidth - DetailsColumn.MinWidth;
+
+        _phonePanelFits = docked;
+        _phoneWidthEach = each;
+        _phoneWidthSet = Math.Max(each, Math.Min(each * docked, room));
+        PhoneColumn.Width = new GridLength(_phoneWidthSet);
+    }
+
+    // Clicking a device in the phone panel, its screen or its name above it, picks it for the panel's tools.
+    private void DockedScreen_ScreenClicked(object? sender, EventArgs e) => SelectDockedScreen(sender);
+
+    private void DockedScreenName_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => SelectDockedScreen(sender);
+
+    private void SelectDockedScreen(object? sender)
+    {
+        if (sender is FrameworkElement { DataContext: DeviceScreenViewModel screen } && DataContext is MainViewModel vm)
+            vm.PhoneScreen.Select(screen);
+    }
+
+    // A device that stops showing takes its place in the panel with it; its host would otherwise linger, parked.
+    private void DockedScreen_Unloaded(object sender, RoutedEventArgs e) => ((ScreenHost)sender).Dispose();
 
     // TreeView.SelectedItem is read-only, so selection is pushed to the view model from here. Only projects count:
     // a section can end up selected (collapsing one moves the tree's selection onto it), which shouldn't clear the detail pane.

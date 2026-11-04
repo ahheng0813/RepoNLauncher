@@ -5,7 +5,8 @@
              xmlns:local="clr-namespace:RepoNLauncher.Controls"
              xmlns:models="clr-namespace:RepoNLauncher.Models">
 
-    <!-- The Phone screen's tools, on its PhoneScreenViewModel: in the docked panel and in the pop-out window's toolbar -->
+    <!-- A device's tools, on its DeviceScreenViewModel: in the docked panel for the device picked there, and in each
+         pop-out window's toolbar for its own device -->
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
         <conv:NullToVisibilityConverter x:Key="NullToVisibility"/>

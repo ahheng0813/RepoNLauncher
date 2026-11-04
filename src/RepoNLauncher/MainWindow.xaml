@@ -367,11 +367,12 @@
         <Grid Grid.Row="1" Margin="16">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="320"/>
-                <ColumnDefinition Width="*" MinWidth="460"/>
+                <ColumnDefinition x:Name="DetailsColumn" Width="*" MinWidth="460"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="300">
+                <ColumnDefinition x:Name="PhoneColumn" Width="300">
                     <!-- The splitter sets Width locally, so hiding the panel clamps it with MaxWidth instead;
-                         showing it again restores whatever width the user dragged it to. -->
+                         showing it again restores whatever width the user dragged it to. Showing more devices side by
+                         side widens it (MainWindow.FitPhonePanel). -->
                     <ColumnDefinition.Style>
                         <Style TargetType="ColumnDefinition">
                             <Setter Property="MinWidth" Value="240"/>
@@ -1230,7 +1231,7 @@
                                         <Setter Property="Content" Value="&#xE8A7;"/>
                                         <Setter Property="ToolTip" Value="Pop out into its own window"/>
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsPoppedOut}" Value="True">
+                                            <DataTrigger Binding="{Binding SelectedScreen.IsPoppedOut}" Value="True">
                                                 <Setter Property="Content" Value="&#xE73F;"/>
                                                 <Setter Property="ToolTip" Value="Dock back into the dashboard"/>
                                             </DataTrigger>
@@ -1263,11 +1264,12 @@
                         </ComboBox>
                         <Button Grid.Column="1" Content="&#xE72C;" ToolTip="Refresh devices" Style="{StaticResource Button.Ghost}"
                                 Margin="4,0" Command="{Binding RefreshDevicesCommand}"/>
+                        <!-- Shows the device picked beside any already showing; Stop stops just that one -->
                         <Button Grid.Column="2" Content="▶  Show" Margin="0" Command="{Binding ShowCommand}">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource Button.Primary}">
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsMirroring}" Value="True">
+                                        <DataTrigger Binding="{Binding SelectedScreen.IsMirroring}" Value="True">
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -1276,52 +1278,144 @@
                         </Button>
                         <Button Grid.Column="2" Content="■  Stop" Style="{StaticResource Button.Danger}" Margin="0"
                                 Command="{Binding StopCommand}"
-                                Visibility="{Binding IsMirroring, Converter={StaticResource BoolToVisibility}}"/>
+                                Visibility="{Binding SelectedScreen.IsMirroring, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}"/>
                     </Grid>
 
                     <!-- Screenshot, recording, camera, location and sending files, for the device picked above -->
-                    <controls:DeviceTools DockPanel.Dock="Top" Margin="-6,0,0,8"/>
+                    <controls:DeviceTools DockPanel.Dock="Top" Margin="-6,0,0,8" DataContext="{Binding SelectedScreen}">
+                        <controls:DeviceTools.Style>
+                            <Style TargetType="controls:DeviceTools">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding}" Value="{x:Null}">
+                                        <Setter Property="IsEnabled" Value="False"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </controls:DeviceTools.Style>
+                    </controls:DeviceTools>
 
                     <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Foreground="{StaticResource Text.Secondary}"
                                FontSize="11" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="44" Margin="0,8,0,0"/>
 
-                    <!-- Padding keeps the square scrcpy window inside the rounded corners, like a bezel -->
-                    <Border Background="Black" CornerRadius="8" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1" Padding="3">
-                        <Grid>
-                            <StackPanel VerticalAlignment="Center" Margin="12"
-                                        Visibility="{Binding ShowInstallPrompt, Converter={StaticResource BoolToVisibility}}">
-                                <TextBlock Text="&#xE8EA;" FontFamily="Segoe MDL2 Assets" FontSize="34" Foreground="{StaticResource Text.Muted}"
-                                           HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                                <TextBlock Text="Mirroring needs scrcpy" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,6"/>
-                                <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="11.5" TextWrapping="Wrap" TextAlignment="Center"
-                                           Margin="0,0,0,14"
-                                           Text="A free, open-source tool that streams an Android phone's screen and sound to this PC. One-time download (about 11 MB) from github.com/Genymobile/scrcpy."/>
-                                <Button Content="Install scrcpy" Style="{StaticResource Button.Primary}" HorizontalAlignment="Center" Margin="0"
-                                        Command="{Binding InstallScrcpyCommand}"/>
-                            </StackPanel>
+                    <Grid>
+                        <!-- Nothing showing here: why, and what to do. Padding keeps the square scrcpy window inside the
+                             rounded corners, like a bezel. -->
+                        <Border Background="Black" CornerRadius="8" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1" Padding="3"
+                                Visibility="{Binding IsDockEmpty, Converter={StaticResource BoolToVisibility}}">
+                            <Grid>
+                                <StackPanel VerticalAlignment="Center" Margin="12"
+                                            Visibility="{Binding ShowInstallPrompt, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Text="&#xE8EA;" FontFamily="Segoe MDL2 Assets" FontSize="34" Foreground="{StaticResource Text.Muted}"
+                                               HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                                    <TextBlock Text="Mirroring needs scrcpy" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                                    <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="11.5" TextWrapping="Wrap" TextAlignment="Center"
+                                               Margin="0,0,0,14"
+                                               Text="A free, open-source tool that streams an Android phone's screen and sound to this PC. One-time download (about 11 MB) from github.com/Genymobile/scrcpy."/>
+                                    <Button Content="Install scrcpy" Style="{StaticResource Button.Primary}" HorizontalAlignment="Center" Margin="0"
+                                            Command="{Binding InstallScrcpyCommand}"/>
+                                </StackPanel>
 
-                            <StackPanel VerticalAlignment="Center" Margin="12"
-                                        Visibility="{Binding ShowPoppedOutNote, Converter={StaticResource BoolToVisibility}}">
-                                <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="30" Foreground="{StaticResource Text.Muted}"
-                                           HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                                <TextBlock Text="Showing in a separate window" Foreground="{StaticResource Text.Secondary}"
-                                           HorizontalAlignment="Center" Margin="0,0,0,14"/>
-                                <Button Content="Dock back here" Style="{StaticResource Button.Secondary}" HorizontalAlignment="Center" Margin="0"
-                                        Command="{Binding TogglePopOutCommand}"/>
-                            </StackPanel>
+                                <StackPanel VerticalAlignment="Center" Margin="12"
+                                            Visibility="{Binding ShowPoppedOutNote, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="30" Foreground="{StaticResource Text.Muted}"
+                                               HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                                    <TextBlock Text="{Binding PoppedOutNote}" Foreground="{StaticResource Text.Secondary}"
+                                               HorizontalAlignment="Center" Margin="0,0,0,14"/>
+                                    <Button Content="Dock back here" Style="{StaticResource Button.Secondary}" HorizontalAlignment="Center" Margin="0"
+                                            Command="{Binding DockAllCommand}"/>
+                                </StackPanel>
 
-                            <StackPanel VerticalAlignment="Center" Margin="12"
-                                        Visibility="{Binding ShowIdleNote, Converter={StaticResource BoolToVisibility}}">
-                                <TextBlock Text="&#xE8EA;" FontFamily="Segoe MDL2 Assets" FontSize="34" Foreground="{StaticResource Text.Muted}"
-                                           HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                                <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="11.5" TextWrapping="Wrap" TextAlignment="Center"
-                                           Text="Pick a device and press Show. Running a Flutter app on an Android device shows its screen here automatically."/>
-                            </StackPanel>
+                                <StackPanel VerticalAlignment="Center" Margin="12"
+                                            Visibility="{Binding ShowIdleNote, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Text="&#xE8EA;" FontFamily="Segoe MDL2 Assets" FontSize="34" Foreground="{StaticResource Text.Muted}"
+                                               HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                                    <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="11.5" TextWrapping="Wrap" TextAlignment="Center"
+                                               Text="Pick a device and press Show. Pick another and press Show to see both side by side. Running a Flutter app on an Android device shows its screen here automatically."/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
 
-                            <controls:ScreenHost ScreenHandle="{Binding DockedScreenHandle}"
-                                                 Visibility="{Binding HasDockedScreen, Converter={StaticResource BoolToVisibility}}"/>
-                        </Grid>
-                    </Border>
+                        <!-- The devices showing, side by side. Clicking one, or its name, picks it for the tools above. -->
+                        <ItemsControl ItemsSource="{Binding Screens}" Focusable="False" Margin="-3,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Rows="1"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <!-- A popped-out device leaves its room to the others -->
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Visibility" Value="{Binding IsDocked, Converter={StaticResource BoolToVisibility}}"/>
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <DockPanel Margin="3,0">
+                                        <!-- Which device it is, when there are several or the list has another picked -->
+                                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4" Background="Transparent"
+                                                   PreviewMouseLeftButtonDown="DockedScreenName_PreviewMouseLeftButtonDown">
+                                            <DockPanel.Style>
+                                                <Style TargetType="DockPanel">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSelected}" Value="False">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding DataContext.HasSeveralDockedScreens, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </DockPanel.Style>
+                                            <Button DockPanel.Dock="Right" Content="&#xE71A;" Style="{StaticResource Button.Ghost}" FontSize="10" Padding="6,4"
+                                                    ToolTip="Stop showing it" AutomationProperties.Name="Stop showing it" Command="{Binding StopCommand}"/>
+                                            <Button DockPanel.Dock="Right" Content="&#xE8A7;" Style="{StaticResource Button.Ghost}" FontSize="10" Padding="6,4"
+                                                    ToolTip="Pop out into its own window" AutomationProperties.Name="Pop out" Command="{Binding TogglePopOutCommand}"/>
+                                            <TextBlock Text="{Binding Device.Model}" ToolTip="{Binding Device.Serial}" FontSize="11.5"
+                                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                        <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                <Setter Property="Foreground" Value="{StaticResource Accent.Hover}"/>
+                                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </DockPanel>
+
+                                        <Border Background="Black" CornerRadius="8" BorderThickness="1" Padding="3">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="BorderBrush" Value="{StaticResource Border.Subtle}"/>
+                                                    <Style.Triggers>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding IsSelected}" Value="True"/>
+                                                                <Condition Binding="{Binding DataContext.HasSeveralDockedScreens, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Value="True"/>
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="BorderBrush" Value="{StaticResource Accent}"/>
+                                                        </MultiDataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <Grid>
+                                                <!-- Until its screen arrives: connecting, or saving a recording before starting again -->
+                                                <TextBlock Text="{Binding Status}" Foreground="{StaticResource Text.Secondary}" FontSize="11.5" Margin="8"
+                                                           TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <controls:ScreenHost ScreenHandle="{Binding DockedScreenHandle}" ScreenClicked="DockedScreen_ScreenClicked"
+                                                                     Unloaded="DockedScreen_Unloaded"
+                                                                     Visibility="{Binding HasDockedScreen, Converter={StaticResource BoolToVisibility}}"/>
+                                            </Grid>
+                                        </Border>
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
                 </DockPanel>
             </Border>
         </Grid>

@@ -9,9 +9,8 @@ using RepoNLauncher.Services;
 namespace RepoNLauncher.ViewModels;
 
 /// <summary>
-/// The Phone screen's Location tools: gives the selected device a virtual location, pinned on the map, found by name, typed
-/// or this PC's own, and gives a phone its real one back. One phone at a time keeps a virtual location; the dashboard gives
-/// it back on closing.
+/// The Phone screen's Location tools for one device: gives it a virtual location, pinned on the map, found by name, typed
+/// or this PC's own, and gives a phone its real one back. The dashboard gives it back on closing.
 /// </summary>
 public partial class DeviceLocationViewModel : ObservableObject
 {
@@ -25,20 +24,19 @@ public partial class DeviceLocationViewModel : ObservableObject
     private const double CloseUpZoom = 15;
 
     private readonly IDeviceToolsService _tools;
-    private readonly Func<AndroidDevice?> _selectedDevice;
+    private readonly AndroidDevice _device;
 
-    // The phone whose location is virtual now, and where it is. Emulators aren't tracked: moving their GPS lasts by itself.
-    private AndroidDevice? _phone;
+    // Where the phone is said to be while its location is virtual. Emulators aren't tracked: moving their GPS lasts by itself.
     private (double Latitude, double Longitude) _phoneLocation;
     private CancellationTokenSource? _refresh;
 
     private CancellationTokenSource? _typing;
     private bool _matchingPin; // Coordinates and Pin being set to the same place, so neither follows the other back
 
-    public DeviceLocationViewModel(IDeviceToolsService tools, Func<AndroidDevice?> selectedDevice)
+    public DeviceLocationViewModel(IDeviceToolsService tools, AndroidDevice device)
     {
         _tools = tools;
-        _selectedDevice = selectedDevice;
+        _device = device;
     }
 
     /// <summary>"Latitude, longitude", as Google Maps copies them: the map's pin, or typed.</summary>
@@ -71,7 +69,7 @@ public partial class DeviceLocationViewModel : ObservableObject
 
     [ObservableProperty] private string _status = string.Empty;
 
-    /// <summary>A phone has a virtual location that it can be given back its real one from.</summary>
+    /// <summary>The device is a phone with a virtual location, that it can be given back its real one from.</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(UseRealLocationCommand))]
     private bool _hasVirtualPhoneLocation;
@@ -232,17 +230,17 @@ public partial class DeviceLocationViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanUseRealLocation))]
     private async Task UseRealLocationAsync()
     {
-        if (_phone is not { } phone) return;
+        if (!HasVirtualPhoneLocation) return;
         IsBusy = true;
-        Status = $"Giving {phone.Model} its real location back…";
+        Status = $"Giving {_device.Model} its real location back…";
         try
         {
             await ClearPhoneAsync();
-            Status = $"{phone.Model} reports where it really is again.";
+            Status = $"{_device.Model} reports where it really is again.";
         }
         catch (Exception e) when (e is InvalidOperationException or TimeoutException)
         {
-            Status = $"{phone.Model} still has the virtual location: {e.Message}";
+            Status = $"{_device.Model} still has the virtual location: {e.Message}";
         }
         finally
         {
@@ -260,15 +258,15 @@ public partial class DeviceLocationViewModel : ObservableObject
         Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
     }
 
-    /// <summary>Gives the phone with a virtual location its real one back, so it doesn't stay somewhere else after the dashboard closes.</summary>
+    /// <summary>Gives a phone with a virtual location its real one back, so it doesn't stay somewhere else after the dashboard closes.</summary>
     public void Shutdown()
     {
         StopRefreshing();
-        if (_phone is not { } phone) return;
+        if (!HasVirtualPhoneLocation) return;
         try
         {
             // The service never needs this (UI) thread to finish, so waiting on it here can't hang.
-            _tools.ClearPhoneLocationAsync(phone.Serial).Wait(TimeSpan.FromSeconds(5));
+            _tools.ClearPhoneLocationAsync(_device.Serial).Wait(TimeSpan.FromSeconds(5));
         }
         catch (AggregateException)
         {
@@ -278,31 +276,11 @@ public partial class DeviceLocationViewModel : ObservableObject
 
     private async Task MoveToAsync(double latitude, double longitude, string what)
     {
-        if (_selectedDevice() is not { } device)
-        {
-            Status = "Pick a device first.";
-            return;
-        }
-
+        var device = _device;
         IsBusy = true;
         Status = $"Moving {device.Model} to {what}…";
         try
         {
-            // One phone keeps a virtual location at a time; the one before gets its real location back.
-            if (_phone != null && _phone.Serial != device.Serial)
-            {
-                try
-                {
-                    await ClearPhoneAsync();
-                }
-                catch (Exception e) when (e is InvalidOperationException or TimeoutException)
-                {
-                    // Unplugged, most likely; its test providers go when it restarts.
-                    _phone = null;
-                    HasVirtualPhoneLocation = false;
-                }
-            }
-
             var result = await _tools.SetLocationAsync(device.Serial, latitude, longitude);
             var where = Format(latitude, longitude);
             if (result.Kind == VirtualLocationKind.EmulatorGps)
@@ -311,7 +289,6 @@ public partial class DeviceLocationViewModel : ObservableObject
                 return;
             }
 
-            _phone = device;
             _phoneLocation = (latitude, longitude);
             HasVirtualPhoneLocation = true;
             StartRefreshing();
@@ -333,7 +310,7 @@ public partial class DeviceLocationViewModel : ObservableObject
     {
         StopRefreshing();
         var refresh = _refresh = new CancellationTokenSource();
-        var serial = _phone!.Serial;
+        var serial = _device.Serial;
         var (latitude, longitude) = _phoneLocation;
         _ = Task.Run(async () =>
         {
@@ -365,10 +342,9 @@ public partial class DeviceLocationViewModel : ObservableObject
     private async Task ClearPhoneAsync()
     {
         StopRefreshing();
-        if (_phone is not { } phone) return;
+        if (!HasVirtualPhoneLocation) return;
 
-        await _tools.ClearPhoneLocationAsync(phone.Serial);
-        _phone = null;
+        await _tools.ClearPhoneLocationAsync(_device.Serial);
         HasVirtualPhoneLocation = false;
     }
 

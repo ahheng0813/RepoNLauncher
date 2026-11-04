@@ -23,6 +23,9 @@ public class ScreenHost : HwndHost
         set => SetValue(ScreenHandleProperty, value);
     }
 
+    /// <summary>Raised when the mirror is clicked, which WPF never sees: the click is in another process's window.</summary>
+    public event EventHandler? ScreenClicked;
+
     private readonly DispatcherTimer _fitTimer;
     private IntPtr _container;
     private IntPtr _child;
@@ -62,6 +65,7 @@ public class ScreenHost : HwndHost
         {
             // A click in the mirror doesn't move keyboard focus into it on its own, so typing would never reach the phone.
             SetFocus(_child);
+            ScreenClicked?.Invoke(this, EventArgs.Empty);
         }
         return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
     }

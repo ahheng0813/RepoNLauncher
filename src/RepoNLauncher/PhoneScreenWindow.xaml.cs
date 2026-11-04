@@ -7,19 +7,23 @@ using RepoNLauncher.ViewModels;
 
 namespace RepoNLauncher;
 
-/// <summary>The phone screen popped out of the dashboard into its own window, which can go borderless full screen.</summary>
+/// <summary>
+/// A device's screen popped out of the dashboard into its own window, which can go borderless full screen. Each device
+/// popped out has one, with its own tools.
+/// </summary>
 public partial class PhoneScreenWindow : Window
 {
     private const int HotkeyToggleFullScreen = 1;
     private const int HotkeyExitFullScreen = 2;
 
-    private readonly PhoneScreenViewModel _phone;
+    private readonly DeviceScreenViewModel _screen;
     private WindowState _stateBeforeFullScreen = WindowState.Normal;
 
-    public PhoneScreenWindow(PhoneScreenViewModel phone)
+    public PhoneScreenWindow(DeviceScreenViewModel screen)
     {
         InitializeComponent();
-        DataContext = _phone = phone;
+        DataContext = _screen = screen;
+        Title = $"{screen.Device.Model} - {Title}";
         Height = Math.Min(Height, SystemParameters.WorkArea.Height - 40);
 
         SourceInitialized += (_, _) =>
@@ -32,7 +36,7 @@ public partial class PhoneScreenWindow : Window
         Deactivated += (_, _) => UpdateHotkeys();
         Closing += (_, _) =>
         {
-            phone.PropertyChanged -= OnPhonePropertyChanged;
+            screen.PropertyChanged -= OnScreenPropertyChanged;
             UnregisterHotkeys(new WindowInteropHelper(this).Handle);
         };
         Closed += (_, _) =>
@@ -43,18 +47,18 @@ public partial class PhoneScreenWindow : Window
             Screen.Dispose();
         };
 
-        phone.PropertyChanged += OnPhonePropertyChanged;
-        if (phone.IsFullScreen) ApplyFullScreen();
+        screen.PropertyChanged += OnScreenPropertyChanged;
+        if (screen.IsFullScreen) ApplyFullScreen();
     }
 
-    private void OnPhonePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    private void OnScreenPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(PhoneScreenViewModel.IsFullScreen)) ApplyFullScreen();
+        if (e.PropertyName == nameof(DeviceScreenViewModel.IsFullScreen)) ApplyFullScreen();
     }
 
     private void ApplyFullScreen()
     {
-        if (_phone.IsFullScreen)
+        if (_screen.IsFullScreen)
         {
             _stateBeforeFullScreen = WindowState;
             // Maximizing only after dropping the frame is what makes the window cover the taskbar too.
@@ -85,7 +89,7 @@ public partial class PhoneScreenWindow : Window
     private void Toolbar_MouseLeave(object sender, MouseEventArgs e)
     {
         // Moving into a tool's flyout leaves the toolbar too; hiding it then would take the flyout with it.
-        if (!_phone.IsFullScreen || Tools.IsFlyoutOpen) return;
+        if (!_screen.IsFullScreen || Tools.IsFlyoutOpen) return;
         Toolbar.Visibility = Visibility.Collapsed;
         RevealStrip.Visibility = Visibility.Visible;
     }
@@ -101,7 +105,7 @@ public partial class PhoneScreenWindow : Window
         if (!IsActive) return;
 
         RegisterHotKey(hwnd, HotkeyToggleFullScreen, ModNoRepeat, VkF11);
-        if (_phone.IsFullScreen) RegisterHotKey(hwnd, HotkeyExitFullScreen, ModNoRepeat, VkEscape);
+        if (_screen.IsFullScreen) RegisterHotKey(hwnd, HotkeyExitFullScreen, ModNoRepeat, VkEscape);
     }
 
     private static void UnregisterHotkeys(IntPtr hwnd)
@@ -117,11 +121,11 @@ public partial class PhoneScreenWindow : Window
         switch (wParam.ToInt32())
         {
             case HotkeyToggleFullScreen:
-                _phone.IsFullScreen = !_phone.IsFullScreen;
+                _screen.IsFullScreen = !_screen.IsFullScreen;
                 handled = true;
                 break;
             case HotkeyExitFullScreen:
-                _phone.IsFullScreen = false;
+                _screen.IsFullScreen = false;
                 handled = true;
                 break;
         }
