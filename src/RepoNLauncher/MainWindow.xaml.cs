@@ -23,6 +23,10 @@ public partial class MainWindow : Window
     // Keeps the AI usage bar current while the dashboard is open; plan limits are checked again every few minutes.
     private readonly DispatcherTimer _usageTimer = new() { Interval = TimeSpan.FromMinutes(1) };
 
+    // Blinks the cursor after the header's C:\Repo'N'Launcher> prompt. A timer rather than an animation: a running
+    // storyboard re-renders the window every frame, which competes with the phone screen mirror.
+    private readonly DispatcherTimer _cursorTimer = new();
+
     // How many devices the phone panel's width is for, and the width it was given for one when it last changed.
     private int _phonePanelFits = 1;
     private double _phoneWidthEach;
@@ -64,10 +68,12 @@ public partial class MainWindow : Window
                 if (WindowState != WindowState.Minimized) _ = vm.AiUsage.RefreshAsync();
             };
             _usageTimer.Start();
+            StartPromptCursor();
         };
         Closing += (_, _) =>
         {
             _usageTimer.Stop();
+            _cursorTimer.Stop();
             BrowserWindow.CloseAll();
             RunConsoleWindow.CloseAll();
             if (DataContext is not MainViewModel vm) return;
@@ -75,6 +81,16 @@ public partial class MainWindow : Window
             vm.PhoneScreen.Shutdown();
             vm.PhoneScreen.DockAll(); // closes the pop-out windows so the app can exit
         };
+    }
+
+    // At Windows' own caret blink rate, as the console's cursor blinks; it stays lit where blinking is turned off.
+    private void StartPromptCursor()
+    {
+        var blink = System.Windows.Forms.SystemInformation.CaretBlinkTime;
+        if (blink <= 0) return;
+        _cursorTimer.Interval = TimeSpan.FromMilliseconds(blink);
+        _cursorTimer.Tick += (_, _) => PromptCursor.Opacity = PromptCursor.Opacity > 0 ? 0 : 1;
+        _cursorTimer.Start();
     }
 
     // The updater waits for the app to close; closing the window stops chats and the phone mirror on the way out.

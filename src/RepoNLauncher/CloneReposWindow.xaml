@@ -6,7 +6,7 @@
         Title="Clone from GitHub - Repo'N'Launcher" Width="1060" Height="740" MinWidth="760" MinHeight="460"
         WindowStartupLocation="CenterOwner"
         Background="{StaticResource Bg.App}"
-        FontFamily="Segoe UI">
+        FontFamily="{StaticResource Font.Mono}">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
@@ -22,7 +22,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="14,6" Margin="3">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="0" Padding="14,6" Margin="3">
                             <ContentPresenter/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -54,7 +54,7 @@
 
         <Style x:Key="Badge" TargetType="Border">
             <Setter Property="Background" Value="{StaticResource Bg.PanelAlt}"/>
-            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="CornerRadius" Value="0"/>
             <Setter Property="Padding" Value="6,1"/>
             <Setter Property="Margin" Value="8,0,0,0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
@@ -66,7 +66,7 @@
         </Style>
 
         <DataTemplate DataType="{x:Type vm:CloneRepoViewModel}">
-            <Border x:Name="Row" Background="Transparent" CornerRadius="7" Padding="10,8" Margin="0,0,0,2">
+            <Border x:Name="Row" Background="Transparent" CornerRadius="0" Padding="10,8" Margin="0,0,0,2">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -116,7 +116,7 @@
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
                                     <TextBlock TextTrimming="CharacterEllipsis">
-                                        <Run Text="{Binding Name, Mode=OneWay}" FontFamily="Consolas"/>
+                                        <Run Text="{Binding Name, Mode=OneWay}" FontFamily="{StaticResource Font.Mono}"/>
                                         <Run Text="{Binding Note, Mode=OneWay}" Foreground="{StaticResource Text.Muted}" FontSize="11"/>
                                     </TextBlock>
                                 </DataTemplate>
@@ -127,7 +127,7 @@
                     <!-- On this PC: where, and adding it to the dashboard -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0"
                                 Visibility="{Binding IsOnPc, Converter={StaticResource BoolToVisibility}}">
-                        <TextBlock Text="{Binding LocalPath}" FontFamily="Consolas" FontSize="11" Foreground="{StaticResource Text.Secondary}"
+                        <TextBlock Text="{Binding LocalPath}" FontFamily="{StaticResource Font.Mono}" FontSize="11" Foreground="{StaticResource Text.Secondary}"
                                    VerticalAlignment="Center" MaxWidth="280" TextTrimming="CharacterEllipsis" ToolTip="{Binding LocalPath}"/>
                         <Button Content="Add to dashboard" Style="{StaticResource Button.Secondary}" Margin="10,0,0,0" Padding="10,4"
                                 Command="{Binding DataContext.AddToDashboardCommand, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -136,7 +136,7 @@
                                 Visibility="{Binding CanAddToDashboard, Converter={StaticResource BoolToVisibility}}"/>
                     </StackPanel>
 
-                    <Border Grid.Column="3" x:Name="Chip" CornerRadius="10" Padding="10,2" MinWidth="96" VerticalAlignment="Center"
+                    <Border Grid.Column="3" x:Name="Chip" CornerRadius="0" Padding="10,2" MinWidth="96" VerticalAlignment="Center"
                             Background="{StaticResource Bg.PanelAlt}">
                         <TextBlock x:Name="ChipText" Text="{Binding LocalLabel}" FontSize="11" FontWeight="SemiBold"
                                    Foreground="{StaticResource Text.Muted}" HorizontalAlignment="Center"/>
@@ -177,14 +177,14 @@
 
         <!-- Shown when signed out: the list comes from the GitHub account -->
         <Border DockPanel.Dock="Top" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"
-                BorderThickness="1" CornerRadius="10" Padding="14,10" Margin="0,0,0,12"
+                BorderThickness="1" CornerRadius="0" Padding="14,10" Margin="0,0,0,12"
                 Visibility="{Binding Account.Login, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}">
             <DockPanel>
                 <Button DockPanel.Dock="Right" Style="{StaticResource Button.Primary}" Margin="0" Click="SignIn_Click">
                     <StackPanel Orientation="Horizontal">
-                        <Path Data="{StaticResource GitHubMark}" Fill="White" Width="14" Height="14" Stretch="Uniform"
+                        <Path Data="{StaticResource GitHubMark}" Fill="{StaticResource Text.OnAccent}" Width="14" Height="14" Stretch="Uniform"
                               VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock Text="Sign in with GitHub" Foreground="White" FontWeight="SemiBold"/>
+                        <TextBlock Text="Sign in with GitHub" Foreground="{StaticResource Text.OnAccent}" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Button>
                 <TextBlock Text="Sign in to GitHub to list your repos." VerticalAlignment="Center"/>
@@ -202,7 +202,7 @@
 
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
             <Border DockPanel.Dock="Left" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"
-                    BorderThickness="1" CornerRadius="9">
+                    BorderThickness="1" CornerRadius="0">
                 <StackPanel Orientation="Horizontal">
                     <RadioButton Style="{StaticResource FilterTab}" ToolTip="Every repo your GitHub account can see"
                                  AutomationProperties.Name="All"
@@ -259,7 +259,7 @@
                            VerticalAlignment="Center" Margin="0,0,12,0"/>
                 <Button DockPanel.Dock="Right" Content="Browse…" Style="{StaticResource Button.Secondary}" Margin="8,0,0,0"
                         Command="{Binding BrowseCloneFolderCommand}" IsEnabled="{Binding IsCloning, Converter={StaticResource InverseBoolean}}"/>
-                <TextBox Text="{Binding CloneFolder}" FontFamily="Consolas" VerticalAlignment="Center"
+                <TextBox Text="{Binding CloneFolder}" FontFamily="{StaticResource Font.Mono}" VerticalAlignment="Center"
                          AutomationProperties.Name="Clone into folder" IsEnabled="{Binding IsCloning, Converter={StaticResource InverseBoolean}}"
                          ToolTip="Each repo is cloned into its own folder in here, named after the repo"/>
             </DockPanel>
@@ -280,7 +280,7 @@
         </StackPanel>
 
         <Border Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
-                CornerRadius="10" Padding="6">
+                CornerRadius="0" Padding="6">
             <Grid>
                 <TextBlock Text="No repos to show." Foreground="{StaticResource Text.Muted}"
                            HorizontalAlignment="Center" VerticalAlignment="Center">

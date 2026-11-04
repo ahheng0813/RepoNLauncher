@@ -25,7 +25,7 @@ public class TileMap : FrameworkElement
     public const double MinZoom = 1, MaxZoom = 19;
     private const int TileSize = WebMercator.TileSize;
     private const double DragDistance = 4;
-    private const double CornerRadius = 6;
+    private const double CornerRadius = 0;
 
     // Where the pin's tip is, at (0, 0): a drop with a dot in its head.
     private static readonly Geometry PinShape = Freeze(Geometry.Parse("M 0,0 C -2.5,-7 -10,-12 -10,-19 A 10,10 0 1 1 10,-19 C 10,-12 2.5,-7 0,0 Z"));
@@ -281,7 +281,7 @@ public class TileMap : FrameworkElement
 
     private void DrawPin(DrawingContext dc, Point tip)
     {
-        var fill = TryFindResource("Accent") as Brush ?? Brushes.MediumPurple;
+        var fill = TryFindResource("Danger") as Brush ?? Brushes.Red;
         dc.DrawEllipse(PinShadow, null, tip, 5, 2.5);
         dc.PushTransform(new TranslateTransform(tip.X, tip.Y));
         dc.DrawGeometry(fill, PinOutline, PinShape);

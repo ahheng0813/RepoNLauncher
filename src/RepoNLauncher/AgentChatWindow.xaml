@@ -6,7 +6,7 @@
         Title="AI chat - Repo'N'Launcher" Width="1240" Height="840" MinWidth="920" MinHeight="560"
         WindowStartupLocation="CenterOwner"
         Background="{StaticResource Bg.App}"
-        FontFamily="Segoe UI">
+        FontFamily="{StaticResource Font.Mono}">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
@@ -34,7 +34,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="8,4">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="0" Padding="8,4">
                             <TextBlock Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}" FontSize="12"
                                        HorizontalAlignment="Center"/>
                         </Border>
@@ -68,8 +68,8 @@
                             ToolTip="Look for new chats" AutomationProperties.Name="Refresh chats" Command="{Binding RefreshHistoryCommand}"/>
                     <Button Style="{StaticResource Button.Primary}" Margin="0" Command="{Binding NewChatCommand}" AutomationProperties.Name="New chat">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock Text="New chat" Foreground="White"/>
+                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource Text.OnAccent}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="New chat" Foreground="{StaticResource Text.OnAccent}"/>
                         </StackPanel>
                     </Button>
                 </DockPanel>
@@ -80,7 +80,7 @@
                                Visibility="{Binding Search, Converter={StaticResource StringNotEmptyToVisibility}, ConverterParameter=Invert}"/>
                 </Grid>
 
-                <Border DockPanel.Dock="Top" Margin="0,10,0,10" Background="{StaticResource Bg.PanelAlt}" CornerRadius="8" Padding="3">
+                <Border DockPanel.Dock="Top" Margin="0,10,0,10" Background="{StaticResource Bg.PanelAlt}" CornerRadius="0" Padding="3">
                     <UniformGrid Columns="3">
                         <RadioButton Style="{StaticResource Segment}" Content="All" IsChecked="{Binding ShowAll}"/>
                         <RadioButton Style="{StaticResource Segment}" Content="Claude" IsChecked="{Binding ShowClaude}"/>
@@ -102,16 +102,14 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <Border x:Name="Tile" Width="22" Height="22" CornerRadius="6" Background="#C96442" VerticalAlignment="Top" Margin="0,1,10,0">
-                                    <TextBlock x:Name="Letter" Text="C" FontSize="11" FontWeight="Bold" Foreground="White"
-                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
+                                <Path Data="{Binding Agent, Converter={StaticResource AgentMark}}" Fill="{StaticResource Text.Primary}"
+                                      Width="20" Height="20" Stretch="Uniform" VerticalAlignment="Top" Margin="1,2,11,0"/>
                                 <StackPanel Grid.Column="1">
                                     <TextBlock Text="{Binding Title}" FontSize="12.5" TextTrimming="CharacterEllipsis" ToolTip="{Binding Title}"/>
                                     <TextBlock Text="{Binding Details}" FontSize="11" Foreground="{StaticResource Text.Muted}" TextTrimming="CharacterEllipsis"
                                                Margin="0,2,0,0"/>
                                 </StackPanel>
-                                <Ellipse x:Name="Running" Grid.Column="2" Width="7" Height="7" Fill="{StaticResource Accent}" Margin="8,0,0,0"
+                                <Rectangle x:Name="Running" Grid.Column="2" Width="7" Height="7" Fill="{StaticResource Accent}" Margin="8,0,0,0"
                                          VerticalAlignment="Center" Visibility="Collapsed" ToolTip="Working"/>
                                 <!-- On hover, over the end of the row: open this chat in a pane of its own beside the others -->
                                 <Button x:Name="OpenBeside" Grid.Column="1" Grid.ColumnSpan="2" Content="&#xE90D;" Style="{StaticResource Button.Ghost}"
@@ -122,10 +120,6 @@
                                         CommandParameter="{Binding}"/>
                             </Grid>
                             <DataTemplate.Triggers>
-                                <DataTrigger Binding="{Binding Agent}" Value="Codex">
-                                    <Setter TargetName="Tile" Property="Background" Value="#3B3F4A"/>
-                                    <Setter TargetName="Letter" Property="Text" Value="X"/>
-                                </DataTrigger>
                                 <DataTrigger Binding="{Binding Chat.IsRunning}" Value="True">
                                     <Setter TargetName="Running" Property="Visibility" Value="Visible"/>
                                 </DataTrigger>

@@ -6,7 +6,7 @@
         WindowStartupLocation="CenterScreen"
         Topmost="{Binding IsPinnedOnTop}"
         Background="Black"
-        FontFamily="Segoe UI">
+        FontFamily="{StaticResource Font.Mono}">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>

@@ -4,7 +4,7 @@
         Title="Sign in to GitHub - Repo'N'Launcher" Width="520" SizeToContent="Height" ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         Background="{StaticResource Bg.App}"
-        FontFamily="Segoe UI">
+        FontFamily="{StaticResource Font.Mono}">
 
     <StackPanel Margin="24,22,24,20">
         <StackPanel Orientation="Horizontal">
@@ -17,9 +17,9 @@
 
         <Button x:Name="GitSignInButton" Style="{StaticResource Button.Primary}" Margin="0" Padding="14,9" Click="SignInWithGit_Click">
             <StackPanel Orientation="Horizontal">
-                <Path Data="{StaticResource GitHubMark}" Fill="White" Width="15" Height="15" Stretch="Uniform"
+                <Path Data="{StaticResource GitHubMark}" Fill="{StaticResource Text.OnAccent}" Width="15" Height="15" Stretch="Uniform"
                       VerticalAlignment="Center" Margin="0,0,9,0"/>
-                <TextBlock Text="Sign in with browser" Foreground="White" FontWeight="SemiBold"/>
+                <TextBlock Text="Sign in with browser" Foreground="{StaticResource Text.OnAccent}" FontWeight="SemiBold"/>
             </StackPanel>
         </Button>
         <TextBlock Foreground="{StaticResource Text.Muted}" FontSize="11.5" TextWrapping="Wrap" Margin="0,7,0,0"
@@ -43,7 +43,7 @@
         </DockPanel>
         <TextBlock Foreground="{StaticResource Text.Muted}" FontSize="11.5" TextWrapping="Wrap" Margin="0,7,0,0">
             <Run Text="A personal access token with the"/>
-            <Run Text="repo" FontFamily="Cascadia Mono, Consolas"/>
+            <Run Text="repo" FontFamily="{StaticResource Font.Mono}"/>
             <Run Text="scope, so your private repos count too."/>
             <Hyperlink NavigateUri="https://github.com/settings/tokens/new?scopes=repo&amp;description=Repo%27N%27Launcher"
                        RequestNavigate="Link_RequestNavigate" Foreground="{StaticResource Cyan}">Create one on GitHub</Hyperlink>

@@ -4,7 +4,7 @@
         Title="Open-in apps - Repo'N'Launcher" Width="860" Height="460" MinWidth="620" MinHeight="300"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         Background="{StaticResource Bg.App}"
-        FontFamily="Segoe UI">
+        FontFamily="{StaticResource Font.Mono}">
 
     <DockPanel Margin="20">
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,14">
@@ -22,7 +22,7 @@
         </DockPanel>
 
         <Border Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
-                CornerRadius="10" Padding="12">
+                CornerRadius="0" Padding="12">
             <DockPanel>
                 <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
                     <Grid.ColumnDefinitions>
@@ -68,10 +68,10 @@
                                         <DockPanel Grid.Column="1" Margin="0,0,8,0">
                                             <Button DockPanel.Dock="Right" Content="Browse…" Style="{StaticResource Button.Secondary}"
                                                     Margin="6,0,0,0" Padding="10,6" Click="Browse_Click"/>
-                                            <TextBox FontFamily="Cascadia Mono, Consolas" VerticalContentAlignment="Center"
+                                            <TextBox FontFamily="{StaticResource Font.Mono}" VerticalContentAlignment="Center"
                                                      Text="{Binding Program, UpdateSourceTrigger=PropertyChanged}"/>
                                         </DockPanel>
-                                        <TextBox Grid.Column="2" FontFamily="Cascadia Mono, Consolas" VerticalContentAlignment="Center"
+                                        <TextBox Grid.Column="2" FontFamily="{StaticResource Font.Mono}" VerticalContentAlignment="Center"
                                                  Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}"/>
                                         <Button Grid.Column="3" Content="✕" ToolTip="Remove this app" Style="{StaticResource Button.Icon}"
                                                 HorizontalAlignment="Right" Click="Remove_Click"/>

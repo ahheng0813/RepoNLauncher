@@ -51,7 +51,7 @@ public sealed partial class ChatSessionViewModel : ObservableObject
     public ObservableCollection<ChatAttachment> Attachments { get; } = new();
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(AgentName), nameof(AgentLetter), nameof(AgentValue), nameof(Placeholder), nameof(InstallUrl), nameof(MissingText))]
+    [NotifyPropertyChangedFor(nameof(AgentName), nameof(AgentValue), nameof(Placeholder), nameof(InstallUrl), nameof(MissingText))]
     private AgentKind _agent;
 
     [ObservableProperty] private string _title = NewChatTitle;
@@ -94,7 +94,6 @@ public sealed partial class ChatSessionViewModel : ObservableObject
     public bool IsStarted => SessionId != null || IsRunning;
 
     public string AgentName => Agent == AgentKind.Claude ? "Claude" : "Codex";
-    public string AgentLetter => Agent == AgentKind.Claude ? "C" : "X";
 
     public string MissingText => Agent == AgentKind.Claude
         ? "Claude Code isn't installed on this PC. Install it, then send again."

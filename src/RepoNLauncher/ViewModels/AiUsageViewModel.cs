@@ -64,10 +64,9 @@ public partial class AiUsageViewModel : ObservableObject
 /// <summary>One tool's card, formatted for display. Rebuilt on every refresh.</summary>
 public class AiToolCardViewModel
 {
-    private AiToolCardViewModel(string name, string letter, AiToolUsage usage, string usagePageUrl)
+    private AiToolCardViewModel(string name, AiToolUsage usage, string usagePageUrl)
     {
         Name = name;
-        Letter = letter;
         IsSignedIn = usage.IsSignedIn;
         Account = usage.Account;
         SignInText = !usage.IsSignedIn ? "Not signed in" : usage.Plan != null ? $"Signed in · {usage.Plan}" : "Signed in";
@@ -82,7 +81,6 @@ public class AiToolCardViewModel
     }
 
     public string Name { get; }
-    public string Letter { get; }
     public bool IsSignedIn { get; }
     public string SignInText { get; }
     public string? Account { get; }
@@ -113,7 +111,7 @@ public class AiToolCardViewModel
     public IReadOnlyList<ModelRow> Models { get; }
 
     // cliPath is null when Claude Code isn't installed; the sign-in command needs it, so the card offers the install page instead.
-    public static AiToolCardViewModel ForClaude(AiToolUsage usage, string usagePageUrl, string? cliPath) => new("Claude", "C", usage, usagePageUrl)
+    public static AiToolCardViewModel ForClaude(AiToolUsage usage, string usagePageUrl, string? cliPath) => new("Claude", usage, usagePageUrl)
     {
         SignInCommand = usage.IsSignedIn || cliPath == null ? null : AgentCli.ConsoleCommand(cliPath, "auth login"),
         InstallUrl = usage.IsSignedIn || cliPath != null ? null : AgentCli.ClaudeInstallUrl,
@@ -128,7 +126,7 @@ public class AiToolCardViewModel
         NoSessionsText = "No Claude Code sessions on this PC in the last 30 days.",
     };
 
-    public static AiToolCardViewModel ForCodex(AiToolUsage usage, string usagePageUrl, string? cliPath) => new("Codex", "X", usage, usagePageUrl)
+    public static AiToolCardViewModel ForCodex(AiToolUsage usage, string usagePageUrl, string? cliPath) => new("Codex", usage, usagePageUrl)
     {
         SignInCommand = usage.IsSignedIn || cliPath == null ? null : AgentCli.ConsoleCommand(cliPath, "login"),
         InstallUrl = usage.IsSignedIn || cliPath != null ? null : AgentCli.CodexInstallUrl,

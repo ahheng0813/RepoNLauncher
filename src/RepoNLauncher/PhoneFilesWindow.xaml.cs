@@ -223,7 +223,7 @@ public partial class PhoneFilesWindow : Window
 
     private async Task StartWebViewAsync()
     {
-        MediaView.DefaultBackgroundColor = System.Drawing.Color.FromArgb(0x16, 0x19, 0x22); // Bg.Panel, so it doesn't flash white
+        MediaView.DefaultBackgroundColor = System.Drawing.Color.FromArgb(0x0C, 0x0C, 0x0C); // Bg.Panel, so it doesn't flash white
         var environment = await CoreWebView2Environment.CreateAsync(userDataFolder: WebViewData);
         await MediaView.EnsureCoreWebView2Async(environment);
         var web = MediaView.CoreWebView2;

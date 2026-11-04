@@ -6,7 +6,7 @@
         Title="AI usage - Repo'N'Launcher" Width="1040" Height="720" MinWidth="760" MinHeight="460"
         WindowStartupLocation="CenterOwner"
         Background="{StaticResource Bg.App}"
-        FontFamily="Segoe UI">
+        FontFamily="{StaticResource Font.Mono}">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
@@ -38,7 +38,7 @@
 
         <DataTemplate DataType="{x:Type vm:AiToolCardViewModel}">
             <Border Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
-                    CornerRadius="10" Padding="18,16">
+                    CornerRadius="0" Padding="18,16">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="0,0,4,0">
                         <!-- Name, sign-in state, link to the provider's own usage page -->
@@ -50,14 +50,12 @@
                                     <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="7,1,0,0"/>
                                 </StackPanel>
                             </Button>
-                            <Border x:Name="Tile" Width="36" Height="36" CornerRadius="9" Background="{StaticResource Accent}">
-                                <TextBlock Text="{Binding Letter}" FontSize="16" FontWeight="Bold" Foreground="White"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
+                            <Path Data="{Binding Name, Converter={StaticResource AgentMark}}" Fill="{StaticResource Text.Primary}"
+                                  Width="36" Height="36" Stretch="Uniform"/>
                             <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                                    <Ellipse x:Name="SignInDot" Width="7" Height="7" Fill="{StaticResource Success}"
+                                    <Rectangle x:Name="SignInDot" Width="7" Height="7" Fill="{StaticResource Success}"
                                              VerticalAlignment="Center" Margin="0,0,6,0"/>
                                     <TextBlock Text="{Binding SignInText}" FontSize="12" Foreground="{StaticResource Text.Secondary}"/>
                                 </StackPanel>
@@ -66,7 +64,7 @@
                         <TextBlock Text="{Binding Account}" Style="{StaticResource Muted}" Margin="48,6,0,0"
                                    Visibility="{Binding Account, Converter={StaticResource StringNotEmptyToVisibility}}"/>
 
-                        <Border Background="{StaticResource Bg.PanelAlt}" CornerRadius="8" Padding="12,10" Margin="0,14,0,0"
+                        <Border Background="{StaticResource Bg.PanelAlt}" CornerRadius="0" Padding="12,10" Margin="0,14,0,0"
                                 Visibility="{Binding SignInHint, Converter={StaticResource StringNotEmptyToVisibility}}">
                             <DockPanel>
                                 <Button DockPanel.Dock="Right" Content="Sign in" Style="{StaticResource Button.Primary}" Margin="10,0,0,0"
@@ -76,8 +74,8 @@
                                         Tag="{Binding InstallUrl}" ToolTip="{Binding InstallUrl}" Click="OpenLink_Click"
                                         Visibility="{Binding InstallUrl, Converter={StaticResource StringNotEmptyToVisibility}}">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="Install" Foreground="White"/>
-                                        <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="White"
+                                        <TextBlock Text="Install" Foreground="{StaticResource Text.OnAccent}"/>
+                                        <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource Text.OnAccent}"
                                                    VerticalAlignment="Center" Margin="7,1,0,0"/>
                                     </StackPanel>
                                 </Button>
@@ -96,8 +94,8 @@
                                             <TextBlock Text="{Binding Label}" FontSize="13"/>
                                         </DockPanel>
                                         <Grid Height="6" Margin="0,6,0,5">
-                                            <Border Background="{StaticResource Bg.PanelAlt}" CornerRadius="3"/>
-                                            <Border x:Name="Fill" Background="{StaticResource Accent}" CornerRadius="3" RenderTransformOrigin="0,0.5">
+                                            <Border Background="{StaticResource Bg.PanelAlt}" CornerRadius="0"/>
+                                            <Border x:Name="Fill" Background="{StaticResource Accent}" CornerRadius="0" RenderTransformOrigin="0,0.5">
                                                 <Border.RenderTransform>
                                                     <ScaleTransform ScaleX="{Binding Fraction}"/>
                                                 </Border.RenderTransform>
@@ -179,11 +177,11 @@
                                                 <ColumnDefinition Width="48"/>
                                                 <ColumnDefinition Width="58"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Text="{Binding Model}" FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                                            <TextBlock Grid.Column="0" Text="{Binding Model}" FontFamily="{StaticResource Font.Mono}" FontSize="12"
                                                        TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                                             <Grid Grid.Column="1" Height="6" VerticalAlignment="Center">
-                                                <Border Background="{StaticResource Bg.PanelAlt}" CornerRadius="3"/>
-                                                <Border Background="{StaticResource Cyan}" CornerRadius="3" RenderTransformOrigin="0,0.5">
+                                                <Border Background="{StaticResource Bg.PanelAlt}" CornerRadius="0"/>
+                                                <Border Background="{StaticResource Cyan}" CornerRadius="0" RenderTransformOrigin="0,0.5">
                                                     <Border.RenderTransform>
                                                         <ScaleTransform ScaleX="{Binding Share}"/>
                                                     </Border.RenderTransform>
@@ -201,12 +199,6 @@
                 </ScrollViewer>
             </Border>
             <DataTemplate.Triggers>
-                <DataTrigger Binding="{Binding Name}" Value="Claude">
-                    <Setter TargetName="Tile" Property="Background" Value="#C96442"/>
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Name}" Value="Codex">
-                    <Setter TargetName="Tile" Property="Background" Value="#3B3F4A"/>
-                </DataTrigger>
                 <DataTrigger Binding="{Binding IsSignedIn}" Value="False">
                     <Setter TargetName="SignInDot" Property="Fill" Value="{StaticResource Text.Muted}"/>
                 </DataTrigger>

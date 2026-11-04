@@ -5,7 +5,7 @@
         Title="Android emulators - Repo'N'Launcher" Width="620" Height="660" MinWidth="500" MinHeight="480"
         WindowStartupLocation="CenterOwner"
         Background="{StaticResource Bg.App}"
-        FontFamily="Segoe UI">
+        FontFamily="{StaticResource Font.Mono}">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
@@ -38,14 +38,14 @@
 
         <!-- What's missing before emulators can be used -->
         <Border DockPanel.Dock="Top" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"
-                BorderThickness="1" CornerRadius="10" Padding="16,14"
+                BorderThickness="1" CornerRadius="0" Padding="16,14"
                 Visibility="{Binding SetupNote, Converter={StaticResource StringNotEmptyToVisibility}}">
             <TextBlock Text="{Binding SetupNote}" TextWrapping="Wrap"/>
         </Border>
 
         <!-- Create -->
         <Border DockPanel.Dock="Bottom" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"
-                BorderThickness="1" CornerRadius="10" Padding="16,14" Margin="0,14,0,0"
+                BorderThickness="1" CornerRadius="0" Padding="16,14" Margin="0,14,0,0"
                 Visibility="{Binding CanUseEmulators, Converter={StaticResource BoolToVisibility}}">
             <StackPanel>
                 <TextBlock Text="CREATE AN EMULATOR" Style="{StaticResource SectionLabel}"/>
@@ -110,7 +110,7 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Border Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
-                                    CornerRadius="8" Padding="14,10" Margin="0,0,0,8">
+                                    CornerRadius="0" Padding="14,10" Margin="0,0,0,8">
                                 <DockPanel>
                                     <Grid DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0">
                                         <Button Content="Start" Style="{StaticResource Button.Secondary}" Margin="0"
@@ -121,7 +121,7 @@
                                                    Visibility="{Binding IsStarting, Converter={StaticResource BoolToVisibility}}"/>
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
                                                     Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}">
-                                            <Ellipse Width="7" Height="7" Fill="{StaticResource Success}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                            <Rectangle Width="7" Height="7" Fill="{StaticResource Success}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                             <TextBlock Text="Running" Foreground="{StaticResource Text.Secondary}"/>
                                         </StackPanel>
                                     </Grid>

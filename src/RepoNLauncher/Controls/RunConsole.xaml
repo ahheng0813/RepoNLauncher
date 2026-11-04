@@ -17,7 +17,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ContextMenu">
                         <Border Background="{StaticResource Bg.Elevated}" BorderBrush="{StaticResource Border.Strong}"
-                                BorderThickness="1" CornerRadius="6" Padding="4" MinWidth="220">
+                                BorderThickness="1" CornerRadius="0" Padding="4" MinWidth="220">
                             <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
                         </Border>
                     </ControlTemplate>
@@ -32,7 +32,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="MenuItem">
-                        <Border x:Name="Bd" Background="Transparent" CornerRadius="4" Padding="10,6">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="0" Padding="10,6">
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Right" Text="{TemplateBinding InputGestureText}" Margin="24,0,0,0"
                                            Foreground="{StaticResource Text.Muted}" FontSize="12"/>
@@ -76,7 +76,7 @@
                         Click="PopOut_Click"/>
             </StackPanel>
             <Grid DockPanel.Dock="Left" Width="300">
-                <TextBox x:Name="SearchBox" FontFamily="Cascadia Mono, Consolas" VerticalAlignment="Center"
+                <TextBox x:Name="SearchBox" FontFamily="{StaticResource Font.Mono}" VerticalAlignment="Center"
                          AutomationProperties.Name="Search the output"
                          ToolTip="Marks every place the output has this, ignoring case"
                          TextChanged="SearchBox_TextChanged" PreviewKeyDown="SearchBox_PreviewKeyDown"/>
@@ -111,7 +111,7 @@
                 </StackPanel>
             </StackPanel>
             <Grid>
-                <TextBox x:Name="ConsoleInputBox" FontFamily="Cascadia Mono, Consolas"
+                <TextBox x:Name="ConsoleInputBox" FontFamily="{StaticResource Font.Mono}"
                          Text="{Binding ConsoleInput, UpdateSourceTrigger=PropertyChanged}"
                          IsEnabled="{Binding IsRunning}" AutomationProperties.Name="Input for the app">
                     <TextBox.InputBindings>
@@ -125,10 +125,10 @@
         </DockPanel>
 
         <!-- The output: drag to select, Ctrl+C copies, Ctrl+A selects it all, Ctrl+click opens an address -->
-        <Border Background="{StaticResource Bg.Console}" CornerRadius="8" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
+        <Border Background="{StaticResource Bg.Console}" CornerRadius="0" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
             <ae:TextEditor x:Name="Output" IsReadOnly="True" WordWrap="True"
-                           Background="Transparent" Foreground="#C7CCD6" Padding="10,8"
-                           FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                           Background="Transparent" Foreground="{StaticResource Text.Primary}" Padding="10,8"
+                           FontFamily="{StaticResource Font.Mono}" FontSize="12"
                            HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
                            AutomationProperties.Name="Console output">
                 <ae:TextEditor.ContextMenu>

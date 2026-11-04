@@ -5,14 +5,14 @@ using RepoNLauncher.Models;
 
 namespace RepoNLauncher.Converters;
 
-/// <summary>Maps a ProjectKind to its badge color, used for the small kind pill in the project list.</summary>
+/// <summary>Maps a ProjectKind to its color (console colors), used for the [Kind] tag in the project list.</summary>
 public class ProjectKindToBrushConverter : IValueConverter
 {
-    private static readonly SolidColorBrush Flutter = (SolidColorBrush)new BrushConverter().ConvertFrom("#0E8FA3")!;
-    private static readonly SolidColorBrush DotNet = (SolidColorBrush)new BrushConverter().ConvertFrom("#7C3AED")!;
-    private static readonly SolidColorBrush Node = (SolidColorBrush)new BrushConverter().ConvertFrom("#059669")!;
-    private static readonly SolidColorBrush Python = (SolidColorBrush)new BrushConverter().ConvertFrom("#3776AB")!;
-    private static readonly SolidColorBrush Unknown = (SolidColorBrush)new BrushConverter().ConvertFrom("#4B5563")!;
+    private static readonly SolidColorBrush Flutter = (SolidColorBrush)new BrushConverter().ConvertFrom("#3A96DD")!;
+    private static readonly SolidColorBrush DotNet = (SolidColorBrush)new BrushConverter().ConvertFrom("#D670D6")!;
+    private static readonly SolidColorBrush Node = (SolidColorBrush)new BrushConverter().ConvertFrom("#16C60C")!;
+    private static readonly SolidColorBrush Python = (SolidColorBrush)new BrushConverter().ConvertFrom("#F9F1A5")!;
+    private static readonly SolidColorBrush Unknown = (SolidColorBrush)new BrushConverter().ConvertFrom("#767676")!;
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {

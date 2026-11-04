@@ -6,7 +6,7 @@
         Title="Paste" Width="640" SizeToContent="Height" ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         Background="{StaticResource Bg.App}"
-        FontFamily="Segoe UI">
+        FontFamily="{StaticResource Font.Mono}">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
@@ -32,7 +32,7 @@
             <Setter Property="HorizontalAlignment" Value="Left"/>
             <Setter Property="VerticalAlignment" Value="Bottom"/>
             <Setter Property="Margin" Value="4"/>
-            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="CornerRadius" Value="0"/>
             <Setter Property="Padding" Value="4,2"/>
             <Setter Property="Background" Value="#B0000000"/>
             <Setter Property="Visibility" Value="Collapsed"/>
@@ -53,7 +53,7 @@
         <TextBlock Text="{Binding From}" Foreground="{StaticResource Text.Secondary}" FontSize="12.5" TextWrapping="Wrap" Margin="0,6,0,0"/>
 
         <Border Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
-                CornerRadius="8" Padding="14" Margin="0,16,0,0">
+                CornerRadius="0" Padding="14" Margin="0,16,0,0">
             <StackPanel>
                 <!-- One, as big as fits -->
                 <ContentControl Content="{Binding Single}" Focusable="False"

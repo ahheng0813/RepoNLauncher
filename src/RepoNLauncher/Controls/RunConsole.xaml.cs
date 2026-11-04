@@ -73,13 +73,13 @@ public partial class RunConsole : UserControl
 
         var area = Output.TextArea;
         area.Caret.CaretBrush = Brushes.Transparent;
-        area.SelectionBrush = Frozen(new SolidColorBrush(Color.FromArgb(0x70, 0x8B, 0x5C, 0xF6)));
+        area.SelectionBrush = Frozen(new SolidColorBrush(Color.FromArgb(0x60, 0xCC, 0xCC, 0xCC)));
         area.SelectionForeground = null;
         area.SelectionBorder = null;
-        area.SelectionCornerRadius = 2;
+        area.SelectionCornerRadius = 0;
 
         var view = area.TextView;
-        view.LinkTextForegroundBrush = Resource("Accent.Hover", Brushes.MediumPurple);
+        view.LinkTextForegroundBrush = Resource("Cyan", Brushes.Cyan);
         view.LineTransformers.Add(new DashboardLineColorizer(Resource("Cyan", Brushes.Cyan)));
         var warning = (Resource("Warning", Brushes.Gold) as SolidColorBrush)?.Color ?? Colors.Gold;
         _marker = new SearchMarker(

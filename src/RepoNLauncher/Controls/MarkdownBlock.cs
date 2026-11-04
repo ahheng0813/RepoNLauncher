@@ -81,7 +81,7 @@ public sealed class MarkdownBlock : RichTextBox
         var document = new FlowDocument
         {
             PagePadding = new Thickness(0),
-            FontFamily = new FontFamily("Segoe UI"),
+            FontFamily = Mono,
             FontSize = 13.5,
             Foreground = Brush("Text.Primary"),
             LineHeight = 21,
@@ -270,7 +270,7 @@ public sealed class MarkdownBlock : RichTextBox
                     FontFamily = Mono,
                     FontSize = 12.5,
                     Background = Brush("Bg.Hover"),
-                    Foreground = new SolidColorBrush(Color.FromRgb(0xE8, 0xB0, 0x7D)),
+                    Foreground = Brush("Warning"),
                 };
 
             case LinkInline { IsImage: true } image:

@@ -5,7 +5,7 @@
         Title="Repo'N'Launcher" Height="800" Width="1200"
         WindowStartupLocation="Manual"
         Background="{StaticResource Bg.App}"
-        FontFamily="Segoe UI"
+        FontFamily="{StaticResource Font.Mono}"
         PreviewKeyDown="Window_PreviewKeyDown">
 
     <Grid>
@@ -60,7 +60,7 @@
                 </StackPanel>
 
                 <!-- The page's address; type another and press Enter to go there -->
-                <TextBox x:Name="Address" Margin="8,0" FontFamily="Cascadia Mono, Consolas" VerticalContentAlignment="Center"
+                <TextBox x:Name="Address" Margin="8,0" FontFamily="{StaticResource Font.Mono}" VerticalContentAlignment="Center"
                          AutomationProperties.Name="Address" KeyDown="Address_KeyDown"
                          GotKeyboardFocus="Address_GotKeyboardFocus"/>
             </DockPanel>

@@ -6,7 +6,7 @@
         Title="Repos on this PC - Repo'N'Launcher" Width="1000" Height="700" MinWidth="720" MinHeight="420"
         WindowStartupLocation="CenterOwner"
         Background="{StaticResource Bg.App}"
-        FontFamily="Segoe UI">
+        FontFamily="{StaticResource Font.Mono}">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
@@ -21,7 +21,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="14,6" Margin="3">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="0" Padding="14,6" Margin="3">
                             <ContentPresenter/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -52,7 +52,7 @@
         </Style>
 
         <DataTemplate DataType="{x:Type vm:PcRepoViewModel}">
-            <Border x:Name="Row" Background="Transparent" CornerRadius="7" Padding="10,8" Margin="0,0,0,2">
+            <Border x:Name="Row" Background="Transparent" CornerRadius="0" Padding="10,8" Margin="0,0,0,2">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -66,23 +66,23 @@
                     <StackPanel Grid.Column="1" ToolTip="{Binding Path}">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13.5"/>
-                            <Border Background="{StaticResource Bg.PanelAlt}" CornerRadius="4" Padding="6,1" Margin="8,0,0,0"
+                            <Border Background="{StaticResource Bg.PanelAlt}" CornerRadius="0" Padding="6,1" Margin="8,0,0,0"
                                     VerticalAlignment="Center"
                                     Visibility="{Binding IsOnDashboard, Converter={StaticResource BoolToVisibility}}">
                                 <TextBlock Text="On dashboard" FontSize="10.5" Foreground="{StaticResource Text.Secondary}"/>
                             </Border>
                         </StackPanel>
-                        <TextBlock Text="{Binding Path}" FontFamily="Consolas" FontSize="11" Foreground="{StaticResource Text.Muted}"
+                        <TextBlock Text="{Binding Path}" FontFamily="{StaticResource Font.Mono}" FontSize="11" Foreground="{StaticResource Text.Muted}"
                                    TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0">
                         <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource Text.Muted}"
                                    VerticalAlignment="Center" Margin="0,0,6,0" ToolTip="Private repo"
                                    Visibility="{Binding IsPrivate, Converter={StaticResource BoolToVisibility}}"/>
-                        <TextBlock Text="{Binding GitHubName}" FontFamily="Consolas" FontSize="11.5"
+                        <TextBlock Text="{Binding GitHubName}" FontFamily="{StaticResource Font.Mono}" FontSize="11.5"
                                    Foreground="{StaticResource Text.Secondary}" VerticalAlignment="Center"/>
                     </StackPanel>
-                    <Border Grid.Column="3" x:Name="Chip" CornerRadius="10" Padding="10,2" MinWidth="64" VerticalAlignment="Center"
+                    <Border Grid.Column="3" x:Name="Chip" CornerRadius="0" Padding="10,2" MinWidth="64" VerticalAlignment="Center"
                             Background="{StaticResource Bg.PanelAlt}">
                         <TextBlock x:Name="ChipText" Text="{Binding OwnershipLabel}" FontSize="11" FontWeight="SemiBold"
                                    Foreground="{StaticResource Text.Muted}" HorizontalAlignment="Center"/>
@@ -124,14 +124,14 @@
 
         <!-- Shown when signed out: the scan needs GitHub to tell whose repos are whose -->
         <Border DockPanel.Dock="Top" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"
-                BorderThickness="1" CornerRadius="10" Padding="14,10" Margin="0,0,0,12"
+                BorderThickness="1" CornerRadius="0" Padding="14,10" Margin="0,0,0,12"
                 Visibility="{Binding Account.Login, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}">
             <DockPanel>
                 <Button DockPanel.Dock="Right" Style="{StaticResource Button.Primary}" Margin="0" Click="SignIn_Click">
                     <StackPanel Orientation="Horizontal">
-                        <Path Data="{StaticResource GitHubMark}" Fill="White" Width="14" Height="14" Stretch="Uniform"
+                        <Path Data="{StaticResource GitHubMark}" Fill="{StaticResource Text.OnAccent}" Width="14" Height="14" Stretch="Uniform"
                               VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock Text="Sign in with GitHub" Foreground="White" FontWeight="SemiBold"/>
+                        <TextBlock Text="Sign in with GitHub" Foreground="{StaticResource Text.OnAccent}" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Button>
                 <TextBlock Text="Sign in to GitHub to check who owns each repo." VerticalAlignment="Center"/>
@@ -150,7 +150,7 @@
 
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
             <Border DockPanel.Dock="Left" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"
-                    BorderThickness="1" CornerRadius="9">
+                    BorderThickness="1" CornerRadius="0">
                 <StackPanel Orientation="Horizontal">
                     <RadioButton x:Name="AllFilter" Style="{StaticResource FilterTab}" ToolTip="Every repo found"
                                  IsChecked="{Binding Filter, Converter={StaticResource EnumEquals}, ConverterParameter=All}">
@@ -191,7 +191,7 @@
         </DockPanel>
 
         <Border Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
-                CornerRadius="10" Padding="6">
+                CornerRadius="0" Padding="6">
             <Grid>
                 <TextBlock Text="No repos to show." Foreground="{StaticResource Text.Muted}"
                            HorizontalAlignment="Center" VerticalAlignment="Center">

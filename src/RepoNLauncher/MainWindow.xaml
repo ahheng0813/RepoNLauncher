@@ -7,7 +7,7 @@
         Title="Repo'N'Launcher" Height="820" Width="1500"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource Bg.App}"
-        FontFamily="Segoe UI">
+        FontFamily="{StaticResource Font.Mono}">
 
     <Window.Resources>
         <conv:EnumToVisibilityConverter x:Key="EnumToVisibility"/>
@@ -20,32 +20,27 @@
         <conv:FileChangeTypeToLetterConverter x:Key="ChangeTypeToLetter"/>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
 
-        <!-- Project list row: checkbox, kind badge, name/branch/status, indicators, accent selection stripe.
+        <!-- Project list row: checkbox, kind, name/branch/status, indicators, and a > cursor on the selected one.
              The highlight follows ProjectViewModel.IsSelected rather than the tree's own selection. -->
         <Style x:Key="ProjectTreeItem" TargetType="TreeViewItem">
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TreeViewItem">
-                        <Grid Margin="0,2" Background="Transparent">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="3"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Border x:Name="Stripe" Grid.Column="0" Background="{StaticResource Accent}"
-                                    CornerRadius="2" Opacity="0"/>
-                            <Border x:Name="Bd" Grid.Column="1" Background="Transparent"
-                                    CornerRadius="7" Margin="4,0,0,0">
-                                <ContentPresenter ContentSource="Header" Margin="8,9"/>
-                            </Border>
-                        </Grid>
+                        <Border x:Name="Bd" Background="Transparent" Margin="0,1">
+                            <DockPanel Margin="4,8,8,8">
+                                <TextBlock x:Name="Cursor" DockPanel.Dock="Left" Text="&gt;" FontWeight="Bold" FontSize="13"
+                                           Foreground="{StaticResource Accent}" VerticalAlignment="Top" Margin="0,1,6,0" Opacity="0"/>
+                                <ContentPresenter ContentSource="Header"/>
+                            </DockPanel>
+                        </Border>
                         <ControlTemplate.Triggers>
                             <Trigger SourceName="Bd" Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
                             </Trigger>
                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
-                                <Setter TargetName="Stripe" Property="Opacity" Value="1"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Accent.Muted}"/>
+                                <Setter TargetName="Cursor" Property="Opacity" Value="1"/>
                             </DataTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -66,7 +61,7 @@
                                           IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
                                 <ToggleButton.Template>
                                     <ControlTemplate TargetType="ToggleButton">
-                                        <Border x:Name="Bd" Background="Transparent" CornerRadius="7" Padding="6,7">
+                                        <Border x:Name="Bd" Background="Transparent" CornerRadius="0" Padding="6,7">
                                             <ContentPresenter/>
                                         </Border>
                                         <ControlTemplate.Triggers>
@@ -97,10 +92,12 @@
                                                GroupStyle="{StaticResource GroupTreeItem}"
                                                ProjectStyle="{StaticResource ProjectTreeItem}"/>
 
-        <Style x:Key="KindBadge" TargetType="Border">
-            <Setter Property="CornerRadius" Value="4"/>
-            <Setter Property="Padding" Value="6,1"/>
-            <Setter Property="Background" Value="{Binding Kind, Converter={StaticResource KindToBrush}}"/>
+        <!-- The project's kind as a console tag, [Flutter], in the kind's color -->
+        <Style x:Key="KindTag" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="Text" Value="{Binding Kind, StringFormat='[{0}]'}"/>
+            <Setter Property="Foreground" Value="{Binding Kind, Converter={StaticResource KindToBrush}}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
 
         <Style x:Key="SectionLabel" TargetType="TextBlock">
@@ -113,7 +110,7 @@
         <Style x:Key="DiffLine" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="Cascadia Mono, Consolas"/>
             <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="#9CA3AF"/>
+            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
             <Setter Property="TextWrapping" Value="NoWrap"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Converter={StaticResource StartsWith}, ConverterParameter='+'}" Value="True">
@@ -158,13 +155,11 @@
             </Setter>
         </Style>
 
-        <!-- One tool in the AI usage bar: tile, name, plan, then the session and week limits as small meters -->
+        <!-- One tool in the AI usage bar: mark, name, plan, then the session and week limits as small meters -->
         <DataTemplate x:Key="UsageBarTool" DataType="{x:Type vm:AiToolCardViewModel}">
             <StackPanel Orientation="Horizontal">
-                <Border x:Name="Tile" Width="18" Height="18" CornerRadius="5" Background="{StaticResource Accent}" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Letter}" FontSize="10.5" FontWeight="Bold" Foreground="White"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
+                <Path Data="{Binding Name, Converter={StaticResource AgentMark}}" Fill="{StaticResource Text.Primary}"
+                      Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12.5" Margin="8,0,0,0" VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding Plan}" Foreground="{StaticResource Text.Muted}" FontSize="12" Margin="6,0,0,0" VerticalAlignment="Center"/>
                 <ItemsControl ItemsSource="{Binding BarLimits}" VerticalAlignment="Center" Focusable="False">
@@ -179,14 +174,15 @@
                                         ToolTip="{Binding ToolTip}">
                                 <TextBlock Text="{Binding ShortLabel}" Foreground="{StaticResource Text.Secondary}" FontSize="12"
                                            VerticalAlignment="Center"/>
-                                <Grid Width="64" Height="5" Margin="8,1,8,0" VerticalAlignment="Center">
-                                    <Border Background="{StaticResource Bg.Hover}" CornerRadius="2.5"/>
-                                    <Border x:Name="Fill" Background="{StaticResource Accent}" CornerRadius="2.5" RenderTransformOrigin="0,0.5">
+                                <!-- A boxed bar, [####    ] -->
+                                <Border Width="66" Height="10" Margin="8,1,8,0" VerticalAlignment="Center"
+                                        BorderBrush="{StaticResource Border.Control}" BorderThickness="1" Padding="1">
+                                    <Border x:Name="Fill" Background="{StaticResource Accent}" RenderTransformOrigin="0,0.5">
                                         <Border.RenderTransform>
                                             <ScaleTransform ScaleX="{Binding Fraction}"/>
                                         </Border.RenderTransform>
                                     </Border>
-                                </Grid>
+                                </Border>
                                 <TextBlock Text="{Binding PercentText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
                             </StackPanel>
                             <DataTemplate.Triggers>
@@ -207,21 +203,12 @@
                            VerticalAlignment="Center"
                            Visibility="{Binding BarNote, Converter={StaticResource StringNotEmptyToVisibility}}"/>
             </StackPanel>
-            <DataTemplate.Triggers>
-                <DataTrigger Binding="{Binding Name}" Value="Claude">
-                    <Setter TargetName="Tile" Property="Background" Value="#C96442"/>
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Name}" Value="Codex">
-                    <Setter TargetName="Tile" Property="Background" Value="#3B3F4A"/>
-                </DataTrigger>
-            </DataTemplate.Triggers>
         </DataTemplate>
 
+        <!-- A changed file's status letter, colored as git status colors it (M, A, D...) -->
         <Style x:Key="ChangeTypeBadge" TargetType="Border">
-            <Setter Property="Width" Value="18"/>
+            <Setter Property="Width" Value="14"/>
             <Setter Property="Height" Value="18"/>
-            <Setter Property="CornerRadius" Value="4"/>
-            <Setter Property="Background" Value="{Binding Type, Converter={StaticResource ChangeTypeToBrush}}"/>
         </Style>
     </Window.Resources>
 
@@ -237,22 +224,23 @@
                 BorderThickness="0,0,0,1">
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="3"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <Rectangle Grid.Row="0" Fill="{StaticResource Accent.Gradient}"/>
-                <DockPanel Grid.Row="1" Margin="20,14">
+                <DockPanel Grid.Row="0" Margin="16,12">
+                    <!-- The app's name as a console prompt, C:\Repo'N'Launcher>_ , its cursor blinking (MainWindow.StartPromptCursor) -->
                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
-                        <Border Width="26" Height="26" CornerRadius="7" Background="{StaticResource Accent.Gradient}" Margin="0,0,10,0">
-                            <TextBlock Text="R" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <TextBlock Text="Repo'N'Launcher" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBlock FontSize="16" VerticalAlignment="Center"
+                            ><Run Text="C:\" Foreground="{StaticResource Text.Muted}"
+                            /><Run Text="Repo'N'Launcher" FontWeight="Bold" Foreground="{StaticResource Accent}"
+                            /><Run Text="&gt;" Foreground="{StaticResource Text.Muted}"/></TextBlock>
+                        <TextBlock x:Name="PromptCursor" Text="_" FontSize="16" FontWeight="Bold" Foreground="{StaticResource Accent}"
+                                   VerticalAlignment="Center"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
                         <Button Content="Fetch All" Style="{StaticResource Button.Primary}" Command="{Binding FetchAllCommand}"/>
                         <Button Content="Fetch Selected" Style="{StaticResource Button.Secondary}" Command="{Binding FetchSelectedCommand}"/>
-                        <Border Width="1" Background="{StaticResource Border.Subtle}" Margin="4,2,12,2"/>
+                        <Border Width="1" Background="{StaticResource Border.Subtle}" Margin="2,4,8,4"/>
                         <Button Content="Add Project" Style="{StaticResource Button.Secondary}" Command="{Binding AddProjectFolderCommand}"/>
                         <Button Content="Scan Folder" Style="{StaticResource Button.Secondary}" Command="{Binding ScanFolderCommand}"/>
                         <Button Content="Rescan All" Style="{StaticResource Button.Secondary}" Command="{Binding RescanAllFoldersCommand}"/>
@@ -260,7 +248,7 @@
                                 ToolTip="Find every repo on this PC and see which are yours on GitHub (needs GitHub sign-in)"/>
                         <Button Content="Clone from GitHub" Style="{StaticResource Button.Secondary}" Click="OpenCloneRepos_Click"
                                 ToolTip="List your GitHub repos, see which this PC has, and clone the others (needs GitHub sign-in)"/>
-                        <Border Width="1" Background="{StaticResource Border.Subtle}" Margin="4,2,12,2"/>
+                        <Border Width="1" Background="{StaticResource Border.Subtle}" Margin="2,4,8,4"/>
                         <Button Content="AI Chat" Style="{StaticResource Button.Secondary}" Click="OpenAiChat_Click"
                                 ToolTip="Chat with Claude Code or Codex in a project, and read your saved chats"/>
                         <Button Style="{StaticResource Button.Secondary}" Margin="0" ToolTip="Show or hide the phone screen panel"
@@ -270,7 +258,7 @@
                                 <TextBlock Text="Phone Screen"/>
                             </StackPanel>
                         </Button>
-                        <Border Width="1" Background="{StaticResource Border.Subtle}" Margin="12,2,12,2"/>
+                        <Border Width="1" Background="{StaticResource Border.Subtle}" Margin="8,4,8,4"/>
                         <!-- GitHub account: only Repos on this PC, Clone from GitHub and creating pull requests need it -->
                         <Button Style="{StaticResource Button.Secondary}" Margin="0" Click="SignInToGitHub_Click"
                                 Visibility="{Binding GitHub.Login, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}">
@@ -280,8 +268,7 @@
                                 <TextBlock Text="Sign in with GitHub"/>
                             </StackPanel>
                         </Button>
-                        <Border Background="{StaticResource Bg.PanelAlt}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
-                                CornerRadius="7" Padding="10,0,3,0"
+                        <Border BorderBrush="{StaticResource Border.Control}" BorderThickness="1" Padding="10,0,3,0"
                                 Visibility="{Binding GitHub.Login, Converter={StaticResource NullToVisibility}}">
                             <StackPanel Orientation="Horizontal">
                                 <Path Data="{StaticResource GitHubMark}" Fill="{StaticResource Text.Primary}" Width="14" Height="14"
@@ -297,7 +284,7 @@
                 </DockPanel>
 
                 <!-- AI usage, always in view; View details opens the window with token use and the rest -->
-                <Border Grid.Row="2" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="0,1,0,0" Padding="20,6"
+                <Border Grid.Row="1" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="0,1,0,0" Padding="16,6"
                         DataContext="{Binding AiUsage}">
                     <DockPanel>
                         <Button DockPanel.Dock="Right" Style="{StaticResource Button.Secondary}" Margin="0" Padding="10,4"
@@ -375,9 +362,13 @@
                 </ColumnDefinition>
             </Grid.ColumnDefinitions>
 
-            <!-- Project list: scanned folders as collapsible sections, nested where a subfolder holds several repos -->
+            <!-- Project list: scanned folders as collapsible sections, nested where a subfolder holds several repos.
+                 Framed like a console window, its title sitting on the top line. -->
+            <TextBlock Grid.Column="0" Text=" PROJECTS " Panel.ZIndex="1" Background="{StaticResource Bg.App}"
+                       Foreground="{StaticResource Text.Secondary}" FontSize="11.5" FontWeight="SemiBold"
+                       HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12,-8,0,0"/>
             <Border Grid.Column="0" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"
-                    BorderThickness="1" CornerRadius="10" Margin="0,0,12,0" Padding="8">
+                    BorderThickness="1" Margin="0,0,12,0" Padding="6,12,6,6">
                 <TreeView ItemsSource="{Binding ProjectTree}" Background="Transparent" BorderThickness="0" Padding="0"
                           ItemContainerStyleSelector="{StaticResource ProjectTreeItemStyle}"
                           SelectedItemChanged="ProjectTree_SelectedItemChanged"
@@ -386,7 +377,7 @@
                         <HierarchicalDataTemplate DataType="{x:Type vm:ProjectGroupViewModel}" ItemsSource="{Binding Children}"
                                                   ItemContainerStyleSelector="{StaticResource ProjectTreeItemStyle}">
                             <DockPanel ToolTip="{Binding Path}">
-                                <Border DockPanel.Dock="Right" Background="{StaticResource Bg.PanelAlt}" CornerRadius="8" Padding="7,1"
+                                <Border DockPanel.Dock="Right" Background="{StaticResource Bg.PanelAlt}" CornerRadius="0" Padding="7,1"
                                         VerticalAlignment="Center" Margin="8,0,0,0">
                                     <TextBlock Text="{Binding RepoCount}" FontSize="10.5" Foreground="{StaticResource Text.Secondary}"/>
                                 </Border>
@@ -420,21 +411,19 @@
                                 <StackPanel Grid.Column="1">
                                     <WrapPanel Orientation="Horizontal" Margin="0,0,0,4">
                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13.5" Margin="0,0,8,0"/>
-                                        <Border Style="{StaticResource KindBadge}" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Kind}" FontSize="9.5" FontWeight="Bold" Foreground="White"/>
-                                        </Border>
+                                        <TextBlock Style="{StaticResource KindTag}" VerticalAlignment="Center"/>
                                     </WrapPanel>
                                     <TextBlock Text="{Binding Branch}" FontSize="11" Foreground="{StaticResource Text.Secondary}"
-                                               FontFamily="Consolas"/>
+                                               FontFamily="{StaticResource Font.Mono}"/>
                                     <TextBlock Text="{Binding StatusMessage}" FontSize="10.5" Foreground="{StaticResource Cyan}"
                                                TextWrapping="Wrap" Margin="0,3,0,0"
                                                Visibility="{Binding StatusMessage, Converter={StaticResource StringNotEmptyToVisibility}}"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
-                                    <Ellipse Width="8" Height="8" Fill="{StaticResource Warning}" Margin="0,4,6,0"
+                                    <Rectangle Width="8" Height="8" Fill="{StaticResource Warning}" Margin="0,4,6,0"
                                              ToolTip="Uncommitted changes"
                                              Visibility="{Binding IsDirty, Converter={StaticResource BoolToVisibility}}"/>
-                                    <Ellipse Width="8" Height="8" Fill="{StaticResource Success}" Margin="0,4,6,0"
+                                    <Rectangle Width="8" Height="8" Fill="{StaticResource Success}" Margin="0,4,6,0"
                                              ToolTip="Running"
                                              Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}"/>
                                     <Button Content="✕" ToolTip="Remove from dashboard" Style="{StaticResource Button.Icon}"
@@ -449,7 +438,7 @@
 
             <!-- Detail -->
             <Border Grid.Column="1" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"
-                    BorderThickness="1" CornerRadius="10" Padding="20">
+                    BorderThickness="1" CornerRadius="0" Padding="20">
                 <Grid>
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
                                 Visibility="{Binding SelectedProject, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}">
@@ -464,7 +453,7 @@
                         <TabItem Header="Overview">
                             <StackPanel Margin="4,0">
                                 <TextBlock Text="{Binding Name}" FontSize="22" FontWeight="Bold"/>
-                                <TextBlock Text="{Binding Path}" Foreground="{StaticResource Text.Muted}" FontFamily="Consolas"
+                                <TextBlock Text="{Binding Path}" Foreground="{StaticResource Text.Muted}" FontFamily="{StaticResource Font.Mono}"
                                            FontSize="11.5" Margin="0,4,0,18" TextWrapping="Wrap"/>
 
                                 <Grid Margin="0,0,0,18">
@@ -492,9 +481,9 @@
                                     <TextBlock Grid.Row="1" Grid.Column="0" Text="BRANCH" Style="{StaticResource SectionLabel}"
                                                VerticalAlignment="Center" Margin="0,0,10,10"/>
                                     <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,10">
-                                        <Border Background="{StaticResource Accent.Muted}" CornerRadius="6" Padding="10,4" VerticalAlignment="Center"
+                                        <Border Background="{StaticResource Accent.Muted}" CornerRadius="0" Padding="10,4" VerticalAlignment="Center"
                                                 ToolTip="The branch checked out now">
-                                            <TextBlock Text="{Binding Branch}" FontFamily="Consolas" FontWeight="SemiBold" FontSize="13"/>
+                                            <TextBlock Text="{Binding Branch}" FontFamily="{StaticResource Font.Mono}" FontWeight="SemiBold" FontSize="13"/>
                                         </Border>
                                         <TextBlock Text="current" Foreground="{StaticResource Text.Muted}" FontSize="11.5"
                                                    VerticalAlignment="Center" Margin="8,0,0,0"/>
@@ -513,9 +502,9 @@
                                                 Visibility="{Binding NeedsPush, Converter={StaticResource BoolToVisibility}}"
                                                 ToolTip="Push the commits made here to the remote branch, so GitHub and your other PCs get them">
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="&#xE898;" FontFamily="Segoe MDL2 Assets" Foreground="White" FontSize="12"
+                                                <TextBlock Text="&#xE898;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource Text.OnAccent}" FontSize="12"
                                                            VerticalAlignment="Center" Margin="0,0,7,0"/>
-                                                <TextBlock Text="Push" Foreground="White" FontWeight="SemiBold"/>
+                                                <TextBlock Text="Push" Foreground="{StaticResource Text.OnAccent}" FontWeight="SemiBold"/>
                                             </StackPanel>
                                         </Button>
                                         <!-- Both this branch and the remote one have commits the other doesn't, so pull and push both fail -->
@@ -524,9 +513,9 @@
                                                 Visibility="{Binding NeedsRebase, Converter={StaticResource BoolToVisibility}}"
                                                 ToolTip="Pull the remote's new commits and put the ones made here on top of them, so the branch can be pushed">
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="&#xE8EE;" FontFamily="Segoe MDL2 Assets" Foreground="White" FontSize="12"
+                                                <TextBlock Text="&#xE8EE;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource Text.OnAccent}" FontSize="12"
                                                            VerticalAlignment="Center" Margin="0,0,7,0"/>
-                                                <TextBlock Text="Rebase" Foreground="White" FontWeight="SemiBold"/>
+                                                <TextBlock Text="Rebase" Foreground="{StaticResource Text.OnAccent}" FontWeight="SemiBold"/>
                                             </StackPanel>
                                         </Button>
                                         <!-- A branch made here that the remote doesn't have yet -->
@@ -538,9 +527,9 @@
                                                 Visibility="{Binding NeedsPublish, Converter={StaticResource BoolToVisibility}}"
                                                 ToolTip="Push this branch to the remote, and pull from and push to it from now on">
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="&#xE898;" FontFamily="Segoe MDL2 Assets" Foreground="White" FontSize="12"
+                                                <TextBlock Text="&#xE898;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource Text.OnAccent}" FontSize="12"
                                                            VerticalAlignment="Center" Margin="0,0,7,0"/>
-                                                <TextBlock Text="Publish branch" Foreground="White" FontWeight="SemiBold"/>
+                                                <TextBlock Text="Publish branch" Foreground="{StaticResource Text.OnAccent}" FontWeight="SemiBold"/>
                                             </StackPanel>
                                         </Button>
                                     </StackPanel>
@@ -553,7 +542,7 @@
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <TextBlock TextTrimming="CharacterEllipsis">
-                                                        <Run Text="{Binding Name, Mode=OneWay}" FontFamily="Consolas"/>
+                                                        <Run Text="{Binding Name, Mode=OneWay}" FontFamily="{StaticResource Font.Mono}"/>
                                                         <Run Text="{Binding Note, Mode=OneWay}" Foreground="{StaticResource Text.Muted}" FontSize="11"/>
                                                     </TextBlock>
                                                 </DataTemplate>
@@ -571,7 +560,7 @@
                                     <StackPanel Grid.Row="3" Grid.Column="1" Margin="0,0,0,10">
                                         <TextBlock FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8">
                                             <Run Text="Default:" Foreground="{StaticResource Text.Secondary}"/>
-                                            <Run Text="{Binding DefaultMergeName, Mode=OneWay}" FontFamily="Consolas" FontWeight="SemiBold"/>
+                                            <Run Text="{Binding DefaultMergeName, Mode=OneWay}" FontFamily="{StaticResource Font.Mono}" FontWeight="SemiBold"/>
                                             <Run Text="·" Foreground="{StaticResource Text.Muted}"/>
                                             <Run Text="{Binding MergeFromHint, Mode=OneWay}" Foreground="{StaticResource Text.Muted}"/>
                                         </TextBlock>
@@ -661,7 +650,7 @@
                         <TabItem Header="Changes">
                             <DockPanel Margin="4,0">
                                 <Border DockPanel.Dock="Top" Background="{StaticResource Danger.Muted}" BorderBrush="{StaticResource Danger}"
-                                        BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,12"
+                                        BorderThickness="1" CornerRadius="0" Padding="14,10" Margin="0,0,0,12"
                                         Visibility="{Binding HasMergeConflict, Converter={StaticResource BoolToVisibility}}">
                                     <DockPanel>
                                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
@@ -684,7 +673,7 @@
                                 </StackPanel>
 
                                 <Border DockPanel.Dock="Bottom" Margin="0,12,0,0" Padding="10,8" Background="{StaticResource Bg.PanelAlt}"
-                                        CornerRadius="8" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
+                                        CornerRadius="0" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
                                     <DockPanel>
                                         <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"
                                                    Text="{Binding Stashes.Count, StringFormat='STASHES ({0})'}"/>
@@ -697,9 +686,9 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Background="{StaticResource Bg.Hover}" CornerRadius="6" Padding="10,6" Margin="0,0,8,8">
+                                                    <Border Background="{StaticResource Bg.Hover}" CornerRadius="0" Padding="10,6" Margin="0,0,8,8">
                                                         <StackPanel Orientation="Horizontal">
-                                                            <TextBlock Text="{Binding Reference}" FontWeight="SemiBold" FontFamily="Consolas" Margin="0,0,8,0"/>
+                                                            <TextBlock Text="{Binding Reference}" FontWeight="SemiBold" FontFamily="{StaticResource Font.Mono}" Margin="0,0,8,0"/>
                                                             <TextBlock Text="{Binding Message}" Foreground="{StaticResource Text.Secondary}"
                                                                        MaxWidth="240" TextTrimming="CharacterEllipsis" Margin="0,0,10,0"/>
                                                             <Button Content="Apply" Style="{StaticResource Button.Icon}" Margin="0,0,4,0"
@@ -725,7 +714,7 @@
 
                                     <DockPanel Grid.Column="0" Margin="0,0,12,0">
                                     <Border DockPanel.Dock="Bottom" Margin="0,10,0,0" Padding="10" Background="{StaticResource Bg.PanelAlt}"
-                                            CornerRadius="8" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
+                                            CornerRadius="0" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
                                         <StackPanel>
                                             <TextBlock Text="COMMIT MESSAGE" Style="{StaticResource SectionLabel}"/>
                                             <TextBox Height="64" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
@@ -738,7 +727,7 @@
                                         </StackPanel>
                                     </Border>
 
-                                    <Border Background="{StaticResource Bg.PanelAlt}" CornerRadius="8"
+                                    <Border Background="{StaticResource Bg.PanelAlt}" CornerRadius="0"
                                             BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
                                       <Grid>
                                         <TextBlock Text="Working tree clean — no changes." Foreground="{StaticResource Text.Muted}"
@@ -756,7 +745,7 @@
                                                         </Grid.ColumnDefinitions>
                                                         <Border Grid.Column="0" Style="{StaticResource ChangeTypeBadge}" Margin="0,0,8,0">
                                                             <TextBlock Text="{Binding Type, Converter={StaticResource ChangeTypeToLetter}}"
-                                                                       FontSize="10" FontWeight="Bold" Foreground="#0D0F14"
+                                                                       FontSize="12" FontWeight="Bold" Foreground="{Binding Type, Converter={StaticResource ChangeTypeToBrush}}"
                                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                         </Border>
                                                         <TextBlock Grid.Column="1" Text="{Binding DisplayPath}" FontSize="12"
@@ -793,7 +782,7 @@
                                                     Command="{Binding MarkResolvedCommand}" CommandParameter="{Binding SelectedChangedFile}"/>
                                         </StackPanel>
 
-                                        <Border Grid.Row="1" Background="{StaticResource Bg.Console}" CornerRadius="8"
+                                        <Border Grid.Row="1" Background="{StaticResource Bg.Console}" CornerRadius="0"
                                                 BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
                                           <Grid>
                                             <TextBlock Text="Select a file to view its changes." Foreground="{StaticResource Text.Muted}"
@@ -883,7 +872,7 @@
 
                                     <DockPanel Grid.Row="2" Visibility="{Binding SelectedCommit, Converter={StaticResource NullToVisibility}}">
                                         <Border DockPanel.Dock="Top" Margin="0,0,0,12" Padding="12,10" Background="{StaticResource Bg.PanelAlt}"
-                                                CornerRadius="8" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
+                                                CornerRadius="0" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
                                             <StackPanel DataContext="{Binding SelectedCommit}">
                                                 <TextBlock Text="{Binding Message}" FontWeight="SemiBold" FontSize="13.5" TextWrapping="Wrap"/>
                                                 <ScrollViewer MaxHeight="52" Margin="0,6,0,0" VerticalScrollBarVisibility="Auto"
@@ -893,7 +882,7 @@
                                                                TextWrapping="Wrap"/>
                                                 </ScrollViewer>
                                                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                                    <TextBlock Text="{Binding Hash}" FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                                                    <TextBlock Text="{Binding Hash}" FontFamily="{StaticResource Font.Mono}" FontSize="12"
                                                                Foreground="{StaticResource Text.Muted}"/>
                                                     <TextBlock Text="{Binding Author}" FontSize="12" Foreground="{StaticResource Text.Secondary}" Margin="16,0,0,0"/>
                                                     <TextBlock Text="{Binding Date}" FontSize="12" Foreground="{StaticResource Text.Muted}" Margin="16,0,0,0"/>
@@ -908,7 +897,7 @@
                                             </Grid.ColumnDefinitions>
 
                                             <Border Grid.Column="0" Margin="0,0,12,0" Padding="4" Background="{StaticResource Bg.PanelAlt}"
-                                                    CornerRadius="8" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
+                                                    CornerRadius="0" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
                                                 <DockPanel>
                                                     <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionLabel}" Margin="6,6,0,4"
                                                                Text="{Binding CommitFiles.Count, StringFormat='FILES CHANGED ({0})'}"/>
@@ -926,7 +915,7 @@
                                                                     </Grid.ColumnDefinitions>
                                                                     <Border Grid.Column="0" Style="{StaticResource ChangeTypeBadge}" Margin="0,0,8,0">
                                                                         <TextBlock Text="{Binding Type, Converter={StaticResource ChangeTypeToLetter}}"
-                                                                                   FontSize="10" FontWeight="Bold" Foreground="#0D0F14"
+                                                                                   FontSize="12" FontWeight="Bold" Foreground="{Binding Type, Converter={StaticResource ChangeTypeToBrush}}"
                                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                     </Border>
                                                                     <TextBlock x:Name="FilePath" Grid.Column="1" Text="{Binding DisplayPath}" FontSize="12"
@@ -948,7 +937,7 @@
                                                 </DockPanel>
                                             </Border>
 
-                                            <Border Grid.Column="1" Background="{StaticResource Bg.Console}" CornerRadius="8"
+                                            <Border Grid.Column="1" Background="{StaticResource Bg.Console}" CornerRadius="0"
                                                     BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
                                                 <ListBox ItemsSource="{Binding CommitDiffLines}" Style="{StaticResource DiffList}"
                                                          controls:ScrollToItem.Item="{Binding CurrentCommitMatch}" controls:ScrollToItem.Center="True">
@@ -992,7 +981,7 @@
                                             AutomationProperties.Name="Save command"
                                             ToolTip="Keep this command in the list below, to run it with one click"/>
                                     <Grid>
-                                        <TextBox x:Name="StartCommandBox" FontFamily="Cascadia Mono, Consolas"
+                                        <TextBox x:Name="StartCommandBox" FontFamily="{StaticResource Font.Mono}"
                                                  Text="{Binding StartCommand, UpdateSourceTrigger=PropertyChanged}"/>
                                         <TextBlock Text="{Binding StartCommandHint}" Foreground="{StaticResource Text.Muted}" FontSize="12.5"
                                                    VerticalAlignment="Center" Margin="11,0,0,0" IsHitTestVisible="False"
@@ -1029,7 +1018,7 @@
                                                             ToolTip="{Binding StringFormat=Run {0}}">
                                                         <StackPanel Orientation="Horizontal">
                                                             <TextBlock Text="▶" FontSize="10" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                            <TextBlock Text="{Binding}" FontFamily="Cascadia Mono, Consolas"/>
+                                                            <TextBlock Text="{Binding}" FontFamily="{StaticResource Font.Mono}"/>
                                                         </StackPanel>
                                                     </Button>
                                                     <Button Content="&#xE8C8;" Style="{StaticResource Button.Ghost}" FontSize="11" Margin="4,0,0,0"
@@ -1138,7 +1127,7 @@
 
             <!-- Phone screen: an Android device mirrored by scrcpy, independent of the selected project -->
             <Border Grid.Column="3" DataContext="{Binding PhoneScreen}" Background="{StaticResource Bg.Panel}"
-                    BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1" CornerRadius="10" Padding="12"
+                    BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1" CornerRadius="0" Padding="12"
                     Visibility="{Binding IsPanelVisible, Converter={StaticResource BoolToVisibility}}">
                 <DockPanel>
                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
@@ -1236,7 +1225,7 @@
                     <Grid>
                         <!-- Nothing showing here: why, and what to do. Padding keeps the square scrcpy window inside the
                              rounded corners, like a bezel. -->
-                        <Border Background="Black" CornerRadius="8" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1" Padding="3"
+                        <Border Background="Black" CornerRadius="0" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1" Padding="3"
                                 Visibility="{Binding IsDockEmpty, Converter={StaticResource BoolToVisibility}}">
                             <Grid>
                                 <StackPanel VerticalAlignment="Center" Margin="12"
@@ -1323,7 +1312,7 @@
                                             </TextBlock>
                                         </DockPanel>
 
-                                        <Border Background="Black" CornerRadius="8" BorderThickness="1" Padding="3">
+                                        <Border Background="Black" CornerRadius="0" BorderThickness="1" Padding="3">
                                             <Border.Style>
                                                 <Style TargetType="Border">
                                                     <Setter Property="BorderBrush" Value="{StaticResource Border.Subtle}"/>
@@ -1372,7 +1361,7 @@
                     <Button Content="Uninstall…" Style="{StaticResource Button.Secondary}" FontSize="11.5" Padding="8,2" Margin="10,0,0,0"
                             Click="Uninstall_Click" ToolTip="Remove Repo'N'Launcher and everything it keeps on this PC"
                             Visibility="{Binding CanUninstall, Converter={StaticResource BoolToVisibility}}"/>
-                    <TextBlock Text="{Binding VersionText}" Foreground="{StaticResource Text.Secondary}" FontSize="11.5" FontFamily="Consolas"
+                    <TextBlock Text="{Binding VersionText}" Foreground="{StaticResource Text.Secondary}" FontSize="11.5" FontFamily="{StaticResource Font.Mono}"
                                VerticalAlignment="Center" Margin="12,0,0,0" ToolTip="App version"/>
                 </StackPanel>
                 <ProgressBar DockPanel.Dock="Right" IsIndeterminate="True" Width="110"

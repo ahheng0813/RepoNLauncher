@@ -30,7 +30,7 @@
             <Setter Property="Background" Value="{StaticResource Bg.Elevated}"/>
             <Setter Property="BorderBrush" Value="{StaticResource Border.Strong}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="CornerRadius" Value="0"/>
             <Setter Property="Padding" Value="14,12"/>
             <Setter Property="Width" Value="300"/>
         </Style>
@@ -43,7 +43,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="8,6">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="0" Padding="8,6">
                             <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -72,7 +72,7 @@
             <Setter Property="Background" Value="{StaticResource Danger.Muted}"/>
             <Setter Property="BorderBrush" Value="#5A2E35"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="7"/>
+            <Setter Property="CornerRadius" Value="0"/>
             <Setter Property="Padding" Value="10,2,2,2"/>
             <Setter Property="Margin" Value="0,6,6,0"/>
         </Style>
@@ -95,7 +95,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd" Width="26" Height="26" Background="{StaticResource Bg.Elevated}"
-                                BorderBrush="{StaticResource Border.Strong}" BorderThickness="1" CornerRadius="5">
+                                BorderBrush="{StaticResource Border.Strong}" BorderThickness="1" CornerRadius="0">
                             <TextBlock Text="{TemplateBinding Content}" FontFamily="Segoe MDL2 Assets" FontSize="11"
                                        Foreground="{TemplateBinding Foreground}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -111,7 +111,7 @@
 
         <Style x:Key="TextLink" TargetType="Button">
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="{StaticResource Accent.Hover}"/>
+            <Setter Property="Foreground" Value="{StaticResource Cyan}"/>
             <Setter Property="FontSize" Value="11.5"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -218,9 +218,9 @@
         <WrapPanel>
             <Border Style="{StaticResource RecordingPill}" Visibility="{Binding IsRecordingScreen, Converter={StaticResource BoolToVisibility}}">
                 <StackPanel Orientation="Horizontal">
-                    <Ellipse Width="8" Height="8" Fill="{StaticResource Danger}" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                    <Rectangle Width="8" Height="8" Fill="{StaticResource Danger}" VerticalAlignment="Center" Margin="0,0,7,0"/>
                     <TextBlock Text="{Binding ScreenRecordingLabel}" Foreground="{StaticResource Danger}" FontSize="12" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding ScreenRecordingTime}" Foreground="{StaticResource Danger}" FontSize="12" FontFamily="Consolas"
+                    <TextBlock Text="{Binding ScreenRecordingTime}" Foreground="{StaticResource Danger}" FontSize="12" FontFamily="{StaticResource Font.Mono}"
                                VerticalAlignment="Center" Margin="6,0,4,0"/>
                     <Button Content="&#xE71A;" Style="{StaticResource Button.Ghost}" FontSize="11" Padding="6,4"
                             Command="{Binding ToggleScreenRecordingCommand}" ToolTip="Stop recording and save it"
@@ -229,9 +229,9 @@
             </Border>
             <Border Style="{StaticResource RecordingPill}" Visibility="{Binding IsRecordingVoice, Converter={StaticResource BoolToVisibility}}">
                 <StackPanel Orientation="Horizontal">
-                    <Ellipse Width="8" Height="8" Fill="{StaticResource Danger}" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                    <Rectangle Width="8" Height="8" Fill="{StaticResource Danger}" VerticalAlignment="Center" Margin="0,0,7,0"/>
                     <TextBlock Text="Voice" Foreground="{StaticResource Danger}" FontSize="12" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding VoiceRecordingTime}" Foreground="{StaticResource Danger}" FontSize="12" FontFamily="Consolas"
+                    <TextBlock Text="{Binding VoiceRecordingTime}" Foreground="{StaticResource Danger}" FontSize="12" FontFamily="{StaticResource Font.Mono}"
                                VerticalAlignment="Center" Margin="6,0,4,0"/>
                     <Button Content="&#xE71A;" Style="{StaticResource Button.Ghost}" FontSize="11" Padding="6,4"
                             Command="{Binding ToggleVoiceRecordingCommand}" ToolTip="Stop recording voice and save it"
@@ -242,7 +242,7 @@
 
         <!-- What was saved last -->
         <Border Background="{StaticResource Bg.PanelAlt}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
-                CornerRadius="7" Padding="10,4,2,4" Margin="0,6,0,0"
+                CornerRadius="0" Padding="10,4,2,4" Margin="0,6,0,0"
                 Visibility="{Binding LastCapturePath, Converter={StaticResource NullToVisibility}}">
             <DockPanel>
                 <Button DockPanel.Dock="Right" Content="&#xE711;" Style="{StaticResource Button.Ghost}" FontSize="10" Padding="6,4"
@@ -335,7 +335,7 @@
 
                     <Grid Height="230" Margin="0,8,0,0">
                         <local:TileMap x:Name="Map" Pin="{Binding Pin}" Zoom="{Binding MapZoom}" AutomationProperties.Name="Map"/>
-                        <Border BorderBrush="{StaticResource Border.Strong}" BorderThickness="1" CornerRadius="6" IsHitTestVisible="False"/>
+                        <Border BorderBrush="{StaticResource Border.Strong}" BorderThickness="1" CornerRadius="0" IsHitTestVisible="False"/>
                         <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,6,6,0">
                             <Button Content="&#xE710;" Style="{StaticResource MapButton}" Click="ZoomIn_Click"
                                     ToolTip="Zoom in" AutomationProperties.Name="Zoom in"/>
@@ -344,7 +344,7 @@
                         </StackPanel>
                         <!-- The map's data is OpenStreetMap's, which asks for this on the map itself -->
                         <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,1,1" Padding="5,1,6,2"
-                                Background="#D9FFFFFF" CornerRadius="4,0,5,0">
+                                Background="#D9FFFFFF" CornerRadius="0">
                             <Button Content="© OpenStreetMap contributors" Style="{StaticResource TextLink}" Foreground="#34408A" FontSize="10"
                                     Click="MapCopyright_Click" ToolTip="OpenStreetMap's copyright and licence"/>
                         </Border>

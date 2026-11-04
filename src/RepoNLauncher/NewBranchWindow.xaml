@@ -5,7 +5,7 @@
         Title="New branch - Repo'N'Launcher" Width="480" SizeToContent="Height" ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         Background="{StaticResource Bg.App}"
-        FontFamily="Segoe UI"
+        FontFamily="{StaticResource Font.Mono}"
         FocusManager.FocusedElement="{Binding ElementName=NameBox}">
 
     <Window.Resources>
@@ -29,7 +29,7 @@
         <TextBlock Text="New branch" FontSize="17" FontWeight="SemiBold"/>
 
         <TextBlock Text="NAME" Style="{StaticResource FieldLabel}" Margin="0,18,0,6"/>
-        <TextBox x:Name="NameBox" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas"
+        <TextBox x:Name="NameBox" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource Font.Mono}"
                  AutomationProperties.Name="Branch name"/>
         <TextBlock Style="{StaticResource Note}" Margin="0,6,0,0" Text="For example feature/login-page. Spaces become dashes."/>
 
@@ -38,7 +38,7 @@
             <ComboBox.ItemTemplate>
                 <DataTemplate>
                     <TextBlock TextTrimming="CharacterEllipsis">
-                        <Run Text="{Binding Name, Mode=OneWay}" FontFamily="Consolas"/>
+                        <Run Text="{Binding Name, Mode=OneWay}" FontFamily="{StaticResource Font.Mono}"/>
                         <Run Text="{Binding Note, Mode=OneWay}" Foreground="{StaticResource Text.Muted}" FontSize="11"/>
                     </TextBlock>
                 </DataTemplate>

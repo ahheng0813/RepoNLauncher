@@ -7,12 +7,12 @@ namespace RepoNLauncher.Converters;
 
 public class FileChangeTypeToBrushConverter : IValueConverter
 {
-    private static readonly SolidColorBrush Modified = (SolidColorBrush)new BrushConverter().ConvertFrom("#FBBF24")!;
-    private static readonly SolidColorBrush Added = (SolidColorBrush)new BrushConverter().ConvertFrom("#34D399")!;
-    private static readonly SolidColorBrush Deleted = (SolidColorBrush)new BrushConverter().ConvertFrom("#F87171")!;
-    private static readonly SolidColorBrush Renamed = (SolidColorBrush)new BrushConverter().ConvertFrom("#22D3EE")!;
-    private static readonly SolidColorBrush Untracked = (SolidColorBrush)new BrushConverter().ConvertFrom("#6B7280")!;
-    private static readonly SolidColorBrush Conflicted = (SolidColorBrush)new BrushConverter().ConvertFrom("#F87171")!;
+    private static readonly SolidColorBrush Modified = (SolidColorBrush)new BrushConverter().ConvertFrom("#F9F1A5")!;
+    private static readonly SolidColorBrush Added = (SolidColorBrush)new BrushConverter().ConvertFrom("#16C60C")!;
+    private static readonly SolidColorBrush Deleted = (SolidColorBrush)new BrushConverter().ConvertFrom("#E74856")!;
+    private static readonly SolidColorBrush Renamed = (SolidColorBrush)new BrushConverter().ConvertFrom("#61D6D6")!;
+    private static readonly SolidColorBrush Untracked = (SolidColorBrush)new BrushConverter().ConvertFrom("#767676")!;
+    private static readonly SolidColorBrush Conflicted = (SolidColorBrush)new BrushConverter().ConvertFrom("#E74856")!;
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {

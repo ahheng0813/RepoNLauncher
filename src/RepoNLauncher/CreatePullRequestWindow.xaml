@@ -5,7 +5,7 @@
         Title="Create pull request - Repo'N'Launcher" Width="640" SizeToContent="Height" ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         Background="{StaticResource Bg.App}"
-        FontFamily="Segoe UI">
+        FontFamily="{StaticResource Font.Mono}">
 
     <Window.Resources>
         <conv:NullToVisibilityConverter x:Key="NullToVisibility"/>
@@ -31,7 +31,7 @@
                   VerticalAlignment="Center" Margin="0,0,10,0"/>
             <TextBlock Text="Create pull request" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center"/>
         </StackPanel>
-        <TextBlock Text="{Binding RepoText}" Foreground="{StaticResource Text.Muted}" FontFamily="Cascadia Mono, Consolas" FontSize="12"
+        <TextBlock Text="{Binding RepoText}" Foreground="{StaticResource Text.Muted}" FontFamily="{StaticResource Font.Mono}" FontSize="12"
                    Margin="0,6,0,18"/>
 
         <!-- A branch here or on GitHub (the current one at first), into one GitHub has -->
@@ -49,7 +49,7 @@
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
                             <TextBlock TextTrimming="CharacterEllipsis">
-                                <Run Text="{Binding Name, Mode=OneWay}" FontFamily="Consolas"/>
+                                <Run Text="{Binding Name, Mode=OneWay}" FontFamily="{StaticResource Font.Mono}"/>
                                 <Run Text="{Binding Note, Mode=OneWay}" Foreground="{StaticResource Text.Muted}" FontSize="11"/>
                             </TextBlock>
                         </DataTemplate>
@@ -61,7 +61,7 @@
             <StackPanel Grid.Column="2">
                 <TextBlock Text="INTO" Style="{StaticResource FieldLabel}"/>
                 <ComboBox Height="32" ItemsSource="{Binding BaseBranches}" SelectedItem="{Binding BaseBranch}"
-                          AutomationProperties.Name="Into branch" FontFamily="Consolas"/>
+                          AutomationProperties.Name="Into branch" FontFamily="{StaticResource Font.Mono}"/>
             </StackPanel>
         </Grid>
         <TextBlock Text="{Binding CommitsText}" Style="{StaticResource Note}" Margin="0,8,0,0"
@@ -69,7 +69,7 @@
 
         <!-- GitHub allows one open pull request per branch -->
         <Border Background="{StaticResource Bg.PanelAlt}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
-                CornerRadius="8" Padding="12,10" Margin="0,14,0,0"
+                CornerRadius="0" Padding="12,10" Margin="0,14,0,0"
                 Visibility="{Binding Existing, Converter={StaticResource NullToVisibility}}">
             <DockPanel>
                 <Button DockPanel.Dock="Right" Style="{StaticResource Button.Secondary}" Margin="10,0,0,0" Command="{Binding OpenExistingCommand}">
