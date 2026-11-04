@@ -15,6 +15,10 @@ public static class Program
     {
         VelopackApp.Build()
             .SetArgs(args)
+            // A new version may bring a new icon, and Windows would keep showing the cached old one on the desktop,
+            // Start menu and taskbar until it next refreshes. Run as the update or install finishes, before the app starts.
+            .OnAfterInstallFastCallback(_ => RefreshIcons())
+            .OnAfterUpdateFastCallback(_ => RefreshIcons())
             .OnRestarted(_ => UpdateService.StartedByUpdater = true)
             .Run();
 
@@ -26,5 +30,17 @@ public static class Program
         var app = new App();
         app.InitializeComponent();
         app.Run();
+    }
+
+    // Only a nicety: it must never get in the way of the install or update it runs in.
+    private static void RefreshIcons()
+    {
+        try
+        {
+            NativeMethods.RefreshShellIcons();
+        }
+        catch (Exception)
+        {
+        }
     }
 }

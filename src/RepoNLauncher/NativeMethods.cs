@@ -3,11 +3,23 @@ using System.Runtime.InteropServices;
 namespace RepoNLauncher;
 
 /// <summary>
-/// Windows calls: the console-style title bar that matches the app's theme, Explorer's name order, and where the
-/// Downloads folder is.
+/// Windows calls: the console-style title bar that matches the app's theme, refreshing the icons File Explorer shows,
+/// Explorer's name order, and where the Downloads folder is.
 /// </summary>
 internal static class NativeMethods
 {
+    [DllImport("shell32.dll")]
+    private static extern void SHChangeNotify(int eventId, uint flags, IntPtr item1, IntPtr item2);
+
+    private const int SHCNE_ASSOCCHANGED = 0x08000000;
+    private const uint SHCNF_IDLIST = 0;
+
+    /// <summary>
+    /// Tells File Explorer that icons have changed, so the desktop, Start menu and taskbar draw the app's icon again
+    /// rather than the previous version's, which Windows otherwise keeps showing from its icon cache.
+    /// </summary>
+    public static void RefreshShellIcons() => SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, IntPtr.Zero, IntPtr.Zero);
+
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
 
