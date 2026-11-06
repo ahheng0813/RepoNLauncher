@@ -22,8 +22,9 @@ namespace RepoNLauncher.Controls;
 
 /// <summary>
 /// A project's Run console. The output is text that can be selected with the mouse and copied, like a terminal's, and
-/// searched: every match is marked, and the arrows step through them. Like a terminal, it follows new output while it's
-/// scrolled to the bottom, so a prompt is in view when it asks; scrolled up to read, it stays put.
+/// searched: every match is marked, and the arrows step through them. Like a terminal, it follows new output, so a prompt
+/// is in view when it asks. Scrolled up to read, it stays put and offers Jump to present, which (like scrolling back down
+/// to the bottom) follows the output again.
 /// </summary>
 public partial class RunConsole : UserControl
 {
@@ -55,6 +56,17 @@ public partial class RunConsole : UserControl
     // Where the search text is, in order, and which of them the arrows are on (-1: none yet).
     private readonly List<int> _matches = new();
     private int _current = -1;
+
+    // Whether the view keeps the latest output in view. It's a state of its own rather than worked out from each scroll
+    // (was it at the bottom before this change?), which a resize or the console coming back into view at the same time
+    // as new output got wrong, and then it stopped following for good.
+    private bool _following = true;
+
+    // While the user moves the view (the mouse held on the output or its scrollbar, or a scroll they asked for still to
+    // land) it isn't pulled to the bottom: a move up stops following, and it catches up after if it's still following.
+    private bool _mouseHeld;
+    private int _scrollsLanding;
+    private bool UserScrolling => _mouseHeld || _scrollsLanding > 0;
 
     public RunConsole()
     {
@@ -90,6 +102,14 @@ public partial class RunConsole : UserControl
 
         Output.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler(Output_ScrollChanged));
         Output.AddHandler(System.Windows.Documents.Hyperlink.RequestNavigateEvent, new RequestNavigateEventHandler(Output_LinkClicked));
+        Output.PreviewMouseWheel += Output_PreviewMouseWheel;
+        Output.PreviewMouseLeftButtonDown += (_, _) => _mouseHeld = true;
+        Output.PreviewMouseLeftButtonUp += (_, _) => MouseLetGo();
+        Output.AddHandler(LostMouseCaptureEvent, new System.Windows.Input.MouseEventHandler((_, _) => MouseLetGo()), handledEventsToo: true);
+        Output.IsVisibleChanged += (_, _) =>
+        {
+            if (Output.IsVisible && _following) Output.ScrollToEnd();
+        };
 
         _recount.Tick += (_, _) => FindMatches(landOnNearest: false);
         DataContextChanged += (_, _) => Attach((DataContext as ProjectViewModel)?.ConsoleOutput);
@@ -172,18 +192,106 @@ public partial class RunConsole : UserControl
         Output.Document.Text = text.ToString();
         _current = -1;
         FindMatches(landOnNearest: false);
-        Output.ScrollToEnd();
+        // A new run, or another project's console: from its latest output.
+        JumpToPresent();
     }
 
     // Lines come split already; a line break inside one would put the lines shown out of step with the console's.
     private static string OneLine(string line) =>
         line.AsSpan().IndexOfAny('\r', '\n') < 0 ? line : line.Replace('\r', ' ').Replace('\n', ' ');
 
+    // ---- Following the output ----
+
+    private bool IsAtBottom => Output.VerticalOffset + Output.ViewportHeight >= Output.ExtentHeight - 1;
+
+    private void SetFollowing(bool following)
+    {
+        _following = following;
+        JumpToPresentButton.Visibility = following ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    /// <summary>Goes to the latest output, and keeps it in view as more comes.</summary>
+    private void JumpToPresent()
+    {
+        SetFollowing(true);
+        Output.ScrollToEnd();
+    }
+
+    private void JumpToPresent_Click(object sender, RoutedEventArgs e) => JumpToPresent();
+
+    // The output grows, the console is resized or comes back into view, the lines rewrap: whatever moved, it decides
+    // from where the view is now and whether it's following, never from what it was before the change.
     private void Output_ScrollChanged(object sender, ScrollChangedEventArgs e)
     {
-        if (e.ExtentHeightChange <= 0 || e.OriginalSource is not ScrollViewer viewer) return;
-        var wasAtBottom = e.VerticalOffset + e.ViewportHeight >= e.ExtentHeight - e.ExtentHeightChange - 1;
-        if (wasAtBottom) viewer.ScrollToEnd();
+        if (e.OriginalSource is not ScrollViewer viewer || !ReferenceEquals(viewer.TemplatedParent, Output)) return;
+
+        // The mouse let go where it wasn't seen (outside the window, nothing captured).
+        if (_mouseHeld && Mouse.LeftButton != MouseButtonState.Pressed) _mouseHeld = false;
+
+        if (viewer.VerticalOffset + viewer.ViewportHeight >= viewer.ExtentHeight - 1)
+        {
+            // At the bottom, however it got there: following.
+            SetFollowing(true);
+            return;
+        }
+
+        if (UserScrolling)
+        {
+            // Moved up by the user: reading, so it stays where they put it.
+            if (e.VerticalChange < 0) SetFollowing(false);
+            return;
+        }
+
+        if (!_following) return;
+
+        // Moved up with nothing else changing: keys, a selection dragged past the top, a match shown.
+        if (e.VerticalChange < 0 && e.ExtentHeightChange == 0 && e.ViewportHeightChange == 0) SetFollowing(false);
+        // More output, or a resize: back to the latest line. Lines measured on the way down can grow the output again,
+        // which brings another change here, until it rests at the bottom.
+        else viewer.ScrollToEnd();
+    }
+
+    // Wheeling up starts the user's scroll; whether it left the bottom is decided once it lands.
+    private void Output_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (e.Delta > 0 && Output.VerticalOffset > 0) LetScrollLand();
+    }
+
+    /// <summary>
+    /// For a scroll the user asked for (a wheel, a key, a search match), which may or may not leave the bottom: the view
+    /// isn't pulled down until it has landed, then catches up if it's still following.
+    /// </summary>
+    private void LetScrollLand()
+    {
+        _scrollsLanding++;
+        // After layout, which is where the scroll lands.
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+        {
+            _scrollsLanding--;
+            if (!UserScrolling) CatchUp();
+        });
+    }
+
+    private void MouseLetGo()
+    {
+        if (!_mouseHeld) return;
+        // After the thumb or the selection has taken its last move, which comes after the button's release.
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+        {
+            if (!_mouseHeld || Mouse.LeftButton == MouseButtonState.Pressed) return;
+            _mouseHeld = false;
+            if (!UserScrolling) CatchUp();
+        });
+    }
+
+    // The user's scroll is over: still following (they didn't move up, or came back down), so to the output that came
+    // meanwhile.
+    private void CatchUp()
+    {
+        var atBottom = IsAtBottom;
+        if (!_following && !atBottom) return;
+        SetFollowing(true);
+        if (!atBottom) Output.ScrollToEnd();
     }
 
     // Ctrl+click on an address: the app's own site opens where the Run tab's Open in says, like its URL buttons; any
@@ -243,6 +351,17 @@ public partial class RunConsole : UserControl
         {
             Step(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? -1 : 1);
             e.Handled = true;
+        }
+        else if (Output.TextArea.IsKeyboardFocusWithin)
+        {
+            if (e.Key == Key.End && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                JumpToPresent();
+                e.Handled = true;
+            }
+            // The output's own keys that can scroll it up.
+            else if (e.Key is Key.PageUp or Key.Up || (e.Key == Key.Home && Keyboard.Modifiers.HasFlag(ModifierKeys.Control)))
+                LetScrollLand();
         }
     }
 
@@ -341,6 +460,8 @@ public partial class RunConsole : UserControl
 
         if (!scroll || offset < 0 || !Output.IsLoaded) return;
         var location = Output.Document.GetLocation(offset);
+        // Scrolled up to the match, it stays in view while more output comes.
+        LetScrollLand();
         Output.ScrollTo(location.Line, location.Column);
     }
 

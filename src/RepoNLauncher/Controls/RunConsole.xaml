@@ -126,24 +126,40 @@
 
         <!-- The output: drag to select, Ctrl+C copies, Ctrl+A selects it all, Ctrl+click opens an address -->
         <Border Background="{StaticResource Bg.Console}" CornerRadius="0" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
-            <ae:TextEditor x:Name="Output" IsReadOnly="True" WordWrap="True"
-                           Background="Transparent" Foreground="{StaticResource Text.Primary}" Padding="10,8"
-                           FontFamily="{StaticResource Font.Mono}" FontSize="12"
-                           HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
-                           AutomationProperties.Name="Console output">
-                <ae:TextEditor.ContextMenu>
-                    <ContextMenu Style="{StaticResource ConsoleMenu}" Opened="OutputMenu_Opened">
-                        <MenuItem x:Name="CopyMenuItem" Header="Copy" InputGestureText="Ctrl+C"
-                                  Style="{StaticResource ConsoleMenuItem}" Click="Copy_Click"/>
-                        <MenuItem Header="Copy all" Style="{StaticResource ConsoleMenuItem}" Click="CopyAll_Click"/>
-                        <MenuItem Header="Select all" InputGestureText="Ctrl+A"
-                                  Style="{StaticResource ConsoleMenuItem}" Click="SelectAll_Click"/>
-                        <Separator Style="{StaticResource ConsoleMenuSeparator}"/>
-                        <MenuItem x:Name="SearchMenuItem" Header="Search the output" InputGestureText="Ctrl+F"
-                                  Style="{StaticResource ConsoleMenuItem}" Click="Search_Click"/>
-                    </ContextMenu>
-                </ae:TextEditor.ContextMenu>
-            </ae:TextEditor>
+            <Grid>
+                <ae:TextEditor x:Name="Output" IsReadOnly="True" WordWrap="True"
+                               Background="Transparent" Foreground="{StaticResource Text.Primary}" Padding="10,8"
+                               FontFamily="{StaticResource Font.Mono}" FontSize="12"
+                               HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
+                               AutomationProperties.Name="Console output">
+                    <ae:TextEditor.ContextMenu>
+                        <ContextMenu Style="{StaticResource ConsoleMenu}" Opened="OutputMenu_Opened">
+                            <MenuItem x:Name="CopyMenuItem" Header="Copy" InputGestureText="Ctrl+C"
+                                      Style="{StaticResource ConsoleMenuItem}" Click="Copy_Click"/>
+                            <MenuItem Header="Copy all" Style="{StaticResource ConsoleMenuItem}" Click="CopyAll_Click"/>
+                            <MenuItem Header="Select all" InputGestureText="Ctrl+A"
+                                      Style="{StaticResource ConsoleMenuItem}" Click="SelectAll_Click"/>
+                            <Separator Style="{StaticResource ConsoleMenuSeparator}"/>
+                            <MenuItem x:Name="SearchMenuItem" Header="Search the output" InputGestureText="Ctrl+F"
+                                      Style="{StaticResource ConsoleMenuItem}" Click="Search_Click"/>
+                        </ContextMenu>
+                    </ae:TextEditor.ContextMenu>
+                </ae:TextEditor>
+
+                <!-- Shown while scrolled up to read, when new output no longer pulls the view down: back to the latest
+                     output, following it again. Over the output's bottom corner, clear of its scrollbar. -->
+                <Button x:Name="JumpToPresentButton" Style="{StaticResource Button.Secondary}" Visibility="Collapsed"
+                        HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,10"
+                        Background="{StaticResource Bg.PanelAlt}" Focusable="False"
+                        AutomationProperties.Name="Jump to present"
+                        ToolTip="Go to the latest output and follow it again as more comes (Ctrl+End in the output)"
+                        Click="JumpToPresent_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE74B;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="Jump to present" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
         </Border>
     </DockPanel>
 </UserControl>
