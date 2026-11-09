@@ -112,8 +112,13 @@ public partial class RunConsole : UserControl
         };
 
         _recount.Tick += (_, _) => FindMatches(landOnNearest: false);
-        DataContextChanged += (_, _) => Attach((DataContext as ProjectViewModel)?.ConsoleOutput);
+        // The project's console lines: the run's whose tab is open, so they change when another tab is picked.
+        SetBinding(LinesProperty, new System.Windows.Data.Binding(nameof(ProjectViewModel.ConsoleOutput)));
     }
+
+    private static readonly DependencyProperty LinesProperty = DependencyProperty.Register(
+        "Lines", typeof(ObservableCollection<string>), typeof(RunConsole),
+        new PropertyMetadata(null, (d, e) => ((RunConsole)d).Attach(e.NewValue as ObservableCollection<string>)));
 
     /// <summary>Puts the cursor in the search box, with the selected text in it when that's a few words on one line.</summary>
     public void FocusSearch()
@@ -192,7 +197,7 @@ public partial class RunConsole : UserControl
         Output.Document.Text = text.ToString();
         _current = -1;
         FindMatches(landOnNearest: false);
-        // A new run, or another project's console: from its latest output.
+        // A new run, another run's tab, or another project's console: from its latest output.
         JumpToPresent();
     }
 

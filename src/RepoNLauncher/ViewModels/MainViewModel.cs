@@ -90,7 +90,7 @@ public partial class MainViewModel : ObservableObject
         _processRunner = processRunner;
         _ports = ports;
         _ides = ides;
-        PhoneScreen = new PhoneScreenViewModel(scrcpy, new DeviceToolsService(scrcpy));
+        PhoneScreen = new PhoneScreenViewModel(scrcpy, new DeviceToolsService(scrcpy)) { FindRunOn = device => FindProjectRunningOn(device.Serial) };
         GitHub = new GitHubAccountViewModel(gitHub);
         PcRepos = new PcReposViewModel(GitHub, IsOnDashboard, paths => AddProjectsFrom("Repos on this PC", paths));
         AiUsage = aiUsage;
@@ -107,6 +107,23 @@ public partial class MainViewModel : ObservableObject
         foreach (var app in _config.OpenWithApps) OpenWithApps.Add(app);
 
         _ = gitHub.VerifySavedSignInAsync();
+    }
+
+    /// <summary>
+    /// The project whose app runs on the device (Flutter's id for an Android device is its adb serial), with that run's
+    /// tab picked: one still running there first, then the selected project's, then the latest. Null when none has run there.
+    /// </summary>
+    private ProjectViewModel? FindProjectRunningOn(string deviceId)
+    {
+        var found = Projects
+            .SelectMany(project => project.Runs.Where(run => run.Device?.Id == deviceId).Select(run => (Project: project, Run: run)))
+            .OrderByDescending(x => x.Run.IsRunning)
+            .ThenByDescending(x => x.Project == SelectedProject)
+            .ThenByDescending(x => x.Run.StartedAt)
+            .FirstOrDefault();
+        if (found.Project == null) return null;
+        found.Project.SelectedRun = found.Run;
+        return found.Project;
     }
 
     // A started emulator is a new device: the phone screen can mirror it, and a Flutter project can run on it.
@@ -353,7 +370,7 @@ public partial class MainViewModel : ObservableObject
         project ??= SelectedProject;
         if (project == null) return;
 
-        project.Stop();
+        project.StopAll();
         _config.Projects.RemoveAll(p => string.Equals(p.Path, project.Path, StringComparison.OrdinalIgnoreCase));
         PersistConfig();
         Projects.Remove(project);

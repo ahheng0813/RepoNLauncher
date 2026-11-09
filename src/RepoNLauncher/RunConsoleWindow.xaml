@@ -21,7 +21,7 @@
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Content="▶  Run" Style="{StaticResource Button.Primary}"
-                            Command="{Binding RunCommand}" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolean}}"/>
+                            Command="{Binding RunCommand}" IsEnabled="{Binding CanRun}"/>
                     <Button Content="■  Stop" Style="{StaticResource Button.Danger}" Margin="0,0,14,0"
                             Command="{Binding StopCommand}" IsEnabled="{Binding IsRunning}"/>
                     <Button x:Name="NextScreenButton" Content="&#xE7F4;" Style="{StaticResource Button.Ghost}" Margin="0,0,2,0"

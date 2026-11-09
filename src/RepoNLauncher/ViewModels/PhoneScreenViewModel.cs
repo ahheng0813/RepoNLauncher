@@ -30,6 +30,12 @@ public partial class PhoneScreenViewModel : ObservableObject
     /// <summary>Raised when a device is popped out or docked back, for its window to open or close.</summary>
     public event Action<DeviceScreenViewModel>? PopOutChanged;
 
+    /// <summary>
+    /// Finds the project whose app runs on a device, for a device's Console button: the project, with its run on the
+    /// device picked; null when the dashboard hasn't run anything there.
+    /// </summary>
+    public Func<AndroidDevice, ProjectViewModel?>? FindRunOn { get; set; }
+
     [ObservableProperty] private AndroidDevice? _selectedDevice;
 
     /// <summary>The device picked in the list, which the panel's tools work on.</summary>

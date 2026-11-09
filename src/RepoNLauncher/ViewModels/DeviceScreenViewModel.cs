@@ -308,6 +308,18 @@ public partial class DeviceScreenViewModel : ObservableObject
         return new PhoneFilesViewModel(_tools, Device);
     }
 
+    /// <summary>
+    /// The project whose run on this device the Console button shows, with that run's tab picked; null (saying why) when
+    /// the dashboard hasn't run anything on it.
+    /// </summary>
+    public ProjectViewModel? FindRunConsole()
+    {
+        var project = _phone.FindRunOn?.Invoke(Device);
+        if (project == null)
+            Status = $"Nothing has been run on {Device.Model} from the dashboard yet. Run a Flutter project on it from its Run tab, then Console shows the app's output.";
+        return project;
+    }
+
     /// <summary>Copies files or folders dropped on the tools to the device's Download folder.</summary>
     public async Task SendFilesAsync(IReadOnlyList<string> paths)
     {

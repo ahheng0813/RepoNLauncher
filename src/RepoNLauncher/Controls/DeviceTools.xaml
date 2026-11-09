@@ -210,6 +210,10 @@
                     AutomationProperties.Name="Phone files"
                     ToolTip="Files: look through the phone's folders, send files to it from this PC and copy its files here. Files dropped on this bar go to its Download folder."/>
 
+            <Button Content="&#xE756;" Style="{StaticResource Button.Ghost}" Click="ConsoleButton_Click"
+                    AutomationProperties.Name="Console"
+                    ToolTip="Console: the output of the app the dashboard runs on this device, in a window of its own, with Hot reload and Stop"/>
+
             <ProgressBar IsIndeterminate="True" Width="40" Height="3" VerticalAlignment="Center" Margin="6,0,0,0"
                          Visibility="{Binding IsSendingFiles, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}"/>
         </WrapPanel>

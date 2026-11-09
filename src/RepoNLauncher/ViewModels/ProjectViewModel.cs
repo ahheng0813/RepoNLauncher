@@ -80,6 +80,10 @@ public partial class ProjectViewModel : ObservableObject
     private static readonly Regex AnyInterfaceHost = new(@"^(https?://)(?:0\.0\.0\.0|\[::\]|\*|\+)(?=[:/]|$)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    // The device a flutter command of your own names: flutter run -d chrome, --device-id=emulator-5554.
+    private static readonly Regex DeviceArgument = new(@"(?:^|\s)(?:-d|--device-id)(?:=|\s+)[""']?(?<device>[^\s""']+)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     public static IReadOnlyList<ProjectKind> AllKinds { get; } = Enum.GetValues<ProjectKind>();
 
     private const int CommitSearchMax = 200;
@@ -131,6 +135,8 @@ public partial class ProjectViewModel : ObservableObject
             Info.RunCommandOverride = string.IsNullOrWhiteSpace(value) ? null : value;
             SettingsChanged?.Invoke();
             SaveStartCommandCommand.NotifyCanExecuteChanged();
+            // A flutter command can name its own device, which may be running already.
+            OnPropertyChanged(nameof(CanRun));
         }
     }
 
@@ -209,11 +215,11 @@ public partial class ProjectViewModel : ObservableObject
     private int _behind;
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string _statusMessage = string.Empty;
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ConsoleInputHint))]
-    [NotifyCanExecuteChangedFor(nameof(SendInputCommand), nameof(SendKeyCommand), nameof(RunSavedCommand))]
-    private bool _isRunning;
+    /// <summary>The device Run starts the app on. Picking one that has a run's tab shows that tab.</summary>
     [ObservableProperty] private DeviceInfo? _selectedDevice;
+
+    /// <summary>The run whose console shows, its tab picked. Null before the first run.</summary>
+    [ObservableProperty] private RunSession? _selectedRun;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSelectedFileConflicted))]
     private FileChangeInfo? _selectedChangedFile;
@@ -266,8 +272,17 @@ public partial class ProjectViewModel : ObservableObject
     public ObservableCollection<FileChangeInfo> CommitFiles { get; } = new();
     public ObservableCollection<CommitDiffLine> CommitDiffLines { get; } = new();
     public ObservableCollection<DeviceInfo> Devices { get; } = new();
-    public ObservableCollection<string> ConsoleOutput { get; } = new();
-    public ObservableCollection<string> DetectedUrls { get; } = new();
+    /// <summary>The project's runs: in a Flutter project one per device it was run on, each a tab over the console.</summary>
+    public ObservableCollection<RunSession> Runs { get; } = new();
+
+    // The console shown before anything has run, for notes such as "Select a device".
+    private readonly RunSession _noRun = new(null, "Run");
+
+    /// <summary>The console shown: the picked run's.</summary>
+    public ObservableCollection<string> ConsoleOutput => (SelectedRun ?? _noRun).ConsoleOutput;
+
+    /// <summary>The addresses the picked run's app serves on.</summary>
+    public ObservableCollection<string> DetectedUrls => (SelectedRun ?? _noRun).DetectedUrls;
     public ObservableCollection<EnvEntry> EnvEntries { get; } = new();
     public ObservableCollection<FileChangeInfo> ChangedFiles { get; } = new();
     public ObservableCollection<StashInfo> Stashes { get; } = new();
@@ -314,17 +329,26 @@ public partial class ProjectViewModel : ObservableObject
     /// <summary>A branch other than the default is picked and not saved.</summary>
     public bool IsMergePickUnsaved => SelectedMergeSource != null && SelectedMergeSource.Branch != MergeSourceFor(Branch);
 
-    private RunningProcessHandle? _runningProcess;
+    /// <summary>The run shown is running: Stop, Hot reload and the input box work on it.</summary>
+    public bool IsRunning => SelectedRun?.IsRunning == true;
 
-    // The console's last line is the start of one still being written, such as a prompt waiting for an answer.
-    private bool _lastLineIsPartial;
+    /// <summary>Any of the project's runs is running, on any device.</summary>
+    public bool IsAnyRunning => Runs.Any(r => r.IsRunning);
+
+    /// <summary>Run can start: the device it would run on (or, for a project not run on devices, its one run) isn't running.</summary>
+    public bool CanRun => !IsRunningOn(DeviceFor(BoxCommand));
+
+    /// <summary>A Flutter project's runs each have a tab over the console, named after the device.</summary>
+    public bool ShowRunTabs => Runs.Any(r => r.Device != null);
 
     /// <summary>The Run tab's input box: what's typed here goes to the running app when Enter is pressed.</summary>
     [ObservableProperty] private string _consoleInput = string.Empty;
 
-    public string ConsoleInputHint => IsRunning
-        ? "Type here and press Enter to send it to the app, e.g. an answer to its prompt"
-        : "Input for the app, once it's running";
+    public string ConsoleInputHint => !IsRunning
+        ? "Input for the app, once it's running"
+        : SelectedRun!.Device != null
+            ? $"Type here and press Enter to send it to the app on {SelectedRun.Title}"
+            : "Type here and press Enter to send it to the app, e.g. an answer to its prompt";
 
     /// <summary>Raised when a Flutter app is launched on a device, so the dashboard can show that device's screen.</summary>
     public event Action<DeviceInfo>? RunStartedOnDevice;
@@ -1131,14 +1155,50 @@ public partial class ProjectViewModel : ObservableObject
         try
         {
             var devices = await _flutter.GetDevicesAsync();
+            // The device picked stays picked while it's still connected.
+            var picked = SelectedDevice?.Id;
             Devices.Clear();
             foreach (var d in devices) Devices.Add(d);
-            SelectedDevice ??= Devices.FirstOrDefault();
+            SelectedDevice = Devices.FirstOrDefault(d => d.Id == picked) ?? Devices.FirstOrDefault();
         }
         finally
         {
             IsBusy = false;
         }
+    }
+
+    // Picking a device shows its run's tab, when it has one; Run is for a device that isn't running.
+    partial void OnSelectedDeviceChanged(DeviceInfo? value)
+    {
+        if (value != null && RunOnDevice(value.Id) is { } run) SelectedRun = run;
+        RefreshRunState();
+    }
+
+    // Picking a tab picks its device too, so Run and the device list are about the run shown.
+    partial void OnSelectedRunChanged(RunSession? value)
+    {
+        if (value?.Device is { } device && SelectedDevice?.Id != device.Id
+            && Devices.FirstOrDefault(d => d.Id == device.Id) is { } listed)
+            SelectedDevice = listed;
+        OnPropertyChanged(nameof(ConsoleOutput));
+        OnPropertyChanged(nameof(DetectedUrls));
+        RefreshRunState();
+    }
+
+    private RunSession? RunOnDevice(string? deviceId) => Runs.FirstOrDefault(r => r.Device?.Id == deviceId);
+
+    private bool IsRunningOn(DeviceInfo? device) => RunOnDevice(device?.Id) is { IsRunning: true };
+
+    private void RefreshRunState()
+    {
+        OnPropertyChanged(nameof(IsRunning));
+        OnPropertyChanged(nameof(IsAnyRunning));
+        OnPropertyChanged(nameof(CanRun));
+        OnPropertyChanged(nameof(ShowRunTabs));
+        OnPropertyChanged(nameof(ConsoleInputHint));
+        SendInputCommand.NotifyCanExecuteChanged();
+        SendKeyCommand.NotifyCanExecuteChanged();
+        RunSavedCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand]
@@ -1164,13 +1224,54 @@ public partial class ProjectViewModel : ObservableObject
     }
 
     [RelayCommand]
-    public void Run() => StartRun(string.IsNullOrWhiteSpace(Info.RunCommandOverride) ? null : Info.RunCommandOverride.Trim());
+    public void Run() => StartRun(BoxCommand);
+
+    // The START COMMAND box's command; null when it's empty, for the kind's own.
+    private string? BoxCommand => string.IsNullOrWhiteSpace(Info.RunCommandOverride) ? null : Info.RunCommandOverride.Trim();
 
     /// <summary>Runs one of the saved start commands; the box's command stays as it is.</summary>
     [RelayCommand(CanExecute = nameof(CanRunSaved))]
     private void RunSaved(string command) => StartRun(command);
 
-    private bool CanRunSaved(string? command) => !IsRunning;
+    private bool CanRunSaved(string? command) => command != null && !IsRunningOn(DeviceFor(command));
+
+    /// <summary>
+    /// The device a run goes to, for a Flutter project: the one a command of your own names with -d, when it's listed,
+    /// else the one picked. Null for other projects.
+    /// </summary>
+    private DeviceInfo? DeviceFor(string? command)
+    {
+        if (Kind != ProjectKind.Flutter) return null;
+        if (command != null && DeviceArgument.Match(command) is { Success: true } match)
+        {
+            var named = match.Groups["device"].Value;
+            var device = Devices.FirstOrDefault(d => d.Id.Equals(named, StringComparison.OrdinalIgnoreCase))
+                         ?? Devices.FirstOrDefault(d => d.Name.Equals(named, StringComparison.OrdinalIgnoreCase));
+            if (device != null) return device;
+        }
+        return SelectedDevice;
+    }
+
+    // The tab a run on the device goes in: the one it had, else a new one.
+    private RunSession RunTabFor(DeviceInfo? device)
+    {
+        if (RunOnDevice(device?.Id) is { } run) return run;
+
+        // Two devices of one name (two emulators of one model) are told apart by their ids.
+        var title = device == null ? "Run"
+            : Runs.Any(r => r.Device?.Name == device.Name) ? $"{device.Name} ({device.Id})"
+            : device.Name;
+        run = new RunSession(device, title);
+        run.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(RunSession.IsRunning)) RefreshRunState();
+        };
+        Runs.Add(run);
+        return run;
+    }
+
+    // A note of the dashboard's, in the console shown.
+    private void ShowNote(string text) => (SelectedRun ?? _noRun).AddDashboardLine(text);
 
     private bool CanSaveStartCommand() => StartCommand.Trim() is { Length: > 0 } command && !SavedCommands.Contains(command);
 
@@ -1201,28 +1302,35 @@ public partial class ProjectViewModel : ObservableObject
     }
 
     // customCommand is the box's command or a saved one; null runs the kind's own (flutter run / dotnet run).
+    // A Flutter project's run goes in its device's tab, and runs alongside those on other devices.
     private void StartRun(string? customCommand)
     {
-        if (IsRunning) return;
+        var device = DeviceFor(customCommand);
+        if (IsRunningOn(device))
+        {
+            // Already running there: its tab shows instead.
+            SelectedRun = RunOnDevice(device?.Id);
+            return;
+        }
 
         string command;
         List<int> ports = new();
         switch (Kind)
         {
             case ProjectKind.Flutter:
-                if (customCommand == null && SelectedDevice == null)
+                if (customCommand == null && device == null)
                 {
-                    ConsoleOutput.Add("[dashboard] Select a device before running.");
+                    ShowNote("Select a device before running.");
                     return;
                 }
-                command = customCommand ?? _flutter.BuildRunCommand(SelectedDevice!.Id);
+                command = customCommand ?? _flutter.BuildRunCommand(device!.Id);
                 break;
 
             case ProjectKind.DotNet:
                 var csproj = Info.CsprojOverride ?? _dotNet.FindCsproj(Path);
                 if (csproj == null && customCommand == null)
                 {
-                    ConsoleOutput.Add("[dashboard] No .csproj found for this project. Type a start command above to run it another way.");
+                    ShowNote("No .csproj found for this project. Type a start command above to run it another way.");
                     return;
                 }
                 command = customCommand ?? _dotNet.BuildRunCommand(csproj!);
@@ -1232,26 +1340,29 @@ public partial class ProjectViewModel : ObservableObject
             default:
                 if (customCommand == null)
                 {
-                    ConsoleOutput.Add("[dashboard] Type the command that starts this project in START COMMAND above, then press Run.");
+                    ShowNote("Type the command that starts this project in START COMMAND above, then press Run.");
                     return;
                 }
                 command = customCommand;
                 break;
         }
 
-        ConsoleOutput.Clear();
-        _lastLineIsPartial = false;
-        if (!EnsurePortsFree(ports)) return;
-        ConsoleOutput.Add($"[dashboard] {command}");
-        DetectedUrls.Clear();
-        IsRunning = true;
+        var run = RunTabFor(device);
+        SelectedRun = run;
+        run.Clear();
+        if (!EnsurePortsFree(run, ports)) return;
+        run.AddDashboardLine(command);
+        run.StartedAt = DateTime.Now;
+        run.IsRunning = true;
 
-        _runningProcess = _processRunner.StartStreaming(
+        var generation = ++run.Generation;
+        run.Process = _processRunner.StartStreaming(
             Path,
             command,
             onOutput: (line, partial) => Application.Current.Dispatcher.Invoke(() =>
             {
-                ShowOutput(line, partial);
+                if (run.Generation != generation) return;
+                run.ShowOutput(line, partial);
                 if (partial) return;
                 // Flutter prints VM-service and DevTools addresses, which aren't the app; only its web server's
                 // "lib/main.dart is being served at ..." is.
@@ -1265,20 +1376,20 @@ public partial class ProjectViewModel : ObservableObject
                 };
                 if (url == null) return;
                 url = AnyInterfaceHost.Replace(url, "$1localhost");
-                if (DetectedUrls.Contains(url)) return;
+                if (run.DetectedUrls.Contains(url)) return;
 
-                DetectedUrls.Add(url);
+                run.DetectedUrls.Add(url);
                 // The first address is the site; any after it (https beside http, say) stay buttons.
-                if (DetectedUrls.Count == 1 && OpenSiteOnRun) SiteOpenRequested?.Invoke(url, false);
+                if (run.DetectedUrls.Count == 1 && OpenSiteOnRun) SiteOpenRequested?.Invoke(url, false);
             }),
             onExit: code => Application.Current.Dispatcher.Invoke(() =>
             {
-                ConsoleOutput.Add($"[dashboard] process exited with code {code}");
-                _lastLineIsPartial = false;
-                IsRunning = false;
+                if (run.Generation != generation) return;
+                run.AddDashboardLine($"process exited with code {code}");
+                run.IsRunning = false;
             }));
 
-        if (Kind == ProjectKind.Flutter && SelectedDevice != null) RunStartedOnDevice?.Invoke(SelectedDevice);
+        if (device != null) RunStartedOnDevice?.Invoke(device);
     }
 
     private static string? TryExtractLocalUrl(string line)
@@ -1289,7 +1400,7 @@ public partial class ProjectViewModel : ObservableObject
 
     // A server left over from a crashed run or started from another terminal keeps the port bound,
     // and Kestrel then fails with "address already in use" — offer to force stop it first.
-    private bool EnsurePortsFree(List<int> ports)
+    private bool EnsurePortsFree(RunSession run, List<int> ports)
     {
         var listeners = _ports.FindListeners(ports);
         if (listeners.Count == 0) return true;
@@ -1300,7 +1411,7 @@ public partial class ProjectViewModel : ObservableObject
             "Port in use", MessageBoxButton.YesNo, MessageBoxImage.Warning);
         if (confirm != MessageBoxResult.Yes)
         {
-            ConsoleOutput.Add($"[dashboard] Run cancelled — port {string.Join(", ", listeners.Select(l => l.Port))} in use.");
+            run.AddDashboardLine($"Run cancelled — port {string.Join(", ", listeners.Select(l => l.Port))} in use.");
             return false;
         }
 
@@ -1308,10 +1419,10 @@ public partial class ProjectViewModel : ObservableObject
         {
             if (!_ports.TryKillProcess(listener.Pid, out var error))
             {
-                ConsoleOutput.Add($"[dashboard] Could not stop {listener.ProcessName} (PID {listener.Pid}): {error}");
+                run.AddDashboardLine($"Could not stop {listener.ProcessName} (PID {listener.Pid}): {error}");
                 return false;
             }
-            ConsoleOutput.Add($"[dashboard] Stopped {listener.ProcessName} (PID {listener.Pid}) on port {listener.Port}.");
+            run.AddDashboardLine($"Stopped {listener.ProcessName} (PID {listener.Pid}) on port {listener.Port}.");
         }
         return true;
     }
@@ -1346,11 +1457,35 @@ public partial class ProjectViewModel : ObservableObject
         }
     }
 
+    /// <summary>Stops the run shown; runs on other devices carry on.</summary>
     [RelayCommand]
-    public void Stop()
+    public void Stop() => StopRun(SelectedRun);
+
+    /// <summary>Stops every run, as when the project is taken off the dashboard.</summary>
+    public void StopAll()
     {
-        _runningProcess?.Stop();
-        IsRunning = false;
+        foreach (var run in Runs) StopRun(run);
+    }
+
+    private static void StopRun(RunSession? run)
+    {
+        if (run == null) return;
+        run.Process?.Stop();
+        run.IsRunning = false;
+    }
+
+    /// <summary>A run's tab's ✕: stops it if it's running, and closes the tab.</summary>
+    [RelayCommand]
+    private void CloseRun(RunSession? run)
+    {
+        var index = run == null ? -1 : Runs.IndexOf(run);
+        if (run == null || index < 0) return;
+        var wasShown = SelectedRun == run;
+        StopRun(run);
+        Runs.Remove(run);
+        // The tab beside it shows next.
+        if (wasShown) SelectedRun = Runs.Count == 0 ? null : Runs[Math.Min(index, Runs.Count - 1)];
+        RefreshRunState();
     }
 
     /// <summary>Sends the input box's line to the running app, as if typed in its terminal. An empty line is just Enter.</summary>
@@ -1364,29 +1499,17 @@ public partial class ProjectViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(IsRunning))]
     private void SendKey(string key) => SendToApp(key);
 
+    // To the app of the run shown, so Hot reload reloads the device whose tab is open.
     private bool SendToApp(string text)
     {
-        if (_runningProcess == null) return false;
-        if (!_runningProcess.SendInput(text))
+        if (SelectedRun is not { IsRunning: true, Process: { } process } run) return false;
+        if (!process.SendInput(text))
         {
-            ConsoleOutput.Add("[dashboard] The app isn't reading input any more.");
-            _lastLineIsPartial = false;
+            run.AddDashboardLine("The app isn't reading input any more.");
             return false;
         }
-
-        // Shown as a terminal echoes it: after the prompt it answers, else on its own line.
-        if (_lastLineIsPartial) ConsoleOutput[ConsoleOutput.Count - 1] += text;
-        else ConsoleOutput.Add(text);
-        _lastLineIsPartial = false;
+        run.Echo(text);
         return true;
-    }
-
-    // A partial line stays the console's last line, and the next output replaces it with more of the same line.
-    private void ShowOutput(string line, bool partial)
-    {
-        if (_lastLineIsPartial) ConsoleOutput[ConsoleOutput.Count - 1] = line;
-        else ConsoleOutput.Add(line);
-        _lastLineIsPartial = partial;
     }
 
     /// <summary>The repo's page on GitHub, from its GitHub remote (origin first); null when it isn't on GitHub.</summary>

@@ -425,7 +425,7 @@
                                              Visibility="{Binding IsDirty, Converter={StaticResource BoolToVisibility}}"/>
                                     <Rectangle Width="8" Height="8" Fill="{StaticResource Success}" Margin="0,4,6,0"
                                              ToolTip="Running"
-                                             Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}"/>
+                                             Visibility="{Binding IsAnyRunning, Converter={StaticResource BoolToVisibility}}"/>
                                     <Button Content="✕" ToolTip="Remove from dashboard" Style="{StaticResource Button.Icon}"
                                             Command="{Binding DataContext.RemoveProjectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                             CommandParameter="{Binding}"/>
@@ -1040,7 +1040,10 @@
                                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
                                     <StackPanel Orientation="Horizontal"
                                                 Visibility="{Binding Kind, Converter={StaticResource EnumToVisibility}, ConverterParameter=Flutter}">
-                                        <ComboBox Width="240" Height="32" ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" Margin="0,0,8,0"/>
+                                        <!-- The device Run starts the app on. Pick another and Run again to run on it too: each device's run gets a tab over the console. -->
+                                        <ComboBox Width="240" Height="32" ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" Margin="0,0,8,0"
+                                                  AutomationProperties.Name="Device to run on"
+                                                  ToolTip="The device Run starts the app on. While it runs, pick another and press Run to run it there too."/>
                                         <Button Content="Refresh Devices" Style="{StaticResource Button.Secondary}" Command="{Binding LoadDevicesCommand}"/>
                                         <Button Content="Emulators…" Style="{StaticResource Button.Secondary}" Margin="8,0,0,0"
                                                 ToolTip="Start an Android emulator to run on, or create one" Click="OpenEmulators_Click"/>
@@ -1076,9 +1079,10 @@
                                     </StackPanel>
 
                                     <Button Content="▶  Run" Style="{StaticResource Button.Primary}" Margin="16,0,8,0"
-                                            Command="{Binding RunCommand}" IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolean}}"/>
+                                            Command="{Binding RunCommand}" IsEnabled="{Binding CanRun}"/>
                                     <Button Content="■  Stop" Style="{StaticResource Button.Danger}"
-                                            Command="{Binding StopCommand}" IsEnabled="{Binding IsRunning}"/>
+                                            Command="{Binding StopCommand}" IsEnabled="{Binding IsRunning}"
+                                            ToolTip="Stops the app whose console shows; the app on other devices carries on"/>
                                 </StackPanel>
 
                                 <!-- Where the site the app serves opens (the same for every project), and whether a run opens it by itself -->

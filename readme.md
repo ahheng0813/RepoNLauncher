@@ -59,6 +59,7 @@ The files aren't code-signed yet, so Windows may warn before the first run: choo
 - **Changes.** Changed files with diffs. Commit, discard, stash, and resolve merge conflicts.
 - **Commits.** Recent history.
 - **Run.** Starts the project with a live console: `flutter run` on a device, `dotnet run`, or your own command. **Choose file…** builds the command from a script.
+  - **Flutter devices:** **Run** starts the app on the device picked beside **Refresh Devices**. To run it on another device too, pick that one and press **Run** again. Each device gets a tab over the console with its own output, and a green dot while the app runs there. **Stop**, **Hot reload**, **Hot restart** and what you type go to the tab that's open, and picking a tab picks its device. ✕ on a tab stops the app on that device and closes the tab. A command of your own that names its device with `-d` runs in that device's tab.
   - **Save** keeps the typed command in a list under it, so a project can have several: each saved command has its own ▶ to run it with one click, and ✕ to remove it.
   - Type in the box under the console to answer the app's prompts. Flutter projects also get **Hot reload** and **Hot restart**.
   - Drag over the output to select it, and **Ctrl+C** to copy (or right-click: **Copy**, **Copy all**, **Select all**). **Ctrl+click** an address the app printed to open it.
@@ -84,6 +85,7 @@ The files aren't code-signed yet, so Windows may warn before the first run: choo
     - **New folder**, **Rename** (F2) and **Delete** change the phone's files. Deleting can't be undone: the phone has no recycle bin for it.
     - It asks before replacing anything with the same name, and **Stop** cancels a copy and removes what it left half copied.
     - Files dropped on the Phone screen's buttons go straight to the phone's Download folder.
+  - **Console:** the Run console of the app the dashboard runs on the device, in a window of its own with that device's tab open, so its output, **Hot reload** and **Stop** are beside the phone.
   - After each screenshot or recording, the file is shown under the buttons to open or find in its folder.
 - **Android emulators.** The phone button in the Phone screen's header, or **Emulators…** in a Flutter project's Run tab, lists the emulators on this PC to start. You can also create one: pick a name, a size (small phone, medium phone or tablet) and an installed Android version. A started emulator joins the Phone screen and Flutter device lists.
 - **Repos on this PC.** Finds every git repo on your drives and sorts them into **Mine** and **Others** by GitHub owner, so you can add them to the dashboard.

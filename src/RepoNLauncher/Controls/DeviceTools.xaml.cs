@@ -64,6 +64,12 @@ public partial class DeviceTools : UserControl
         if (DataContext is DeviceScreenViewModel screen) PhoneFilesWindow.ShowFor(screen.Device.Serial, screen.OpenFiles);
     }
 
+    // The run console of the app on this device, with its tab open, beside the phone.
+    private void ConsoleButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is DeviceScreenViewModel screen && screen.FindRunConsole() is { } project) RunConsoleWindow.Open(project);
+    }
+
     private void CameraChoice_Click(object sender, RoutedEventArgs e) => CameraPopup.IsOpen = false;
 
     private void LocationButton_Click(object sender, RoutedEventArgs e)
