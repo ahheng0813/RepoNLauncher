@@ -16,7 +16,7 @@ namespace RepoNLauncher.ViewModels;
 /// <summary>
 /// One device on the Phone screen: its mirror, in the dashboard's side panel beside any others or popped out into a window
 /// of its own, and the tools that work on it — screenshots, recording the screen or a camera, recording the microphone,
-/// sending files, and a virtual location.
+/// sending files, a virtual location, and pressing its power, Back, Home and recent apps buttons.
 /// </summary>
 public partial class DeviceScreenViewModel : ObservableObject
 {
@@ -272,6 +272,29 @@ public partial class DeviceScreenViewModel : ObservableObject
         IsRecordingVoice = true;
         Status = $"Recording {Device.Model}'s microphone…";
         session.Exited += () => Application.Current?.Dispatcher.BeginInvoke(() => OnVoiceExited(session));
+    }
+
+    /// <summary>
+    /// Presses one of the device's own buttons: power (its screen off or on), Back, Home or recent apps. Several can be
+    /// pressed in a row without waiting for the one before.
+    /// </summary>
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task PressKeyAsync(DeviceKey key)
+    {
+        try
+        {
+            await _tools.PressKeyAsync(Device.Serial, key);
+        }
+        catch (Exception e) when (e is InvalidOperationException or TimeoutException)
+        {
+            var what = key switch
+            {
+                DeviceKey.Power => "the power button",
+                DeviceKey.Recents => "Recent apps",
+                _ => key.ToString(),
+            };
+            Status = $"Couldn't press {what} on {Device.Model}: {e.Message}";
+        }
     }
 
     /// <summary>The device's files to look through, send to and copy from; null (saying why) when it's gone.</summary>

@@ -50,6 +50,9 @@ public interface IDeviceToolsService
     /// <summary>Saves a PNG of the device's screen, at the screen's full resolution.</summary>
     Task TakeScreenshotAsync(string serial, string path, CancellationToken ct = default);
 
+    /// <summary>Presses one of the device's own buttons, as if pressed on it. Works whether or not its screen is showing.</summary>
+    Task PressKeyAsync(string serial, DeviceKey key, CancellationToken ct = default);
+
     /// <summary>
     /// Copies files and folders from this PC into a folder on the device, <see cref="DeviceToolsService.DeviceDownloadFolder"/>
     /// unless another is given, replacing ones with the same names. Null when adb doesn't say how much it copied.
@@ -158,6 +161,9 @@ public class DeviceToolsService(IScrcpyService scrcpy) : IDeviceToolsService
 
         await File.WriteAllBytesAsync(path, bytes, ct).ConfigureAwait(false);
     }
+
+    public async Task PressKeyAsync(string serial, DeviceKey key, CancellationToken ct = default) =>
+        await RunShellAsync(serial, $"input keyevent {(int)key}", ct).ConfigureAwait(false);
 
     public async Task<CopiedFiles?> SendFilesAsync(string serial, IReadOnlyList<string> paths, string folder = DeviceDownloadFolder,
         CancellationToken ct = default)

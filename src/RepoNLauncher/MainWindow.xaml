@@ -1206,7 +1206,7 @@
                                 Visibility="{Binding SelectedScreen.IsMirroring, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}"/>
                     </Grid>
 
-                    <!-- Screenshot, recording, camera, location and sending files, for the device picked above -->
+                    <!-- Screenshot, recording, camera, location, sending files and the phone's own buttons, for the device picked above -->
                     <controls:DeviceTools DockPanel.Dock="Top" Margin="-6,0,0,8" DataContext="{Binding SelectedScreen}">
                         <controls:DeviceTools.Style>
                             <Style TargetType="controls:DeviceTools">

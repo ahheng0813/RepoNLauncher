@@ -211,12 +211,43 @@
                     ToolTip="Files: look through the phone's folders, send files to it from this PC and copy its files here. Files dropped on this bar go to its Download folder."/>
 
             <ProgressBar IsIndeterminate="True" Width="40" Height="3" VerticalAlignment="Center" Margin="6,0,0,0"
-                         Visibility="{Binding IsSendingFiles, Converter={StaticResource BoolToVisibility}}"/>
+                         Visibility="{Binding IsSendingFiles, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}"/>
         </WrapPanel>
 
-        <!-- Recordings in progress -->
+        <!-- The phone's own buttons, pressed through adb: they work whether or not its screen is showing -->
+        <StackPanel Orientation="Horizontal">
+            <Button Content="&#xE7E8;" Style="{StaticResource Button.Ghost}"
+                    Command="{Binding PressKeyCommand}" CommandParameter="{x:Static models:DeviceKey.Power}"
+                    AutomationProperties.Name="Screen on or off"
+                    ToolTip="Screen on/off: presses the phone's power button"/>
+            <Border Width="1" Height="14" Background="{StaticResource Border.Strong}" Margin="4,0" VerticalAlignment="Center">
+                <Border.Style>
+                    <!-- Dims with the buttons while there's no device -->
+                    <Style TargetType="Border">
+                        <Style.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+            </Border>
+            <Button Content="&#xE72B;" Style="{StaticResource Button.Ghost}"
+                    Command="{Binding PressKeyCommand}" CommandParameter="{x:Static models:DeviceKey.Back}"
+                    AutomationProperties.Name="Back" ToolTip="Back"/>
+            <Button Content="&#xE80F;" Style="{StaticResource Button.Ghost}"
+                    Command="{Binding PressKeyCommand}" CommandParameter="{x:Static models:DeviceKey.Home}"
+                    AutomationProperties.Name="Home" ToolTip="Home"/>
+            <Button Content="&#xE7C4;" Style="{StaticResource Button.Ghost}"
+                    Command="{Binding PressKeyCommand}" CommandParameter="{x:Static models:DeviceKey.Recents}"
+                    AutomationProperties.Name="Recent apps" ToolTip="Recent apps: switch between the apps open on the phone"/>
+        </StackPanel>
+
+        <!-- Recordings in progress. The panel's tools have no device while none is connected, and a binding with nothing
+             to read leaves Visibility at Visible, so each of these says Collapsed for then. -->
         <WrapPanel>
-            <Border Style="{StaticResource RecordingPill}" Visibility="{Binding IsRecordingScreen, Converter={StaticResource BoolToVisibility}}">
+            <Border Style="{StaticResource RecordingPill}"
+                    Visibility="{Binding IsRecordingScreen, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}">
                 <StackPanel Orientation="Horizontal">
                     <Rectangle Width="8" Height="8" Fill="{StaticResource Danger}" VerticalAlignment="Center" Margin="0,0,7,0"/>
                     <TextBlock Text="{Binding ScreenRecordingLabel}" Foreground="{StaticResource Danger}" FontSize="12" VerticalAlignment="Center"/>
@@ -227,7 +258,8 @@
                             AutomationProperties.Name="Stop recording and save it"/>
                 </StackPanel>
             </Border>
-            <Border Style="{StaticResource RecordingPill}" Visibility="{Binding IsRecordingVoice, Converter={StaticResource BoolToVisibility}}">
+            <Border Style="{StaticResource RecordingPill}"
+                    Visibility="{Binding IsRecordingVoice, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}">
                 <StackPanel Orientation="Horizontal">
                     <Rectangle Width="8" Height="8" Fill="{StaticResource Danger}" VerticalAlignment="Center" Margin="0,0,7,0"/>
                     <TextBlock Text="Voice" Foreground="{StaticResource Danger}" FontSize="12" VerticalAlignment="Center"/>
@@ -243,7 +275,7 @@
         <!-- What was saved last -->
         <Border Background="{StaticResource Bg.PanelAlt}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
                 CornerRadius="0" Padding="10,4,2,4" Margin="0,6,0,0"
-                Visibility="{Binding LastCapturePath, Converter={StaticResource NullToVisibility}}">
+                Visibility="{Binding LastCapturePath, Converter={StaticResource NullToVisibility}, FallbackValue=Collapsed}">
             <DockPanel>
                 <Button DockPanel.Dock="Right" Content="&#xE711;" Style="{StaticResource Button.Ghost}" FontSize="10" Padding="6,4"
                         Command="{Binding DismissLastCaptureCommand}" ToolTip="Hide" AutomationProperties.Name="Hide the saved file"/>
