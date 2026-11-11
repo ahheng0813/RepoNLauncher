@@ -27,6 +27,29 @@ public static class AgentOptions
         new("max", "Max effort"),
     ];
 
+    /// <summary>
+    /// The Claude models, the Default one naming the model Claude Code's settings pick, if they do (model: opus), so
+    /// it's clear what Default runs.
+    /// </summary>
+    public static IReadOnlyList<AgentOption> ClaudeModelsFor(string workingDirectory)
+    {
+        if (ClaudeSettings.Model(workingDirectory) is not { } model) return ClaudeModels;
+        var name = ClaudeModels.FirstOrDefault(m => m.Value.Length > 0 && m.Value == ClaudeSettings.Alias(model))?.Label ?? model;
+        return [new(string.Empty, $"Default ({name})", "The model Claude Code's settings pick"), .. ClaudeModels.Skip(1)];
+    }
+
+    /// <summary>
+    /// The Claude efforts, the Default one naming the effort Claude Code's settings give the model, if they do: those
+    /// set with /effort or /model, such as xhigh for Opus. <paramref name="model"/> is the one picked; empty for Default.
+    /// </summary>
+    public static IReadOnlyList<AgentOption> ClaudeEffortsFor(string workingDirectory, string? model)
+    {
+        if (ClaudeSettings.Effort(workingDirectory, model) is not { } effort) return ClaudeEfforts;
+        var name = EffortLabel(effort);
+        name = name.EndsWith(" effort", StringComparison.Ordinal) ? name[..^" effort".Length] : name;
+        return [new(string.Empty, $"Default effort ({name})", "The effort Claude Code's settings give this model"), .. ClaudeEfforts.Skip(1)];
+    }
+
     public const string ClaudeAskMode = "manual";
 
     public static readonly IReadOnlyList<AgentOption> ClaudeModes =

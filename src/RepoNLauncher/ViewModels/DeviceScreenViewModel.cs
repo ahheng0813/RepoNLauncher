@@ -400,6 +400,8 @@ public partial class DeviceScreenViewModel : ObservableObject
             return;
         }
 
+        if (!await WaitUntilBootedAsync(request, saved)) return;
+
         // The screen's sound plays here when it's on, and goes in a recording with it. A camera's recording has the microphone's.
         var sound = Source == MirrorSource.Screen ? _phone.IsAudioEnabled : recordPath != null;
         ScrcpySession session;
@@ -425,6 +427,39 @@ public partial class DeviceScreenViewModel : ObservableObject
         Status = Join(saved, $"Connecting to {Device.Model}...");
         session.Exited += () => Application.Current?.Dispatcher.BeginInvoke(() => OnSessionExited(session));
         _ = AttachWhenReadyAsync(session, saved);
+    }
+
+    private static readonly TimeSpan BootWait = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// Waits, saying so, while the device is still starting up: adb lists an emulator well before Android has started,
+    /// and scrcpy started then fails, its input service not there yet. False when the mirror was stopped or started
+    /// again meanwhile. After <see cref="BootWait"/>, or when adb can't tell, it carries on and scrcpy says what's wrong.
+    /// </summary>
+    private async Task<bool> WaitUntilBootedAsync(int request, string? note)
+    {
+        var deadline = DateTime.UtcNow + BootWait;
+        var said = false;
+        while (DateTime.UtcNow < deadline)
+        {
+            try
+            {
+                if (await _tools.IsBootedAsync(Device.Serial)) break;
+            }
+            catch (Exception e) when (e is TimeoutException or System.ComponentModel.Win32Exception or InvalidOperationException)
+            {
+                break;
+            }
+            if (request != _mirrorRequest) return false;
+            if (!said)
+            {
+                IsMirroring = true; // Stop is there to give up waiting
+                Status = Join(note, $"Waiting for {Device.Model} to finish starting up…");
+                said = true;
+            }
+            await Task.Delay(TimeSpan.FromSeconds(1));
+        }
+        return request == _mirrorRequest;
     }
 
     private async Task AttachWhenReadyAsync(ScrcpySession session, string? note)
@@ -468,7 +503,15 @@ public partial class DeviceScreenViewModel : ObservableObject
         // A camera that won't start would only fail again; the next Show shows the screen.
         if (session.Source != MirrorSource.Screen) Source = MirrorSource.Screen;
 
-        var why = session.LastError is { } error ? $"Mirroring {Device.Model} stopped: {error}" : $"Mirroring {Device.Model} stopped.";
+        var why = session.LastError switch
+        {
+            // scrcpy reads the keyboard layout from Android's input service as it starts; on a device still starting
+            // up there's none yet, and it fails with this NullPointerException.
+            { } error when error.Contains("InputManagerGlobal", StringComparison.Ordinal) =>
+                $"Mirroring {Device.Model} stopped: its Android hadn't finished starting up. Press Show to try again.",
+            { } error => $"Mirroring {Device.Model} stopped: {error}",
+            null => $"Mirroring {Device.Model} stopped.",
+        };
         if (session.RecordPath == null)
         {
             Status = why;

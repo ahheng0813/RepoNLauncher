@@ -4,6 +4,7 @@
         xmlns:conv="clr-namespace:RepoNLauncher.Converters"
         xmlns:controls="clr-namespace:RepoNLauncher.Controls"
         xmlns:vm="clr-namespace:RepoNLauncher.ViewModels"
+        xmlns:services="clr-namespace:RepoNLauncher.Services"
         Title="Repo'N'Launcher" Height="820" Width="1500"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource Bg.App}"
@@ -280,6 +281,12 @@
                                         Command="{Binding GitHub.SignOutCommand}"/>
                             </StackPanel>
                         </Border>
+                        <Border Width="1" Background="{StaticResource Border.Subtle}" Margin="8,4,8,4"/>
+                        <!-- Settings: the date and time format, the app's other settings, its version, updates and where it's from -->
+                        <Button Style="{StaticResource Button.Secondary}" Margin="0" Padding="9,5" Click="OpenSettings_Click"
+                                ToolTip="Settings (Ctrl+,)" AutomationProperties.Name="Settings">
+                            <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="14" VerticalAlignment="Center"/>
+                        </Button>
                     </StackPanel>
                 </DockPanel>
 
@@ -857,7 +864,7 @@
                                             <GridView>
                                                 <GridViewColumn Header="Hash" Width="80" DisplayMemberBinding="{Binding ShortHash}"/>
                                                 <GridViewColumn Header="Author" Width="140" DisplayMemberBinding="{Binding Author}"/>
-                                                <GridViewColumn Header="Date" Width="170" DisplayMemberBinding="{Binding Date}"/>
+                                                <GridViewColumn Header="Date" Width="170" DisplayMemberBinding="{conv:DateTimeText Date}"/>
                                                 <GridViewColumn Header="Message" Width="420" DisplayMemberBinding="{Binding Message}"/>
                                             </GridView>
                                         </ListView.View>
@@ -885,7 +892,7 @@
                                                     <TextBlock Text="{Binding Hash}" FontFamily="{StaticResource Font.Mono}" FontSize="12"
                                                                Foreground="{StaticResource Text.Muted}"/>
                                                     <TextBlock Text="{Binding Author}" FontSize="12" Foreground="{StaticResource Text.Secondary}" Margin="16,0,0,0"/>
-                                                    <TextBlock Text="{Binding Date}" FontSize="12" Foreground="{StaticResource Text.Muted}" Margin="16,0,0,0"/>
+                                                    <TextBlock Text="{conv:DateTimeText Date}" FontSize="12" Foreground="{StaticResource Text.Muted}" Margin="16,0,0,0"/>
                                                 </StackPanel>
                                             </StackPanel>
                                         </Border>
@@ -1072,7 +1079,20 @@
                                                     <Button Content="{Binding}" Style="{StaticResource Button.Secondary}" Margin="0,0,8,0"
                                                             Command="{Binding DataContext.OpenSiteCommand, ElementName=ProjectTabControl}"
                                                             CommandParameter="{Binding}"
-                                                            ToolTip="Open the site, where Open in below says"/>
+                                                            Tag="{Binding DataContext, ElementName=ProjectTabControl}"
+                                                            ToolTip="Open the site, where Open in below says. Right-click to open it in the dashboard browser or your default browser instead.">
+                                                            <Button.ContextMenu>
+                                                                <!-- Just this once, whatever Open in says -->
+                                                                <ContextMenu>
+                                                                    <MenuItem Header="Open in the dashboard browser"
+                                                                              Command="{Binding PlacementTarget.Tag.OpenSiteInDashboardCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                              CommandParameter="{Binding}"/>
+                                                                    <MenuItem Header="{x:Static services:DefaultBrowser.OpenLabel}"
+                                                                              Command="{Binding PlacementTarget.Tag.OpenSiteInDefaultBrowserCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                              CommandParameter="{Binding}"/>
+                                                                </ContextMenu>
+                                                            </Button.ContextMenu>
+                                                    </Button>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
@@ -1080,20 +1100,23 @@
 
                                     <Button Content="▶  Run" Style="{StaticResource Button.Primary}" Margin="16,0,8,0"
                                             Command="{Binding RunCommand}" IsEnabled="{Binding CanRun}"/>
-                                    <Button Content="■  Stop" Style="{StaticResource Button.Danger}"
+                                    <Button Content="■  Stop" Style="{StaticResource Button.Danger}" Margin="0,0,8,0"
                                             Command="{Binding StopCommand}" IsEnabled="{Binding IsRunning}"
                                             ToolTip="Stops the app whose console shows; the app on other devices carries on"/>
+                                    <Button Content="↻  Restart" Style="{StaticResource Button.Secondary}" Margin="0"
+                                            Command="{Binding RestartCommand}"
+                                            ToolTip="Stops the app whose console shows and runs it again: the same command, on the same device"/>
                                 </StackPanel>
 
                                 <!-- Where the site the app serves opens (the same for every project), and whether a run opens it by itself -->
                                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
                                     <TextBlock Text="SITE" Style="{StaticResource SectionLabel}" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                     <TextBlock Text="Open in" Foreground="{StaticResource Text.Secondary}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <ComboBox Width="330" Height="32" AutomationProperties.Name="Open the site in"
+                                    <ComboBox Width="360" Height="32" AutomationProperties.Name="Open the site in"
                                               DataContext="{Binding DataContext.SiteBrowser, RelativeSource={RelativeSource AncestorType=Window}}"
                                               ItemsSource="{Binding Targets}" SelectedItem="{Binding SelectedTarget}"
                                               DropDownOpened="SiteTargets_DropDownOpened"
-                                              ToolTip="The dashboard's browser window, on a screen of its own, or your default browser. The same for every project."/>
+                                              ToolTip="The dashboard's own browser window, on a screen of its own, or your default browser, the one Windows opens links in. The same for every project, and in Settings."/>
                                     <CheckBox Content="Open it when the app starts serving it" Margin="16,0,0,0" VerticalAlignment="Center"
                                               IsChecked="{Binding OpenSiteOnRun}"
                                               ToolTip="Opens the first address the app prints, such as http://localhost:5173, as soon as it prints it"/>
@@ -1186,20 +1209,29 @@
                                 <DataTemplate>
                                     <TextBlock TextTrimming="CharacterEllipsis">
                                         <Run Text="{Binding Model, Mode=OneWay}"/>
-                                        <Run Text="{Binding Serial, Mode=OneWay}" Foreground="{StaticResource Text.Muted}" FontSize="11"/>
+                                        <Run Text="{Binding Note, Mode=OneWay}" Foreground="{StaticResource Text.Muted}" FontSize="11"/>
                                     </TextBlock>
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
                         <Button Grid.Column="1" Content="&#xE72C;" ToolTip="Refresh devices" Style="{StaticResource Button.Ghost}"
                                 Margin="4,0" Command="{Binding RefreshDevicesCommand}"/>
-                        <!-- Shows the device picked beside any already showing; Stop stops just that one -->
-                        <Button Grid.Column="2" Content="▶  Show" Margin="0" Command="{Binding ShowCommand}">
+                        <!-- Shows the device picked beside any already showing; Stop stops just that one. An emulator that
+                             isn't running is started first. -->
+                        <Button Grid.Column="2" Margin="0" Command="{Binding ShowCommand}">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource Button.Primary}">
+                                    <Setter Property="Content" Value="▶  Show"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding SelectedScreen.IsMirroring}" Value="True">
                                             <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SelectedDevice.IsEmulatorToStart}" Value="True">
+                                            <Setter Property="ToolTip" Value="Start the emulator, then show its screen here"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SelectedDevice.IsStarting}" Value="True">
+                                            <Setter Property="Content" Value="Starting…"/>
+                                            <Setter Property="IsEnabled" Value="False"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -1259,7 +1291,7 @@
                                     <TextBlock Text="&#xE8EA;" FontFamily="Segoe MDL2 Assets" FontSize="34" Foreground="{StaticResource Text.Muted}"
                                                HorizontalAlignment="Center" Margin="0,0,0,12"/>
                                     <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="11.5" TextWrapping="Wrap" TextAlignment="Center"
-                                               Text="Pick a device and press Show. Pick another and press Show to see both side by side. Running a Flutter app on an Android device shows its screen here automatically."/>
+                                               Text="Pick a device and press Show. Pick another and press Show to see both side by side. An emulator that isn't running starts first. Running a Flutter app on an Android device shows its screen here automatically."/>
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -1365,8 +1397,9 @@
                     <Button Content="Uninstall…" Style="{StaticResource Button.Secondary}" FontSize="11.5" Padding="8,2" Margin="10,0,0,0"
                             Click="Uninstall_Click" ToolTip="Remove Repo'N'Launcher and everything it keeps on this PC"
                             Visibility="{Binding CanUninstall, Converter={StaticResource BoolToVisibility}}"/>
-                    <TextBlock Text="{Binding VersionText}" Foreground="{StaticResource Text.Secondary}" FontSize="11.5" FontFamily="{StaticResource Font.Mono}"
-                               VerticalAlignment="Center" Margin="12,0,0,0" ToolTip="App version"/>
+                    <Button Content="{Binding VersionText}" Style="{StaticResource Button.Ghost}" FontFamily="{StaticResource Font.Mono}"
+                            FontSize="11.5" Padding="6,1" Margin="6,0,0,0" VerticalAlignment="Center" Click="OpenAbout_Click"
+                            ToolTip="App version: open About" AutomationProperties.Name="About Repo'N'Launcher"/>
                 </StackPanel>
                 <ProgressBar DockPanel.Dock="Right" IsIndeterminate="True" Width="110"
                              Visibility="{Binding IsFetchingAll, Converter={StaticResource BoolToVisibility}}"/>

@@ -13,7 +13,7 @@ namespace RepoNLauncher.Services;
 /// </summary>
 public class UpdateService
 {
-    public const string RepoUrl = "https://github.com/ahheng0813/RepoNLauncher";
+    public const string RepoUrl = AppInfo.RepoUrl;
     private const string FeedVariable = "REPONLAUNCHER_UPDATE_FEED";
 
     private readonly UpdateManager _manager;

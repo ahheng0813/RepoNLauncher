@@ -5,6 +5,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:conv="clr-namespace:RepoNLauncher.Converters"
         xmlns:controls="clr-namespace:RepoNLauncher.Controls"
+        xmlns:services="clr-namespace:RepoNLauncher.Services"
         Title="Run - Repo'N'Launcher" Height="760" Width="1100" MinWidth="560" MinHeight="320"
         WindowStartupLocation="Manual"
         Background="{StaticResource Bg.App}"
@@ -22,27 +23,15 @@
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Content="▶  Run" Style="{StaticResource Button.Primary}"
                             Command="{Binding RunCommand}" IsEnabled="{Binding CanRun}"/>
-                    <Button Content="■  Stop" Style="{StaticResource Button.Danger}" Margin="0,0,14,0"
+                    <Button Content="■  Stop" Style="{StaticResource Button.Danger}"
                             Command="{Binding StopCommand}" IsEnabled="{Binding IsRunning}"/>
+                    <Button Content="↻  Restart" Style="{StaticResource Button.Secondary}" Margin="0,0,14,0"
+                            Command="{Binding RestartCommand}"
+                            ToolTip="Stops the app whose console shows and runs it again: the same command, on the same device"/>
                     <Button x:Name="NextScreenButton" Content="&#xE7F4;" Style="{StaticResource Button.Ghost}" Margin="0,0,2,0"
                             ToolTip="Move to the next screen" AutomationProperties.Name="Move to the next screen"
                             Click="NextScreen_Click"/>
-                    <Button AutomationProperties.Name="Pin on top" Click="Pin_Click">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
-                                <Setter Property="Content" Value="&#xE718;"/>
-                                <Setter Property="ToolTip" Value="Pin on top of other windows"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Topmost, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                                        <Setter Property="Content" Value="&#xE840;"/>
-                                        <Setter Property="Foreground" Value="{StaticResource Accent}"/>
-                                        <Setter Property="Background" Value="{StaticResource Accent.Muted}"/>
-                                        <Setter Property="ToolTip" Value="Pinned on top — click to unpin"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
+                    <controls:PinOnTopButton/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -77,7 +66,20 @@
                                 <Button Content="{Binding}" Style="{StaticResource Button.Secondary}" Padding="10,4" Margin="0,0,6,0"
                                         Command="{Binding DataContext.OpenSiteCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                         CommandParameter="{Binding}"
-                                        ToolTip="Open the site, where the Run tab's Open in says"/>
+                                        Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        ToolTip="Open the site, where the Run tab's Open in says. Right-click to open it in the dashboard browser or your default browser instead.">
+                                        <Button.ContextMenu>
+                                            <!-- Just this once, whatever Open in says -->
+                                            <ContextMenu>
+                                                <MenuItem Header="Open in the dashboard browser"
+                                                          Command="{Binding PlacementTarget.Tag.OpenSiteInDashboardCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                          CommandParameter="{Binding}"/>
+                                                <MenuItem Header="{x:Static services:DefaultBrowser.OpenLabel}"
+                                                          Command="{Binding PlacementTarget.Tag.OpenSiteInDefaultBrowserCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                          CommandParameter="{Binding}"/>
+                                            </ContextMenu>
+                                        </Button.ContextMenu>
+                                </Button>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

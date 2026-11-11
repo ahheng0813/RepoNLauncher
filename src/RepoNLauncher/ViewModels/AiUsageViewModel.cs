@@ -43,7 +43,7 @@ public partial class AiUsageViewModel : ObservableObject
             if (checkLimits) Status = "Checking plan limits with Claude Code and Codex…";
             await ReadAsync(checkLimits);
             if (checkLimits) _limitsCheckedAt = DateTime.Now;
-            Status = $"Updated {DateTime.Now:t}. Refreshes every minute.";
+            Status = $"Updated {DateTimeDisplay.Time(DateTime.Now)}. Refreshes every minute.";
         }
         finally
         {
@@ -203,15 +203,15 @@ public class LimitRow
 
     private static string When(DateTimeOffset time)
     {
-        var local = time.ToLocalTime();
+        var local = time.LocalDateTime;
         var days = (local.Date - DateTime.Today).TotalDays;
         return days switch
         {
-            0 => $"today {local:t}",
-            1 => $"tomorrow {local:t}",
-            -1 => $"yesterday {local:t}",
-            > 1 and < 7 => $"{local:ddd} {local:t}",
-            _ => $"{local:d MMM} {local:t}",
+            0 => $"today {DateTimeDisplay.Time(local)}",
+            1 => $"tomorrow {DateTimeDisplay.Time(local)}",
+            -1 => $"yesterday {DateTimeDisplay.Time(local)}",
+            > 1 and < 7 => $"{local:ddd} {DateTimeDisplay.Time(local)}",
+            _ => DateTimeDisplay.DateAndTime(local),
         };
     }
 }

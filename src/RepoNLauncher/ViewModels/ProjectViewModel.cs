@@ -96,6 +96,7 @@ public partial class ProjectViewModel : ObservableObject
     private readonly IProcessRunner _processRunner;
     private readonly IPortService _ports;
     private readonly IIdeService _ides;
+    private readonly IEmulatorService _emulators;
 
     public ProjectInfo Info { get; }
 
@@ -170,7 +171,7 @@ public partial class ProjectViewModel : ObservableObject
     /// Raised to show the project's site: true when its button was pressed, so the browser comes to the front; false when
     /// a run just started serving it.
     /// </summary>
-    public event Action<string, bool>? SiteOpenRequested;
+    public event Action<string, bool, bool?>? SiteOpenRequested;
 
     /// <summary>Flutter and .NET start from their project files; the other kinds often start from one script.</summary>
     public bool CanChooseStartFile => Kind is not (ProjectKind.Flutter or ProjectKind.DotNet);
@@ -336,7 +337,7 @@ public partial class ProjectViewModel : ObservableObject
     public bool IsAnyRunning => Runs.Any(r => r.IsRunning);
 
     /// <summary>Run can start: the device it would run on (or, for a project not run on devices, its one run) isn't running.</summary>
-    public bool CanRun => !IsRunningOn(DeviceFor(BoxCommand));
+    public bool CanRun => RunOnDevice(DeviceFor(BoxCommand)?.Id) is not ({ IsRunning: true } or { IsRestarting: true });
 
     /// <summary>A Flutter project's runs each have a tab over the console, named after the device.</summary>
     public bool ShowRunTabs => Runs.Any(r => r.Device != null);
@@ -361,7 +362,8 @@ public partial class ProjectViewModel : ObservableObject
         IEnvironmentParser envParser,
         IProcessRunner processRunner,
         IPortService ports,
-        IIdeService ides)
+        IIdeService ides,
+        IEmulatorService emulators)
     {
         Info = info;
         _git = git;
@@ -371,6 +373,7 @@ public partial class ProjectViewModel : ObservableObject
         _processRunner = processRunner;
         _ports = ports;
         _ides = ides;
+        _emulators = emulators;
         SavedCommands = new ObservableCollection<string>(info.SavedRunCommands ?? new List<string>());
     }
 
@@ -1155,6 +1158,12 @@ public partial class ProjectViewModel : ObservableObject
         try
         {
             var devices = await _flutter.GetDevicesAsync();
+            // Emulators by their own names: Flutter, like Android, calls them all sdk gphone64 x86 64.
+            var names = await _emulators.GetDisplayNamesAsync(devices.Where(d => d.IsEmulator).Select(d => d.Id));
+            foreach (var device in devices)
+            {
+                if (names.TryGetValue(device.Id, out var name)) device.Name = name;
+            }
             // The device picked stays picked while it's still connected.
             var picked = SelectedDevice?.Id;
             Devices.Clear();
@@ -1196,6 +1205,8 @@ public partial class ProjectViewModel : ObservableObject
         OnPropertyChanged(nameof(CanRun));
         OnPropertyChanged(nameof(ShowRunTabs));
         OnPropertyChanged(nameof(ConsoleInputHint));
+        OnPropertyChanged(nameof(CanRestart));
+        RestartCommand.NotifyCanExecuteChanged();
         SendInputCommand.NotifyCanExecuteChanged();
         SendKeyCommand.NotifyCanExecuteChanged();
         RunSavedCommand.NotifyCanExecuteChanged();
@@ -1264,7 +1275,7 @@ public partial class ProjectViewModel : ObservableObject
         run = new RunSession(device, title);
         run.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(RunSession.IsRunning)) RefreshRunState();
+            if (e.PropertyName is nameof(RunSession.IsRunning) or nameof(RunSession.IsRestarting)) RefreshRunState();
         };
         Runs.Add(run);
         return run;
@@ -1349,8 +1360,17 @@ public partial class ProjectViewModel : ObservableObject
 
         var run = RunTabFor(device);
         SelectedRun = run;
+        Launch(run, command, ports);
+    }
+
+    // Runs the command in the run's tab, from an empty console, on the run's device.
+    private void Launch(RunSession run, string command, List<int> ports)
+    {
+        var device = run.Device;
         run.Clear();
         if (!EnsurePortsFree(run, ports)) return;
+        run.Command = command;
+        run.Ports = ports;
         run.AddDashboardLine(command);
         run.StartedAt = DateTime.Now;
         run.IsRunning = true;
@@ -1380,7 +1400,7 @@ public partial class ProjectViewModel : ObservableObject
 
                 run.DetectedUrls.Add(url);
                 // The first address is the site; any after it (https beside http, say) stay buttons.
-                if (run.DetectedUrls.Count == 1 && OpenSiteOnRun) SiteOpenRequested?.Invoke(url, false);
+                if (run.DetectedUrls.Count == 1 && OpenSiteOnRun) SiteOpenRequested?.Invoke(url, false, null);
             }),
             onExit: code => Application.Current.Dispatcher.Invoke(() =>
             {
@@ -1460,6 +1480,37 @@ public partial class ProjectViewModel : ObservableObject
     /// <summary>Stops the run shown; runs on other devices carry on.</summary>
     [RelayCommand]
     public void Stop() => StopRun(SelectedRun);
+
+    /// <summary>
+    /// Stop, then Run, for the run shown: the same command again on the same device, in the same tab, once the app has
+    /// ended. A run that has already stopped just runs again.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanRestart))]
+    private async Task RestartAsync()
+    {
+        if (SelectedRun is not { Command: { } command, IsRestarting: false } run) return;
+        run.IsRestarting = true;
+        try
+        {
+            if (run.IsRunning && run.Process is { } process)
+            {
+                run.AddDashboardLine("Restarting…");
+                StopRun(run);
+                await process.WaitForExitAsync(TimeSpan.FromSeconds(10));
+                // The server's ports can take a moment more to come free; the port check before the run asks if they don't.
+                for (var i = 0; i < 15 && _ports.FindListeners(run.Ports).Count > 0; i++) await Task.Delay(200);
+                // Closed meanwhile, or run again with Run.
+                if (!Runs.Contains(run) || run.IsRunning) return;
+            }
+            Launch(run, command, run.Ports);
+        }
+        finally
+        {
+            run.IsRestarting = false;
+        }
+    }
+
+    public bool CanRestart => SelectedRun is { Command: not null, IsRestarting: false };
 
     /// <summary>Stops every run, as when the project is taken off the dashboard.</summary>
     public void StopAll()
@@ -1602,7 +1653,15 @@ public partial class ProjectViewModel : ObservableObject
 
     /// <summary>A URL button in the Run tab: the site, where the Open in picker says.</summary>
     [RelayCommand]
-    private void OpenSite(string url) => SiteOpenRequested?.Invoke(url, true);
+    private void OpenSite(string url) => SiteOpenRequested?.Invoke(url, true, null);
+
+    /// <summary>A URL button's menu: the site in the dashboard's browser window, whatever Open in says.</summary>
+    [RelayCommand]
+    private void OpenSiteInDashboard(string url) => SiteOpenRequested?.Invoke(url, true, false);
+
+    /// <summary>A URL button's menu: the site in the default browser, whatever Open in says.</summary>
+    [RelayCommand]
+    private void OpenSiteInDefaultBrowser(string url) => SiteOpenRequested?.Invoke(url, true, true);
 
     private static void OpenUrl(string? url)
     {

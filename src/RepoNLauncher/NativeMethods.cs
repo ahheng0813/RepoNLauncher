@@ -3,8 +3,8 @@ using System.Runtime.InteropServices;
 namespace RepoNLauncher;
 
 /// <summary>
-/// Windows calls: the console-style title bar that matches the app's theme, refreshing the icons File Explorer shows,
-/// Explorer's name order, and where the Downloads folder is.
+/// Windows calls: the console-style title bar that matches the app's theme, bringing a window to the front, refreshing
+/// the icons File Explorer shows, Explorer's name order, and where the Downloads folder is.
 /// </summary>
 internal static class NativeMethods
 {
@@ -53,6 +53,34 @@ internal static class NativeMethods
         DwmSetWindowAttribute(hwnd, DWMWA_TEXT_COLOR, ref text, sizeof(int));
         DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, ref border, sizeof(int));
         DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref corners, sizeof(int));
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool SetWindowPos(IntPtr hwnd, IntPtr after, int x, int y, int width, int height, uint flags);
+
+    private static readonly IntPtr HWND_TOPMOST = new(-1);
+    private static readonly IntPtr HWND_NOTOPMOST = new(-2);
+    private const uint SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOACTIVATE = 0x0010;
+
+    /// <summary>
+    /// A window that's open already, shown again as opening it would show it: restored if it was minimized (maximized
+    /// again if it was maximized), in front of every other window, and active. Activate alone does none of that for a
+    /// minimized window, and leaves it behind others when Windows won't hand it the focus, so it's raised through the
+    /// topmost band and straight back, which Windows always allows. A window pinned on top stays pinned.
+    /// </summary>
+    public static void BringToFront(System.Windows.Window window)
+    {
+        if (!window.IsVisible) window.Show();
+        if (window.WindowState == System.Windows.WindowState.Minimized) System.Windows.SystemCommands.RestoreWindow(window);
+
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(window).Handle;
+        if (hwnd != IntPtr.Zero && !window.Topmost)
+        {
+            const uint flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE;
+            SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, flags);
+            SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, flags);
+        }
+        window.Activate();
     }
 
     [DllImport("shlwapi.dll", CharSet = CharSet.Unicode)]

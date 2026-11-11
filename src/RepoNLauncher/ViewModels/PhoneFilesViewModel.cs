@@ -62,7 +62,7 @@ public partial class PhoneFileItem(DeviceFile file) : ObservableObject
     public string Name => File.Name;
     public bool IsFolder => File.IsFolder;
     public string Size => File.IsFolder ? "" : FileSize.Format(File.Size);
-    public string Modified => File.Modified.ToString("g", CultureInfo.CurrentCulture);
+    public string Modified => DateTimeDisplay.DateAndTime(File.Modified);
 
     public string Kind => File.IsFolder ? "Folder"
         : Path.GetExtension(File.Name) is { Length: > 1 } extension ? $"{extension[1..].ToUpperInvariant()} file"

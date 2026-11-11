@@ -1,6 +1,7 @@
 <Window x:Class="RepoNLauncher.BrowserWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:RepoNLauncher.Controls"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         Title="Repo'N'Launcher" Height="800" Width="1200"
         WindowStartupLocation="Manual"
@@ -39,22 +40,7 @@
                     <Button x:Name="NextScreenButton" Content="&#xE7F4;" Style="{StaticResource Button.Ghost}" Margin="0,0,2,0"
                             ToolTip="Move to the next screen" AutomationProperties.Name="Move to the next screen"
                             Click="NextScreen_Click"/>
-                    <Button Margin="0,0,2,0" AutomationProperties.Name="Pin on top" Click="Pin_Click">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
-                                <Setter Property="Content" Value="&#xE718;"/>
-                                <Setter Property="ToolTip" Value="Pin on top of other windows"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Topmost, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                                        <Setter Property="Content" Value="&#xE840;"/>
-                                        <Setter Property="Foreground" Value="{StaticResource Accent}"/>
-                                        <Setter Property="Background" Value="{StaticResource Accent.Muted}"/>
-                                        <Setter Property="ToolTip" Value="Pinned on top — click to unpin"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
+                    <controls:PinOnTopButton Margin="0,0,2,0"/>
                     <Button Content="&#xE740;" Style="{StaticResource Button.Ghost}"
                             ToolTip="Full screen (F11)" AutomationProperties.Name="Full screen" Click="FullScreen_Click"/>
                 </StackPanel>

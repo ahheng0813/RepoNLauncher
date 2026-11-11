@@ -47,6 +47,12 @@ public interface IDeviceToolsService
     /// <summary>The device's Android API level (28 is Android 9), or 0 when it can't be read.</summary>
     Task<int> GetApiLevelAsync(string serial, CancellationToken ct = default);
 
+    /// <summary>
+    /// Android has finished starting up. adb lists a device, an emulator especially, well before that, and scrcpy started
+    /// on one still starting fails: its input service isn't there yet.
+    /// </summary>
+    Task<bool> IsBootedAsync(string serial, CancellationToken ct = default);
+
     /// <summary>Saves a PNG of the device's screen, at the screen's full resolution.</summary>
     Task TakeScreenshotAsync(string serial, string path, CancellationToken ct = default);
 
@@ -132,6 +138,12 @@ public class DeviceToolsService(IScrcpyService scrcpy) : IDeviceToolsService
     {
         var result = await RunAdbAsync(ct, CommandTimeout, "-s", serial, "shell", "getprop", "ro.build.version.sdk").ConfigureAwait(false);
         return int.TryParse(result.Output.Trim(), out var api) ? api : 0;
+    }
+
+    public async Task<bool> IsBootedAsync(string serial, CancellationToken ct = default)
+    {
+        var result = await RunAdbAsync(ct, CommandTimeout, "-s", serial, "shell", "getprop", "sys.boot_completed").ConfigureAwait(false);
+        return result.Output.Trim() == "1";
     }
 
     public async Task TakeScreenshotAsync(string serial, string path, CancellationToken ct = default)

@@ -338,6 +338,21 @@ public partial class ChatPane : UserControl
             e.Handled = true;
             if (Chat?.SendCommand.CanExecute(null) == true) Chat.SendCommand.Execute(null);
         }
+        // Up on the first line brings back the message sent before, as in a terminal; Down on the last line goes forward
+        // again, and past the newest, back to what was being typed. Elsewhere they move the caret between lines as usual.
+        else if (e.Key is Key.Up or Key.Down && Keyboard.Modifiers == ModifierKeys.None && Chat is { } chat)
+        {
+            var line = Prompt.GetLineIndexFromCharacterIndex(Prompt.CaretIndex);
+            var recalled = e.Key == Key.Up
+                ? line <= 0 && chat.RecallPrevious()
+                : (line < 0 || line >= Prompt.LineCount - 1) && chat.RecallNext();
+            if (recalled)
+            {
+                e.Handled = true;
+                Prompt.CaretIndex = Prompt.Text.Length;
+                Prompt.ScrollToEnd();
+            }
+        }
         else if (e.Key == Key.V && Keyboard.Modifiers == ModifierKeys.Control && PasteAttachments())
         {
             e.Handled = true;

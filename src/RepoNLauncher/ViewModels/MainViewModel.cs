@@ -18,6 +18,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IProcessRunner _processRunner;
     private readonly IPortService _ports;
     private readonly IIdeService _ides;
+    private readonly IEmulatorService _emulators;
 
     private DashboardConfig _config;
 
@@ -47,6 +48,9 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>Where the Run tab opens the site a project serves, for every project.</summary>
     public SiteBrowserViewModel SiteBrowser { get; }
+
+    /// <summary>The Settings window: the date and time format, the app's other settings, its version and where it's from.</summary>
+    public SettingsViewModel Settings { get; }
 
     [ObservableProperty] private ProjectViewModel? _selectedProject;
     [ObservableProperty] private bool _isFetchingAll;
@@ -90,17 +94,24 @@ public partial class MainViewModel : ObservableObject
         _processRunner = processRunner;
         _ports = ports;
         _ides = ides;
-        PhoneScreen = new PhoneScreenViewModel(scrcpy, new DeviceToolsService(scrcpy)) { FindRunOn = device => FindProjectRunningOn(device.Serial) };
+        _emulators = emulators;
+        Emulators = new EmulatorsViewModel(emulators);
+        Emulators.Changed += OnEmulatorsChanged;
+        PhoneScreen = new PhoneScreenViewModel(scrcpy, new DeviceToolsService(scrcpy), emulators, Emulators)
+        {
+            FindRunOn = device => FindProjectRunningOn(device.Serial),
+        };
         GitHub = new GitHubAccountViewModel(gitHub);
         PcRepos = new PcReposViewModel(GitHub, IsOnDashboard, paths => AddProjectsFrom("Repos on this PC", paths));
         AiUsage = aiUsage;
         Updates = updates;
-        Emulators = new EmulatorsViewModel(emulators);
-        Emulators.EmulatorStarted += OnEmulatorStarted;
         AgentChat = new AgentChatViewModel(() => Projects.Select(p => new ProjectOption(p.Name, p.Path)), () => SelectedProject?.Path);
 
         _config = _configService.Load();
+        _config.DateTimeFormat ??= new DateTimeFormatSettings();
+        DateTimeDisplay.Apply(_config.DateTimeFormat);
         SiteBrowser = new SiteBrowserViewModel(_config.SiteScreen, _config.OpenSitesInDefaultBrowser, SaveSiteTarget);
+        Settings = new SettingsViewModel(_config.DateTimeFormat, SaveDateTimeFormat, Updates, GitHub, OpenWithApps, Emulators, SiteBrowser);
         CloneRepos = new CloneReposViewModel(GitHub, git, IsOnDashboard, paths => AddProjectsFrom("Clone from GitHub", paths),
             () => _config.Projects.Select(p => p.Path), DefaultCloneFolder(), SaveCloneFolder);
         LoadProjectsFromConfig();
@@ -126,8 +137,9 @@ public partial class MainViewModel : ObservableObject
         return found.Project;
     }
 
-    // A started emulator is a new device: the phone screen can mirror it, and a Flutter project can run on it.
-    private void OnEmulatorStarted()
+    // A started emulator is a new device: the phone screen can mirror it, and a Flutter project can run on it. One shut
+    // down, made, renamed or deleted changes the lists too: the phone screen's has the emulators that aren't running.
+    private void OnEmulatorsChanged()
     {
         _ = PhoneScreen.RefreshDevicesAsync();
         if (SelectedProject?.Kind == ProjectKind.Flutter) _ = SelectedProject.LoadDevicesAsync();
@@ -210,9 +222,10 @@ public partial class MainViewModel : ObservableObject
 
     private ProjectViewModel CreateProjectViewModel(ProjectInfo info)
     {
-        var project = new ProjectViewModel(info, _git, _flutter, _dotNet, _envParser, _processRunner, _ports, _ides);
+        var project = new ProjectViewModel(info, _git, _flutter, _dotNet, _envParser, _processRunner, _ports, _ides, _emulators);
         project.RunStartedOnDevice += device => _ = PhoneScreen.ShowRunDeviceAsync(device);
-        project.SiteOpenRequested += (url, activate) => SiteBrowser.Open(project.Path, project.Name, url, activate);
+        project.SiteOpenRequested += (url, activate, inDefaultBrowser) =>
+            SiteBrowser.Open(project.Path, project.Name, url, activate, inDefaultBrowser);
         project.SettingsChanged += PersistConfig; // the project edits its ProjectInfo, which is part of _config
         project.PropertyChanged += (_, e) =>
         {
@@ -232,6 +245,12 @@ public partial class MainViewModel : ObservableObject
     }
 
     private void PersistConfig() => _configService.Save(_config);
+
+    private void SaveDateTimeFormat(DateTimeFormatSettings format)
+    {
+        _config.DateTimeFormat = format;
+        PersistConfig();
+    }
 
     private void SaveSiteTarget(string? screen, bool inDefaultBrowser)
     {

@@ -56,6 +56,17 @@ public class RunningProcessHandle
         }
         catch { /* already exited */ }
     }
+
+    /// <summary>Waits for it to end, after <see cref="Stop"/>, at most <paramref name="timeout"/>.</summary>
+    public async Task WaitForExitAsync(TimeSpan timeout)
+    {
+        using var cts = new CancellationTokenSource(timeout);
+        try
+        {
+            await _process.WaitForExitAsync(cts.Token);
+        }
+        catch (Exception e) when (e is OperationCanceledException or InvalidOperationException) { }
+    }
 }
 
 public record CaptureResult(int ExitCode, string StdOut, string StdErr);

@@ -81,8 +81,8 @@ public partial class BrowserWindow : Window
         if (OpenWindows.TryGetValue(request.ProjectPath, out var open))
         {
             open.Go(request.Url);
-            if (open.WindowState == WindowState.Minimized) SystemCommands.RestoreWindow(open);
-            if (request.Activate) open.Activate();
+            if (request.Activate) NativeMethods.BringToFront(open);
+            else if (open.WindowState == WindowState.Minimized) SystemCommands.RestoreWindow(open);
             return;
         }
 
@@ -291,7 +291,6 @@ public partial class BrowserWindow : Window
         PlaceOn(screens[(index + 1) % screens.Count]);
     }
 
-    private void Pin_Click(object sender, RoutedEventArgs e) => Topmost = !Topmost;
 
     private void FullScreen_Click(object sender, RoutedEventArgs e) => SetFullScreen(!_isFullScreen);
 

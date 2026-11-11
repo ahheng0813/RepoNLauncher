@@ -54,8 +54,7 @@ public partial class RunConsoleWindow : Window
     {
         if (OpenWindows.TryGetValue(project, out var open))
         {
-            if (open.WindowState == WindowState.Minimized) SystemCommands.RestoreWindow(open);
-            open.Activate();
+            NativeMethods.BringToFront(open);
             return;
         }
 
@@ -141,7 +140,6 @@ public partial class RunConsoleWindow : Window
         if (maximized) WindowState = WindowState.Maximized;
     }
 
-    private void Pin_Click(object sender, RoutedEventArgs e) => Topmost = !Topmost;
 
     // Ctrl+F searches the output wherever the focus is in the window.
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)

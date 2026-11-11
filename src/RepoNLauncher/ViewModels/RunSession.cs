@@ -30,10 +30,17 @@ public sealed partial class RunSession(DeviceInfo? device, string title) : Obser
     [NotifyPropertyChangedFor(nameof(ToolTip))]
     private bool _isRunning;
 
+    /// <summary>Restart has stopped it and is waiting for it to end before running it again.</summary>
+    [ObservableProperty] private bool _isRestarting;
+
     /// <summary>When it was last started, so the Phone screen's Console shows the latest run on a device.</summary>
     public DateTime StartedAt { get; internal set; }
 
     internal RunningProcessHandle? Process { get; set; }
+
+    /// <summary>The command it last ran and the ports that frees first, so Restart runs the same again; null before it has run.</summary>
+    internal string? Command { get; set; }
+    internal List<int> Ports { get; set; } = [];
 
     // Counts its starts. A process stopped just before the tab was run again can still have output and its exit to come,
     // which belong to that run, not this one's console.

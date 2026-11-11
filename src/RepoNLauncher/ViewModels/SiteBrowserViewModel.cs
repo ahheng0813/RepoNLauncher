@@ -1,13 +1,13 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Windows.Forms;
 using CommunityToolkit.Mvvm.ComponentModel;
+using RepoNLauncher.Services;
 
 namespace RepoNLauncher.ViewModels;
 
 /// <summary>
-/// A choice in the Run tab's Open in picker: the browser window on a screen (a null <see cref="Screen"/> picks another
-/// than the dashboard's when it opens), or the PC's default browser.
+/// A choice in the Run tab's Open in picker, and Settings': the dashboard's browser window on a screen (a null
+/// <see cref="Screen"/> picks another than the dashboard's when it opens), or the PC's default browser.
 /// </summary>
 public sealed class SiteTarget(string label, string? screen, bool isDefaultBrowser)
 {
@@ -24,7 +24,8 @@ public sealed record SiteRequest(string ProjectPath, string ProjectName, string 
 
 /// <summary>
 /// Where the Run tab opens the site a project serves: the dashboard's own browser window, on a screen of its own
-/// (another than the dashboard's by default), or the PC's default browser. One choice for every project.
+/// (another than the dashboard's by default), or the PC's default browser, the one Windows opens links in. One choice
+/// for every project, in the Run tab and Settings; a site's address can be opened the other way just once.
 /// </summary>
 public partial class SiteBrowserViewModel : ObservableObject
 {
@@ -56,11 +57,15 @@ public partial class SiteBrowserViewModel : ObservableObject
         ListTargets();
     }
 
-    /// <summary>Lists the screens again, such as when the picker opens, so one plugged in a moment ago is there.</summary>
+    /// <summary>
+    /// Lists the screens again, such as when the picker opens, so one plugged in a moment ago is there, and the default
+    /// browser by its name, in case another has been made the default since.
+    /// </summary>
     public void ListTargets()
     {
         var screens = Screen.AllScreens.OrderBy(s => s.Bounds.Left).ThenBy(s => s.Bounds.Top).ToList();
-        var listed = string.Join("|", screens.Select(s => $"{s.DeviceName} {s.Bounds}"));
+        var defaultBrowser = DefaultBrowser.Label;
+        var listed = string.Join("|", screens.Select(s => $"{s.DeviceName} {s.Bounds}")) + "|" + defaultBrowser;
         if (listed == _listedScreens) return;
         _listedScreens = listed;
 
@@ -68,14 +73,14 @@ public partial class SiteBrowserViewModel : ObservableObject
         Targets.Clear();
         if (screens.Count > 1)
         {
-            Targets.Add(new SiteTarget("Browser window, on another screen", null, false));
-            foreach (var screen in screens) Targets.Add(new SiteTarget($"Browser window on {ScreenName(screen)}", screen.DeviceName, false));
+            Targets.Add(new SiteTarget("Dashboard browser, on another screen", null, false));
+            foreach (var screen in screens) Targets.Add(new SiteTarget($"Dashboard browser on {ScreenName(screen)}", screen.DeviceName, false));
         }
         else
         {
-            Targets.Add(new SiteTarget("Browser window", null, false));
+            Targets.Add(new SiteTarget("Dashboard browser", null, false));
         }
-        Targets.Add(new SiteTarget("Default browser", null, true));
+        Targets.Add(new SiteTarget(defaultBrowser, null, true));
 
         SelectedTarget = _inDefaultBrowser
             ? Targets[^1]
@@ -101,14 +106,21 @@ public partial class SiteBrowserViewModel : ObservableObject
         if (!value.IsDefaultBrowser) ScreenPicked?.Invoke(value.Screen);
     }
 
-    /// <summary>Shows a project's site where the picker says; <paramref name="activate"/> brings its browser window to the front.</summary>
-    public void Open(string projectPath, string projectName, string url, bool activate)
+    /// <summary>
+    /// Shows a project's site where the picker says, or where <paramref name="inDefaultBrowser"/> says just this once;
+    /// <paramref name="activate"/> brings its browser window to the front.
+    /// </summary>
+    public void Open(string projectPath, string projectName, string url, bool activate, bool? inDefaultBrowser = null)
     {
-        if (_inDefaultBrowser)
+        if (inDefaultBrowser ?? _inDefaultBrowser)
         {
-            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            DefaultBrowser.Open(url);
             return;
         }
-        WindowRequested?.Invoke(new SiteRequest(projectPath, projectName, url, SelectedTarget?.Screen, activate));
+        // With the default browser picked, the window goes where it went before that, if that screen is still here.
+        var screen = SelectedTarget is { IsDefaultBrowser: false } picked
+            ? picked.Screen
+            : Targets.FirstOrDefault(t => !t.IsDefaultBrowser && t.Screen != null && t.Screen == _screen)?.Screen;
+        WindowRequested?.Invoke(new SiteRequest(projectPath, projectName, url, screen, activate));
     }
 }

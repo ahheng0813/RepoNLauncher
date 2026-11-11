@@ -12,12 +12,17 @@ namespace RepoNLauncher.ViewModels;
 /// <summary>
 /// The Android screen mirrors shown on the right of the dashboard, independent of which project is selected. Several
 /// devices can show at once: side by side in the panel, or each popped out into its own window. The panel's tools work on
-/// the device picked in its list; each device's own are on its <see cref="DeviceScreenViewModel"/>.
+/// the device picked in its list; each device's own are on its <see cref="DeviceScreenViewModel"/>. The list also has
+/// the emulators on this PC that aren't running: Show starts one, then shows its screen.
 /// </summary>
 public partial class PhoneScreenViewModel : ObservableObject
 {
     private readonly IScrcpyService _scrcpy;
     private readonly IDeviceToolsService _tools;
+    private readonly IEmulatorService _emulators;
+    private readonly EmulatorsViewModel _emulatorList;
+    // Emulators started by Show, by AVD name, whose screen shows here once they're up.
+    private readonly HashSet<string> _startingHere = new(StringComparer.OrdinalIgnoreCase);
 
     // Every device picked or shown so far, by serial, so one unplugged and plugged back in keeps what its tools had.
     private readonly Dictionary<string, DeviceScreenViewModel> _screens = new();
@@ -72,16 +77,20 @@ public partial class PhoneScreenViewModel : ObservableObject
 
     public string PoppedOutNote => PoppedOutCount == 1 ? "Showing in a separate window" : $"Showing in {PoppedOutCount} separate windows";
 
-    public PhoneScreenViewModel(IScrcpyService scrcpy, IDeviceToolsService tools)
+    public PhoneScreenViewModel(IScrcpyService scrcpy, IDeviceToolsService tools, IEmulatorService emulators, EmulatorsViewModel emulatorList)
     {
         _scrcpy = scrcpy;
         _tools = tools;
+        _emulators = emulators;
+        _emulatorList = emulatorList;
         IsScrcpyInstalled = _scrcpy.FindScrcpy() != null;
         _ = RefreshDevicesAsync();
     }
 
     // Picking another device leaves any showing as they are: the tools just work on the one picked.
-    partial void OnSelectedDeviceChanged(AndroidDevice? value) => SelectedScreen = value == null ? null : ScreenFor(value);
+    // An emulator that isn't running has no screen or tools yet.
+    partial void OnSelectedDeviceChanged(AndroidDevice? value) =>
+        SelectedScreen = value is null or { IsEmulatorToStart: true } ? null : ScreenFor(value);
 
     partial void OnSelectedScreenChanged(DeviceScreenViewModel? value)
     {
@@ -99,24 +108,116 @@ public partial class PhoneScreenViewModel : ObservableObject
         var all = await _scrcpy.GetDevicesAsync();
         var ready = all.Where(d => d.IsReady).ToList();
 
-        // Update in place so the current selection — and with it a running mirror — isn't disturbed.
-        foreach (var gone in Devices.Where(d => ready.All(r => r.Serial != d.Serial)).ToList()) Devices.Remove(gone);
-        foreach (var added in ready.Where(r => Devices.All(d => d.Serial != r.Serial))) Devices.Add(added);
+        // The emulators running, by serial, shown by their own names: Android calls them all sdk gphone64 x86 64. The
+        // rest of this PC's emulators are listed after the devices, for Show to start one.
+        var avds = await _emulators.GetAvdNamesAsync(ready.Select(d => d.Serial));
+        var onThisPc = _emulators.HasEmulator ? _emulators.GetEmulators() : new List<AndroidEmulator>();
+        string NameOf(string avd) => onThisPc.FirstOrDefault(e => SameAvd(e.Name, avd))?.DisplayName ?? avd.Replace('_', ' ');
+        var toStart = onThisPc.Where(e => !avds.Values.Any(avd => SameAvd(avd, e.Name))).ToList();
+        foreach (var device in ready)
+        {
+            if (avds.TryGetValue(device.Serial, out var avd)) device.Model = NameOf(avd);
+        }
+
+        // Update in place so the current selection — and with it a running mirror — isn't disturbed. A name found again
+        // is renamed, for when another emulator has started under one that closed's serial, or one was renamed.
+        var pickedToStart = SelectedDevice?.EmulatorToStart;
+        foreach (var gone in Devices.Where(d => d.EmulatorToStart is { } avd
+                     ? !toStart.Any(e => SameAvd(e.Name, avd))
+                     : ready.All(r => r.Serial != d.Serial)).ToList())
+            Devices.Remove(gone);
+        foreach (var listed in Devices)
+        {
+            if (listed.EmulatorToStart is { } avd)
+            {
+                listed.Model = NameOf(avd);
+                listed.IsStarting = _emulatorList.IsStarting(avd);
+            }
+            else if (avds.TryGetValue(listed.Serial, out var running))
+            {
+                listed.Model = NameOf(running);
+            }
+        }
+        var connected = Devices.Count(d => !d.IsEmulatorToStart);
+        foreach (var added in ready.Where(r => Devices.All(d => d.Serial != r.Serial))) Devices.Insert(connected++, added);
+        foreach (var emulator in toStart.Where(e => !Devices.Any(d => d.EmulatorToStart is { } avd && SameAvd(avd, e.Name))))
+        {
+            Devices.Add(new AndroidDevice
+            {
+                Model = emulator.DisplayName,
+                EmulatorToStart = emulator.Name,
+                IsStarting = _emulatorList.IsStarting(emulator.Name),
+            });
+        }
+
+        // An emulator picked to start that's running now is picked as the device it has become.
+        if (SelectedDevice != null && !Devices.Contains(SelectedDevice)) SelectedDevice = null;
+        if (SelectedDevice == null && pickedToStart != null && avds.FirstOrDefault(p => SameAvd(p.Value, pickedToStart)).Key is { } serial)
+            SelectedDevice = Devices.FirstOrDefault(d => d.Serial == serial);
         SelectedDevice ??= Devices.FirstOrDefault();
 
-        if (_screens.Values.Any(s => s.IsInUse)) return;
+        if (_screens.Values.Any(s => s.IsInUse) || _startingHere.Count > 0) return;
         var unauthorized = all.FirstOrDefault(d => d.State == "unauthorized");
-        Status = Devices.Count > 0
+        Status = connected > 0
             ? "Pick a device and press Show."
             : unauthorized != null
                 ? $"{unauthorized.Serial} is waiting for you to allow USB debugging on the phone."
-                : "No Android device found. Connect a phone with USB debugging on, or start an emulator with the phone button above.";
+                : Devices.Count > 0
+                    ? "Pick an emulator and press Show to start it, or connect a phone with USB debugging on."
+                    : "No Android device found. Connect a phone with USB debugging on, or make an emulator with the phone button above.";
+    }
+
+    private static bool SameAvd(string a, string b) => a.Equals(b, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Starts an emulator picked in the list, in its own window as the Emulators window does, then shows its screen here
+    /// once Android is up. A start already going, from the Emulators window say, is waited for rather than begun again.
+    /// </summary>
+    private async Task StartEmulatorAsync(AndroidDevice emulator)
+    {
+        var avd = emulator.EmulatorToStart!;
+        if (!_startingHere.Add(avd)) return;
+
+        var name = emulator.Model;
+        emulator.IsStarting = true;
+        Status = $"Starting {name}…";
+        try
+        {
+            await _emulatorList.StartAsync(avd, new Progress<string>(step => Status = $"{name}: {step} Its screen shows here once it's up."));
+        }
+        catch (Exception e)
+        {
+            Status = $"{name} didn't start: {e.Message}";
+            return;
+        }
+        finally
+        {
+            _startingHere.Remove(avd);
+            emulator.IsStarting = false;
+        }
+
+        // Running, it's a device adb lists, under a serial of its own.
+        var serial = (await _emulators.GetRunningAsync()).GetValueOrDefault(avd);
+        await RefreshDevicesAsync();
+        if (serial == null || Devices.FirstOrDefault(d => d.Serial == serial) is not { } device)
+        {
+            Status = $"{name} started, but adb doesn't list it, so its screen can't be shown.";
+            return;
+        }
+        IsPanelVisible = true;
+        SelectedDevice = device;
+        await ScreenFor(device).ShowScreenAsync();
     }
 
     /// <summary>Shows the device picked in the list, beside any already showing.</summary>
     [RelayCommand]
     public void Show()
     {
+        if (SelectedDevice is { IsEmulatorToStart: true } emulator)
+        {
+            _ = StartEmulatorAsync(emulator);
+            return;
+        }
         if (SelectedScreen is not { } screen)
         {
             Status = "No device selected.";

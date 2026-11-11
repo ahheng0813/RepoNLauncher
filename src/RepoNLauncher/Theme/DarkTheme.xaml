@@ -391,6 +391,21 @@
         </Setter>
     </Style>
 
+    <!-- Pin on top (controls:PinOnTopButton): a thumbtack, lit while its window is pinned on top of other windows -->
+    <Style x:Key="Button.Pin" TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
+        <Setter Property="Content" Value="&#xE718;"/>
+        <Setter Property="ToolTip" Value="Pin on top of other windows"/>
+        <Setter Property="AutomationProperties.Name" Value="Pin on top"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Topmost, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                <Setter Property="Content" Value="&#xE840;"/>
+                <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                <Setter Property="Background" Value="{StaticResource Accent.Muted}"/>
+                <Setter Property="ToolTip" Value="Pinned on top — click to unpin"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- CheckBox, typed out the way console programs draw one: [ ] [x] and [-] -->
     <Style TargetType="CheckBox">
         <Setter Property="Foreground" Value="{StaticResource Text.Primary}"/>

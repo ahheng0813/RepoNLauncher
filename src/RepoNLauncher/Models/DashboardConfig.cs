@@ -25,4 +25,7 @@ public class DashboardConfig
 
     /// <summary>The installed app has asked whether to add a desktop icon, or found one already, so it doesn't ask again.</summary>
     public bool DesktopIconAsked { get; set; }
+
+    /// <summary>How dates and times are shown: Settings, Date &amp; time.</summary>
+    public DateTimeFormatSettings DateTimeFormat { get; set; } = new();
 }

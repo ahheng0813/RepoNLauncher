@@ -90,7 +90,7 @@ public partial class UpdateViewModel : ObservableObject
         {
             if (await _updates.CheckAsync() is not { } update)
             {
-                Status = $"Up to date · checked {DateTime.Now:t}";
+                Status = $"Up to date · checked {DateTimeDisplay.Time(DateTime.Now)}";
                 return;
             }
 

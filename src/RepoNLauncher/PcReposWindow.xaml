@@ -1,6 +1,7 @@
 <Window x:Class="RepoNLauncher.PcReposWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:RepoNLauncher.Controls"
         xmlns:conv="clr-namespace:RepoNLauncher.Converters"
         xmlns:vm="clr-namespace:RepoNLauncher.ViewModels"
         Title="Repos on this PC - Repo'N'Launcher" Width="1000" Height="700" MinWidth="720" MinHeight="420"
@@ -116,11 +117,14 @@
     </Window.Resources>
 
     <DockPanel Margin="20">
-        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,14">
-            <TextBlock Text="Repos on this PC" FontSize="17" FontWeight="SemiBold"/>
-            <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="12.5" TextWrapping="Wrap" Margin="0,6,0,0"
-                       Text="Every git repo on this PC's drives, and who owns it on GitHub. Windows, Program Files, AppData, hidden and dot-folders, and dependency folders such as node_modules are skipped."/>
-        </StackPanel>
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,14">
+            <controls:PinOnTopButton DockPanel.Dock="Right" Margin="12,0,0,0" VerticalAlignment="Top"/>
+            <StackPanel>
+                <TextBlock Text="Repos on this PC" FontSize="17" FontWeight="SemiBold"/>
+                <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="12.5" TextWrapping="Wrap" Margin="0,6,0,0"
+                           Text="Every git repo on this PC's drives, and who owns it on GitHub. Windows, Program Files, AppData, hidden and dot-folders, and dependency folders such as node_modules are skipped."/>
+            </StackPanel>
+        </DockPanel>
 
         <!-- Shown when signed out: the scan needs GitHub to tell whose repos are whose -->
         <Border DockPanel.Dock="Top" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"

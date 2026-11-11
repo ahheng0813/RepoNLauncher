@@ -204,6 +204,7 @@
 
     <DockPanel Margin="20,16,20,14">
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+            <controls:PinOnTopButton DockPanel.Dock="Right" Margin="6,0,0,0" VerticalAlignment="Center"/>
             <ToggleButton DockPanel.Dock="Right" Content="&#xE8A0;" Style="{StaticResource GlyphToggle}" Margin="10,0,0,0"
                           IsChecked="{Binding ShowPreview}" ToolTip="Preview pane (Alt+P)" AutomationProperties.Name="Preview pane"/>
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="18,0,0,0">
@@ -373,7 +374,7 @@
                                     </GridViewColumn.Header>
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate DataType="{x:Type vm:PhoneFileItem}">
-                                            <TextBlock Text="{Binding Modified}" Foreground="{StaticResource Text.Secondary}" FontSize="12.5"/>
+                                            <TextBlock Text="{conv:DateTimeText File.Modified}" Foreground="{StaticResource Text.Secondary}" FontSize="12.5"/>
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>

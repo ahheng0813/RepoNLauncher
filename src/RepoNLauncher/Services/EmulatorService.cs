@@ -33,6 +33,28 @@ public interface IEmulatorService
     Task<Dictionary<string, string>> GetRunningAsync(CancellationToken ct = default);
 
     /// <summary>
+    /// The name each emulator among these adb serials has in Android Studio and the Emulators window (Medium Phone API 36),
+    /// by serial. Android itself calls every emulator "sdk gphone64 x86 64", which can't tell two apart. Serials that
+    /// aren't emulators, or whose name can't be found, aren't in it.
+    /// </summary>
+    Task<Dictionary<string, string>> GetDisplayNamesAsync(IEnumerable<string> serials, CancellationToken ct = default);
+
+    /// <summary>
+    /// The AVD each emulator among these adb serials runs (Medium_Phone_API_36.1), by serial: which of the emulators on
+    /// this PC are running. Serials that aren't emulators, or whose AVD can't be found, aren't in it.
+    /// </summary>
+    Task<Dictionary<string, string>> GetAvdNamesAsync(IEnumerable<string> serials, CancellationToken ct = default);
+
+    /// <summary>Gives it another name to be shown by. Its AVD name, which starts it, stays as it is.</summary>
+    void Rename(string name, string displayName);
+
+    /// <summary>Deletes it with everything on it: its apps, files and settings. It mustn't be running.</summary>
+    void Delete(string name);
+
+    /// <summary>Shuts a running emulator down, and waits until it has gone. Nothing happens when it isn't running.</summary>
+    Task StopAsync(string name, CancellationToken ct = default);
+
+    /// <summary>
     /// Starts it in its own window and waits until Android has booted. It keeps running when the dashboard closes, as
     /// one started from Android Studio does. Throws with the emulator's own message when it doesn't start.
     /// </summary>
@@ -201,6 +223,72 @@ public class EmulatorService : IEmulatorService
         });
     }
 
+    public void Rename(string name, string displayName)
+    {
+        displayName = displayName.Trim();
+        if (displayName.Length == 0) throw new ArgumentException("Give the emulator a name.");
+        var config = AvdDir(name) is { } dir ? Path.Combine(dir, "config.ini") : null;
+        if (config == null || !File.Exists(config)) throw new FileNotFoundException($"{name}'s settings (config.ini) aren't there any more.");
+
+        // Only the name it's shown by: the rest of its settings stay line for line as Android Studio wrote them.
+        var lines = File.ReadAllLines(config).ToList();
+        var line = $"avd.ini.displayname={displayName}";
+        var at = lines.FindIndex(l => l.Split('=')[0].Trim().Equals("avd.ini.displayname", StringComparison.OrdinalIgnoreCase));
+        if (at >= 0) lines[at] = line;
+        else lines.Add(line);
+        File.WriteAllText(config, string.Concat(lines.Select(l => l + "\n")), new UTF8Encoding(false));
+    }
+
+    public void Delete(string name)
+    {
+        var ini = Path.Combine(AndroidSdk.AvdHome, name + ".ini");
+        if (AvdDir(name) is { } dir && Directory.Exists(dir))
+        {
+            // Only an emulator's own folder, never whatever else a broken .ini might point at.
+            if (!Path.TrimEndingDirectorySeparator(dir).EndsWith(".avd", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException($"Its folder, {dir}, isn't an emulator's (.avd) folder, so it was left as it is.");
+            Directory.Delete(dir, recursive: true);
+        }
+        if (File.Exists(ini)) File.Delete(ini);
+    }
+
+    private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(30);
+
+    public async Task StopAsync(string name, CancellationToken ct = default)
+    {
+        if (AdbExe == null) throw new InvalidOperationException("The Android SDK's platform tools (adb) aren't installed.");
+        if (!(await GetRunningAsync(ct)).TryGetValue(name, out var serial)) return;
+
+        // The emulator's console closes it, as its window's close button does.
+        await RunAdbAsync($"-s {serial} emu kill", ct);
+        var started = DateTime.UtcNow;
+        while (DateTime.UtcNow - started < StopTimeout)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(1), ct);
+            if (!(await GetRunningAsync(ct)).ContainsKey(name)) return;
+        }
+        throw new TimeoutException($"It didn't close within {StopTimeout.TotalSeconds:0} seconds. Close its window instead.");
+    }
+
+    /// <summary>
+    /// The emulator's own folder, where its settings and data are: the one its .ini names. That needn't be name.avd:
+    /// Android Studio keeps the folder when it renames an emulator, so Medium_Phone can be in Medium_Phone_2.avd and
+    /// Medium_Phone.avd be another emulator's. Null when its .ini names none that's there.
+    /// </summary>
+    private static string? AvdDir(string name)
+    {
+        var ini = Path.Combine(AndroidSdk.AvdHome, name + ".ini");
+        if (!File.Exists(ini)) return null;
+        var props = ReadProperties(ini);
+        if (props.GetValueOrDefault("path") is { Length: > 0 } path && Directory.Exists(path)) return path;
+        // Moved with the rest of the Android settings: path.rel is from the folder the avd folder is in (.android).
+        if (props.GetValueOrDefault("path.rel") is { Length: > 0 } relative
+            && Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(AndroidSdk.AvdHome)) is { } androidHome
+            && Path.Combine(androidHome, relative) is var moved && Directory.Exists(moved))
+            return moved;
+        return null;
+    }
+
     public async Task<Dictionary<string, string>> GetRunningAsync(CancellationToken ct = default)
     {
         var running = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -214,19 +302,54 @@ public class EmulatorService : IEmulatorService
 
         foreach (var serial in serials)
         {
-            // Asked of Android itself, not the console: the console can be this emulator's while adb, on the port above
-            // it, reaches another kind of emulator (LDPlayer, say) under the same serial. Android in these emulators knows
-            // its AVD name; in other kinds it doesn't, and isn't marked as qemu either.
-            var props = (await RunAdbAsync(
-                    $"-s {serial} shell \"getprop ro.boot.qemu.avd_name; getprop ro.kernel.qemu.avd_name; getprop ro.boot.qemu; getprop ro.kernel.qemu\"", ct))
-                .Split('\n').Select(l => l.Trim()).ToList();
-            var name = props.Take(2).FirstOrDefault(p => p.Length > 0);
-            // Images older than the name property only have the console to ask, which prints the name, then OK.
-            if (name == null && props.Skip(2).Contains("1"))
-                name = (await RunAdbAsync($"-s {serial} emu avd name", ct)).Split('\n')[0].Trim();
-            if (name is { Length: > 0 } and not "OK") running[name] = serial;
+            if (await AvdNameAsync(serial, null, ct) is { } name) running[name] = serial;
         }
         return running;
+    }
+
+    // Asking a name is quick; a device still coming up shouldn't hold up a whole device list.
+    private static readonly TimeSpan NameTimeout = TimeSpan.FromSeconds(3);
+
+    public async Task<Dictionary<string, string>> GetDisplayNamesAsync(IEnumerable<string> serials, CancellationToken ct = default)
+    {
+        var avds = await GetAvdNamesAsync(serials, ct);
+        var displayNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (avds.Count > 0)
+        {
+            foreach (var emulator in GetEmulators()) displayNames[emulator.Name] = emulator.DisplayName;
+        }
+        return avds.ToDictionary(p => p.Key, p => displayNames.GetValueOrDefault(p.Value) ?? p.Value.Replace('_', ' '),
+            StringComparer.OrdinalIgnoreCase);
+    }
+
+    public async Task<Dictionary<string, string>> GetAvdNamesAsync(IEnumerable<string> serials, CancellationToken ct = default)
+    {
+        var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var emulators = serials.Where(s => s.StartsWith("emulator-", StringComparison.OrdinalIgnoreCase)).Distinct().ToList();
+        if (emulators.Count == 0 || AdbExe == null) return names;
+
+        var avds = await Task.WhenAll(emulators.Select(serial => AvdNameAsync(serial, NameTimeout, ct)));
+        for (var i = 0; i < emulators.Count; i++)
+        {
+            if (avds[i] is { } avd) names[emulators[i]] = avd;
+        }
+        return names;
+    }
+
+    /// <summary>The AVD an emulator-5554 serial is running, or null when it isn't an Android Studio emulator.</summary>
+    private async Task<string?> AvdNameAsync(string serial, TimeSpan? timeout, CancellationToken ct)
+    {
+        // Asked of Android itself, not the console: the console can be this emulator's while adb, on the port above
+        // it, reaches another kind of emulator (LDPlayer, say) under the same serial. Android in these emulators knows
+        // its AVD name; in other kinds it doesn't, and isn't marked as qemu either.
+        var props = (await RunAdbAsync(
+                $"-s {serial} shell \"getprop ro.boot.qemu.avd_name; getprop ro.kernel.qemu.avd_name; getprop ro.boot.qemu; getprop ro.kernel.qemu\"", ct, timeout))
+            .Split('\n').Select(l => l.Trim()).ToList();
+        var name = props.Take(2).FirstOrDefault(p => p.Length > 0);
+        // Images older than the name property only have the console to ask, which prints the name, then OK.
+        if (name == null && props.Skip(2).Contains("1"))
+            name = (await RunAdbAsync($"-s {serial} emu avd name", ct, timeout)).Split('\n')[0].Trim();
+        return name is { Length: > 0 } and not "OK" ? name : null;
     }
 
     public async Task StartAsync(string name, IProgress<string> progress, CancellationToken ct = default)
@@ -291,7 +414,7 @@ public class EmulatorService : IEmulatorService
             : Regex.Replace(error, @"^(ERROR|FATAL|\w+\s+\|)\s*[:|]?\s*", "", RegexOptions.IgnoreCase);
     }
 
-    private async Task<string> RunAdbAsync(string arguments, CancellationToken ct)
+    private async Task<string> RunAdbAsync(string arguments, CancellationToken ct, TimeSpan? timeoutAfter = null)
     {
         var info = new ProcessStartInfo(AdbExe!, arguments)
         {
@@ -303,7 +426,7 @@ public class EmulatorService : IEmulatorService
         using var process = Process.Start(info)!;
         // adb can hang on a device that's still coming up; give up on it rather than on the whole start.
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(TimeSpan.FromSeconds(10));
+        timeout.CancelAfter(timeoutAfter ?? TimeSpan.FromSeconds(10));
         try
         {
             var output = await process.StandardOutput.ReadToEndAsync(timeout.Token);

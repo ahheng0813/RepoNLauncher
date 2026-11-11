@@ -1,6 +1,7 @@
 <Window x:Class="RepoNLauncher.AiUsageWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:RepoNLauncher.Controls"
         xmlns:conv="clr-namespace:RepoNLauncher.Converters"
         xmlns:vm="clr-namespace:RepoNLauncher.ViewModels"
         Title="AI usage - Repo'N'Launcher" Width="1040" Height="720" MinWidth="760" MinHeight="460"
@@ -212,6 +213,7 @@
 
     <DockPanel Margin="20">
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,16">
+            <controls:PinOnTopButton DockPanel.Dock="Right" Margin="6,0,0,0" VerticalAlignment="Top"/>
             <Button DockPanel.Dock="Right" Content="Refresh" Style="{StaticResource Button.Secondary}" Margin="0"
                     VerticalAlignment="Top" Command="{Binding RefreshCommand}"/>
             <StackPanel>

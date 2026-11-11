@@ -111,7 +111,8 @@ public sealed partial class ChatSessionViewModel : ObservableObject
 
     public string ProjectName => Path.GetFileName(WorkingDirectory.TrimEnd('\\', '/')) is { Length: > 0 } name ? name : WorkingDirectory;
 
-    public string Placeholder => $"Ask {AgentName} to do something in {ProjectName}.  @ mentions a file, Enter sends, Shift+Enter adds a line.";
+    public string Placeholder =>
+        $"Ask {AgentName} to do something in {ProjectName}.  @ mentions a file, Enter sends, Shift+Enter adds a line, ↑ brings back a message you sent.";
 
     public string InstallUrl => Agent == AgentKind.Claude ? AgentCli.ClaudeInstallUrl : AgentCli.CodexInstallUrl;
 
@@ -121,14 +122,45 @@ public sealed partial class ChatSessionViewModel : ObservableObject
         IsAgentMissing = !_owner.IsInstalled(value);
     }
 
-    // Each Codex model has its own effort levels.
+    // Each Codex model has its own effort levels; Claude's Default effort is the one its settings give the model.
     partial void OnModelChanged(AgentOption? value)
     {
-        if (Agent != AgentKind.Codex) return;
+        if (Agent == AgentKind.Claude)
+        {
+            RefreshClaudeDefaults();
+            return;
+        }
         var efforts = _codexModels.FirstOrDefault(m => m.Option.Value == value?.Value)?.Efforts ?? _codexModels.FirstOrDefault()?.Efforts ?? [];
         var current = Effort?.Value;
         Efforts = efforts;
         Effort = efforts.FirstOrDefault(e => e.Value == current) ?? efforts.FirstOrDefault();
+    }
+
+    // A project's own Claude Code settings can pick another model or effort.
+    partial void OnWorkingDirectoryChanged(string value) => RefreshClaudeDefaults();
+
+    /// <summary>
+    /// Claude's Default model and effort name what they run with, from Claude Code's settings for the folder and model
+    /// (Default (Opus), Default effort (Extra high)). The picks stay as they are.
+    /// </summary>
+    private void RefreshClaudeDefaults()
+    {
+        if (Agent != AgentKind.Claude) return;
+        var model = Model?.Value;
+        var models = AgentOptions.ClaudeModelsFor(WorkingDirectory);
+        if (!models.SequenceEqual(Models))
+        {
+            Models = models;
+            Model = models.FirstOrDefault(m => m.Value == model) ?? models[0];
+        }
+
+        var effort = Effort?.Value;
+        var efforts = AgentOptions.ClaudeEffortsFor(WorkingDirectory, Model?.Value);
+        if (!efforts.SequenceEqual(Efforts))
+        {
+            Efforts = efforts;
+            Effort = efforts.FirstOrDefault(e => e.Value == effort) ?? efforts[0];
+        }
     }
 
     private void LoadOptions()
@@ -136,8 +168,8 @@ public sealed partial class ChatSessionViewModel : ObservableObject
         var last = _owner.LastChoices(Agent);
         if (Agent == AgentKind.Claude)
         {
-            Models = AgentOptions.ClaudeModels;
-            Efforts = AgentOptions.ClaudeEfforts;
+            Models = AgentOptions.ClaudeModelsFor(WorkingDirectory);
+            Efforts = AgentOptions.ClaudeEffortsFor(WorkingDirectory, last?.Model);
             Modes = AgentOptions.ClaudeModes;
         }
         else
@@ -219,6 +251,64 @@ public sealed partial class ChatSessionViewModel : ObservableObject
     }
 
     private bool CanSend() => !IsRunning && !IsLoading && (Draft.Trim().Length > 0 || Attachments.Count > 0);
+
+    // Up and Down in the composer go back and forth through the messages sent in this chat, as in a terminal. How far
+    // back the composer shows (-1: what's being typed, not a sent message), and what was being typed before going back.
+    private int _recalled = -1;
+    private string _typedBeforeRecall = string.Empty;
+    private bool _recalling;
+
+    /// <summary>The composer shows a sent message that Up brought back, and Down goes forward again.</summary>
+    public bool IsRecalling => _recalled >= 0;
+
+    // The messages sent, newest first, each once in a row.
+    private List<string> SentMessages()
+    {
+        var sent = new List<string>();
+        foreach (var text in Items.OfType<UserChatItem>().Select(i => i.Text.Trim()).Where(t => t.Length > 0).Reverse())
+            if (sent.Count == 0 || sent[^1] != text) sent.Add(text);
+        return sent;
+    }
+
+    /// <summary>Up: the composer shows the message sent before the one it shows. False when there's none further back.</summary>
+    public bool RecallPrevious()
+    {
+        var sent = SentMessages();
+        if (_recalled + 1 >= sent.Count) return false;
+        if (_recalled < 0) _typedBeforeRecall = Draft;
+        ShowRecalled(_recalled + 1, sent[_recalled + 1]);
+        return true;
+    }
+
+    /// <summary>Down: the message sent after the one shown, or past the newest, what was being typed. False when not going back.</summary>
+    public bool RecallNext()
+    {
+        if (_recalled < 0) return false;
+        var sent = SentMessages();
+        if (_recalled - 1 >= 0 && _recalled - 1 < sent.Count) ShowRecalled(_recalled - 1, sent[_recalled - 1]);
+        else ShowRecalled(-1, _typedBeforeRecall);
+        return true;
+    }
+
+    private void ShowRecalled(int index, string text)
+    {
+        _recalling = true;
+        try
+        {
+            Draft = text;
+        }
+        finally
+        {
+            _recalling = false;
+        }
+        _recalled = index;
+    }
+
+    // Typing in a message brought back makes it a new one: Up then starts again from the newest.
+    partial void OnDraftChanged(string value)
+    {
+        if (!_recalling) _recalled = -1;
+    }
 
     [RelayCommand(CanExecute = nameof(IsRunning))]
     private void Stop() => _turn?.Stop();

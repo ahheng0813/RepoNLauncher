@@ -1,6 +1,7 @@
 <Window x:Class="RepoNLauncher.AgentChatWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:RepoNLauncher.Controls"
         xmlns:conv="clr-namespace:RepoNLauncher.Converters"
         xmlns:ctl="clr-namespace:RepoNLauncher.Controls"
         Title="AI chat - Repo'N'Launcher" Width="1240" Height="840" MinWidth="920" MinHeight="560"
@@ -64,6 +65,7 @@
         <Border Grid.Column="0" Background="{StaticResource Bg.Panel}">
             <DockPanel Margin="12,14,12,12">
                 <DockPanel DockPanel.Dock="Top">
+                    <controls:PinOnTopButton DockPanel.Dock="Right" Margin="2,0,0,0"/>
                     <Button DockPanel.Dock="Right" Content="&#xE72C;" Style="{StaticResource Button.Ghost}" Margin="6,0,0,0"
                             ToolTip="Look for new chats" AutomationProperties.Name="Refresh chats" Command="{Binding RefreshHistoryCommand}"/>
                     <Button Style="{StaticResource Button.Primary}" Margin="0" Command="{Binding NewChatCommand}" AutomationProperties.Name="New chat">

@@ -363,6 +363,11 @@ public class ScrcpyService : IScrcpyService
         if (source == MirrorSource.Screen)
         {
             if (!forwardAudio) info.ArgumentList.Add("--no-audio");
+            // Every key goes to the phone as a key press. By default scrcpy sends only letters and space that way, and
+            // digits and symbols as typed text, which SDL drops in the dashboard: SDL counts its window as focused only
+            // when it's the foreground window, which a window embedded in the dashboard's never is, and without focus
+            // it throws away typed text but not key presses.
+            info.ArgumentList.Add("--raw-key-events");
         }
         else
         {

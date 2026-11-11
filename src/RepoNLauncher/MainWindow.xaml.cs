@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     private AiUsageWindow? _aiUsageWindow;
     private AgentChatWindow? _agentChatWindow;
     private EmulatorsWindow? _emulatorsWindow;
+    private SettingsWindow? _settingsWindow;
 
     // Keeps the AI usage bar current while the dashboard is open; plan limits are checked again every few minutes.
     private readonly DispatcherTimer _usageTimer = new() { Interval = TimeSpan.FromMinutes(1) };
@@ -35,6 +36,8 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        InputBindings.Add(new KeyBinding(new CommunityToolkit.Mvvm.Input.RelayCommand(() => OpenSettings(SettingsPage.DateAndTime)),
+            Key.OemComma, ModifierKeys.Control));
         // The phone panel made the default layout wider; never open larger than the screen.
         Width = Math.Min(Width, SystemParameters.WorkArea.Width);
         Height = Math.Min(Height, SystemParameters.WorkArea.Height);
@@ -105,11 +108,14 @@ public partial class MainWindow : Window
         Close();
     }
 
+    private void Uninstall_Click(object sender, RoutedEventArgs e) => Uninstall(this);
+
     // The uninstall waits for the app to close; closing the window stops chats and the phone mirror on the way out.
-    private void Uninstall_Click(object sender, RoutedEventArgs e)
+    // From the status bar or Settings, which asks over itself.
+    internal void Uninstall(Window owner)
     {
         if (DataContext is not MainViewModel vm) return;
-        if (System.Windows.MessageBox.Show(this,
+        if (System.Windows.MessageBox.Show(owner,
                 "Uninstall Repo'N'Launcher and remove everything it keeps on this PC?\n\n" +
                 "That's your project list and settings, the GitHub sign-in, the scrcpy it downloaded, its map, preview and " +
                 "browser window caches, temp files, update files and the desktop icon. Your projects' own folders stay as they are." +
@@ -123,7 +129,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex) when (ex is InvalidOperationException or Win32Exception)
         {
-            System.Windows.MessageBox.Show(this, $"Repo'N'Launcher couldn't start uninstalling: {ex.Message}", "Uninstall Repo'N'Launcher",
+            System.Windows.MessageBox.Show(owner, $"Repo'N'Launcher couldn't start uninstalling: {ex.Message}", "Uninstall Repo'N'Launcher",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -230,18 +236,37 @@ public partial class MainWindow : Window
             vm.SelectedProject = project;
     }
 
-    private void EditOpenWithApps_Click(object sender, RoutedEventArgs e)
+    private void EditOpenWithApps_Click(object sender, RoutedEventArgs e) => EditOpenWithApps(this);
+
+    // From the Overview's OPEN IN row or Settings, over whichever asked.
+    internal void EditOpenWithApps(Window owner)
     {
         if (DataContext is not MainViewModel vm) return;
 
-        var dialog = new OpenWithAppsWindow(vm.OpenWithApps) { Owner = this };
+        var dialog = new OpenWithAppsWindow(vm.OpenWithApps) { Owner = owner };
         if (dialog.ShowDialog() == true && dialog.Result != null) vm.SaveOpenWithApps(dialog.Result);
     }
 
     private void SignInToGitHub_Click(object sender, RoutedEventArgs e) => SignInToGitHub();
 
-    private bool SignInToGitHub() =>
-        DataContext is MainViewModel vm && new GitHubSignInWindow(vm.GitHub.Service) { Owner = this }.ShowDialog() == true;
+    internal bool SignInToGitHub(Window? owner = null) =>
+        DataContext is MainViewModel vm && new GitHubSignInWindow(vm.GitHub.Service) { Owner = owner ?? this }.ShowDialog() == true;
+
+    private void OpenSettings_Click(object sender, RoutedEventArgs e) => OpenSettings(SettingsPage.DateAndTime);
+
+    // The version in the status bar opens what it's the version of.
+    private void OpenAbout_Click(object sender, RoutedEventArgs e) => OpenSettings(SettingsPage.About);
+
+    private void OpenSettings(SettingsPage page)
+    {
+        if (DataContext is not MainViewModel vm) return;
+        if (_settingsWindow == null)
+        {
+            _settingsWindow = new SettingsWindow(vm.Settings, this);
+            _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+        }
+        _settingsWindow.Show(page);
+    }
 
     // Telling mine from others' needs GitHub, so signing in comes first.
     private void OpenPcRepos_Click(object sender, RoutedEventArgs e)
@@ -251,7 +276,7 @@ public partial class MainWindow : Window
 
         if (_pcReposWindow != null)
         {
-            _pcReposWindow.Activate();
+            NativeMethods.BringToFront(_pcReposWindow);
             return;
         }
         _pcReposWindow = new PcReposWindow(vm.PcRepos) { Owner = this };
@@ -266,7 +291,7 @@ public partial class MainWindow : Window
 
         if (_cloneReposWindow != null)
         {
-            _cloneReposWindow.Activate();
+            NativeMethods.BringToFront(_cloneReposWindow);
             return;
         }
         _cloneReposWindow = new CloneReposWindow(vm.CloneRepos) { Owner = this };
@@ -279,7 +304,7 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel vm) return;
         if (_emulatorsWindow != null)
         {
-            _emulatorsWindow.Activate();
+            NativeMethods.BringToFront(_emulatorsWindow);
             return;
         }
         _emulatorsWindow = new EmulatorsWindow(vm.Emulators) { Owner = this };
@@ -292,7 +317,7 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel vm) return;
         if (_aiUsageWindow != null)
         {
-            _aiUsageWindow.Activate();
+            NativeMethods.BringToFront(_aiUsageWindow);
             return;
         }
         _aiUsageWindow = new AiUsageWindow(vm.AiUsage) { Owner = this };
@@ -306,8 +331,7 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel vm) return;
         if (_agentChatWindow != null)
         {
-            if (_agentChatWindow.WindowState == WindowState.Minimized) _agentChatWindow.WindowState = WindowState.Normal;
-            _agentChatWindow.Activate();
+            NativeMethods.BringToFront(_agentChatWindow);
             return;
         }
         _agentChatWindow = new AgentChatWindow(vm.AgentChat) { Owner = this };

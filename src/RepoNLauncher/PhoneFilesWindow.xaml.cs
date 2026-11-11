@@ -97,8 +97,7 @@ public partial class PhoneFilesWindow : Window
     {
         if (OpenWindows.TryGetValue(serial, out var open))
         {
-            if (open.WindowState == WindowState.Minimized) open.WindowState = WindowState.Normal;
-            open.Activate();
+            NativeMethods.BringToFront(open);
             return;
         }
         if (create() is not { } viewModel) return;
