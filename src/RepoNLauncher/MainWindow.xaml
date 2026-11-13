@@ -857,27 +857,40 @@
                                         <RowDefinition Height="2*" MinHeight="160"/>
                                     </Grid.RowDefinitions>
 
-                                    <ListView Grid.Row="0" ItemsSource="{Binding Commits}" SelectedItem="{Binding SelectedCommit}"
-                                              SelectionMode="Single" BorderThickness="1"
-                                              controls:ScrollToItem.Item="{Binding SelectedCommit}">
-                                        <ListView.ItemContainerStyle>
-                                            <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
-                                                <Style.Triggers>
-                                                    <Trigger Property="IsSelected" Value="True">
-                                                        <Setter Property="Background" Value="{StaticResource Accent.Muted}"/>
-                                                    </Trigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </ListView.ItemContainerStyle>
-                                        <ListView.View>
-                                            <GridView>
-                                                <GridViewColumn Header="Hash" Width="80" DisplayMemberBinding="{Binding ShortHash}"/>
-                                                <GridViewColumn Header="Author" Width="140" DisplayMemberBinding="{Binding Author}"/>
-                                                <GridViewColumn Header="Date" Width="170" DisplayMemberBinding="{conv:DateTimeText Date}"/>
-                                                <GridViewColumn Header="Message" Width="420" DisplayMemberBinding="{Binding Message}"/>
-                                            </GridView>
-                                        </ListView.View>
-                                    </ListView>
+                                    <!-- The newest commits first; older ones load a page at a time as the list is scrolled near its end -->
+                                    <Grid Grid.Row="0">
+                                        <ListView ItemsSource="{Binding Commits}" SelectedItem="{Binding SelectedCommit}"
+                                                  SelectionMode="Single" BorderThickness="1"
+                                                  controls:ScrollToItem.Item="{Binding SelectedCommit}"
+                                                  controls:LoadMoreOnScroll.Command="{Binding LoadMoreCommitsCommand}">
+                                            <ListView.ItemContainerStyle>
+                                                <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter Property="Background" Value="{StaticResource Accent.Muted}"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ListView.ItemContainerStyle>
+                                            <ListView.View>
+                                                <GridView>
+                                                    <GridViewColumn Header="Hash" Width="80" DisplayMemberBinding="{Binding ShortHash}"/>
+                                                    <GridViewColumn Header="Author" Width="140" DisplayMemberBinding="{Binding Author}"/>
+                                                    <GridViewColumn Header="Date" Width="170" DisplayMemberBinding="{conv:DateTimeText Date}"/>
+                                                    <GridViewColumn Header="Message" Width="420" DisplayMemberBinding="{Binding Message}"/>
+                                                </GridView>
+                                            </ListView.View>
+                                        </ListView>
+                                        <Border VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,10" Padding="12,6"
+                                                Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Strong}" BorderThickness="1"
+                                                IsHitTestVisible="False"
+                                                Visibility="{Binding IsLoadingMoreCommits, Converter={StaticResource BoolToVisibility}}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <ProgressBar IsIndeterminate="True" Width="60" Height="3" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                                <TextBlock Text="Loading older commits…" FontSize="12" Foreground="{StaticResource Text.Secondary}"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
 
                                     <GridSplitter Grid.Row="1" HorizontalAlignment="Stretch" Background="Transparent"
                                                   ResizeBehavior="PreviousAndNext" ResizeDirection="Rows" Focusable="False"/>

@@ -43,7 +43,7 @@ public static class ScrollToItem
         });
     }
 
-    private static T? FindChild<T>(DependencyObject parent) where T : DependencyObject
+    internal static T? FindChild<T>(DependencyObject parent) where T : DependencyObject
     {
         for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
         {

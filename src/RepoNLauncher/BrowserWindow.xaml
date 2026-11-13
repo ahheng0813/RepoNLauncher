@@ -4,14 +4,13 @@
         xmlns:controls="clr-namespace:RepoNLauncher.Controls"
         xmlns:services="clr-namespace:RepoNLauncher.Services"
         xmlns:conv="clr-namespace:RepoNLauncher.Converters"
-        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         Title="Repo'N'Launcher" Height="800" Width="1200"
         WindowStartupLocation="Manual"
         Background="{StaticResource Bg.App}"
         FontFamily="{StaticResource Font.Mono}"
         PreviewKeyDown="Window_PreviewKeyDown">
 
-    <!-- DataContext: the SiteBrowserViewModel, for the saved sites every browser window shows -->
+    <!-- DataContext: the SiteBrowserViewModel, for the saved sites every browser window shows. The toolbar acts on the tab picked. -->
     <Window.Resources>
         <!-- A saved site in the bar under the address: its name, the address in its tooltip -->
         <Style x:Key="SiteChip" TargetType="Button">
@@ -78,6 +77,103 @@
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Margin" Value="0,0,0,4"/>
         </Style>
+        <!-- × on a tab -->
+        <Style x:Key="TabClose" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="Transparent" Width="20" Height="20">
+                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="9" Foreground="{TemplateBinding Foreground}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
+                                <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- A tab (its DataContext is the BrowserTab): the site's icon, turning while the page loads, its title, and × -->
+        <DataTemplate x:Key="TabHeader">
+            <Grid x:Name="Root" Background="Transparent" Height="34" ToolTip="{Binding Title}">
+                <Border x:Name="Bd" BorderThickness="1,1,1,0" BorderBrush="Transparent" Background="Transparent"/>
+                <DockPanel Margin="10,0,6,0">
+                    <Button x:Name="Close" DockPanel.Dock="Right" Style="{StaticResource TabClose}" VerticalAlignment="Center"
+                            Visibility="Hidden" ToolTip="Close tab (Ctrl+W)" AutomationProperties.Name="Close tab" Click="TabClose_Click"/>
+                    <Grid DockPanel.Dock="Left" Width="16" Height="16" Margin="0,0,8,0" VerticalAlignment="Center">
+                        <TextBlock x:Name="Globe" Text="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="13" Visibility="Collapsed"
+                                   Foreground="{StaticResource Text.Muted}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Image x:Name="Icon" Source="{Binding Favicon}" Width="16" Height="16" RenderOptions.BitmapScalingMode="HighQuality"/>
+                        <Ellipse x:Name="Spinner" Width="14" Height="14" Stroke="{StaticResource Accent}" StrokeThickness="2"
+                                 StrokeDashArray="6 13" RenderTransformOrigin="0.5,0.5" Visibility="Collapsed">
+                            <Ellipse.RenderTransform>
+                                <RotateTransform/>
+                            </Ellipse.RenderTransform>
+                        </Ellipse>
+                    </Grid>
+                    <TextBlock x:Name="Label" Text="{Binding Title}" FontSize="12" TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" Foreground="{StaticResource Text.Secondary}"/>
+                </DockPanel>
+            </Grid>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding Favicon}" Value="{x:Null}">
+                    <Setter TargetName="Icon" Property="Visibility" Value="Collapsed"/>
+                    <Setter TargetName="Globe" Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding IsSelected}" Value="False"/>
+                        <Condition Binding="{Binding IsMouseOver, ElementName=Root}" Value="True"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.PanelAlt}"/>
+                    <Setter TargetName="Label" Property="Foreground" Value="{StaticResource Text.Primary}"/>
+                </MultiDataTrigger>
+                <Trigger SourceName="Root" Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Close" Property="Visibility" Value="Visible"/>
+                </Trigger>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Elevated}"/>
+                    <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Border.Subtle}"/>
+                    <Setter TargetName="Label" Property="Foreground" Value="{StaticResource Text.Primary}"/>
+                    <Setter TargetName="Close" Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                    <Setter TargetName="Spinner" Property="Visibility" Value="Visible"/>
+                    <Setter TargetName="Icon" Property="Visibility" Value="Collapsed"/>
+                    <Setter TargetName="Globe" Property="Visibility" Value="Collapsed"/>
+                    <DataTrigger.EnterActions>
+                        <BeginStoryboard x:Name="Spin">
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="Spinner"
+                                                 Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                 From="0" To="360" Duration="0:0:0.9" RepeatBehavior="Forever"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </DataTrigger.EnterActions>
+                    <DataTrigger.ExitActions>
+                        <StopStoryboard BeginStoryboardName="Spin"/>
+                    </DataTrigger.ExitActions>
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!-- A tab's menu; its PlacementTarget's DataContext is the tab -->
+        <ContextMenu x:Key="TabMenu">
+            <MenuItem Header="New tab to the right" Click="TabMenuNewTab_Click"/>
+            <MenuItem Header="Reload" Click="TabMenuReload_Click"/>
+            <MenuItem Header="Duplicate" Click="TabMenuDuplicate_Click"/>
+            <MenuItem Header="Move to new window" Click="TabMenuMoveToNewWindow_Click"/>
+            <Separator/>
+            <MenuItem Header="Close tab" InputGestureText="Ctrl+W" Click="TabMenuClose_Click"/>
+            <MenuItem Header="Close other tabs" Click="TabMenuCloseOthers_Click"/>
+            <MenuItem Header="Close tabs to the right" Click="TabMenuCloseRight_Click"/>
+        </ContextMenu>
     </Window.Resources>
 
     <Grid>
@@ -90,8 +186,20 @@
         <Border x:Name="RevealStrip" Grid.Row="0" Height="4" Background="Transparent" Visibility="Collapsed"
                 MouseEnter="RevealStrip_MouseEnter"/>
 
-        <Border x:Name="Toolbar" Grid.Row="0" Background="{StaticResource Bg.Elevated}" BorderBrush="{StaticResource Border.Subtle}"
-                BorderThickness="0,0,0,1" Padding="8,6" MouseLeave="Toolbar_MouseLeave">
+        <StackPanel x:Name="Toolbar" Grid.Row="0" MouseLeave="Toolbar_MouseLeave">
+            <!-- The tabs: click one to show it, drag it along the tabs to move it, out of the window for a window of its own,
+                 or onto another browser window's tabs to join them; + (Ctrl+T), or double-clicking past the tabs, opens one -->
+            <Grid x:Name="TabBar" Background="{StaticResource Bg.Console}">
+                <Rectangle Height="1" VerticalAlignment="Bottom" Fill="{StaticResource Border.Subtle}"/>
+                <controls:BrowserTabPanel x:Name="TabStrip" Margin="6,6,6,0" Background="Transparent" ClipToBounds="True"
+                                          MouseLeftButtonDown="TabStrip_MouseLeftButtonDown">
+                    <Button Content="&#xE710;" Style="{StaticResource Button.Ghost}" Margin="4,0,0,0" ToolTip="New tab (Ctrl+T)"
+                            AutomationProperties.Name="New tab" Click="NewTab_Click"/>
+                </controls:BrowserTabPanel>
+            </Grid>
+
+            <Border Background="{StaticResource Bg.Elevated}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="0,0,0,1"
+                    Padding="8,6">
             <StackPanel>
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
@@ -104,6 +212,9 @@
                     </StackPanel>
 
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <Button Content="&#xE8A7;" Style="{StaticResource Button.Ghost}" Margin="0,0,2,0"
+                                ToolTip="New window (Ctrl+N; Ctrl+Shift+N for an incognito one)" AutomationProperties.Name="New window"
+                                Click="NewWindow_Click"/>
                         <Button Content="&#xE774;" Style="{StaticResource Button.Ghost}" Margin="0,0,2,0"
                                 ToolTip="Open this page in your default browser" AutomationProperties.Name="Open in default browser"
                                 Click="OpenInDefaultBrowser_Click"/>
@@ -176,7 +287,8 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </StackPanel>
-        </Border>
+            </Border>
+        </StackPanel>
 
         <!-- Shown instead of the page while the app's server doesn't answer yet -->
         <StackPanel x:Name="WaitingNote" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24"
@@ -232,7 +344,8 @@
             </StackPanel>
         </ScrollViewer>
 
-        <wv2:WebView2 x:Name="Web" Grid.Row="1"/>
+        <!-- The tabs' pages; only the tab picked shows its own -->
+        <Grid x:Name="WebHost" Grid.Row="1"/>
 
         <!-- Saving a site, or editing a saved one: its name and address. A window of its own, so it shows over the page. -->
         <Popup x:Name="SitePopup" Placement="Custom" AllowsTransparency="True" StaysOpen="False"

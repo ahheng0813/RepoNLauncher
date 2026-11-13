@@ -62,7 +62,12 @@ public interface IGitService
     /// <summary>Subjects of the commits in a range such as origin/main..HEAD, newest first, at most <paramref name="max"/>.</summary>
     Task<List<string>> GetCommitSubjectsAsync(string path, string range, int max, CancellationToken ct = default);
     Task<GitStatusSummary> GetStatusAsync(string path, CancellationToken ct = default);
-    Task<List<CommitInfo>> GetRecentCommitsAsync(string path, int count = 30, CancellationToken ct = default);
+
+    /// <summary>
+    /// A page of the history that <paramref name="from"/> (HEAD, or a commit's hash) reaches, newest first: at most
+    /// <paramref name="count"/> commits, after leaving out the first <paramref name="skip"/>.
+    /// </summary>
+    Task<List<CommitInfo>> GetCommitsAsync(string path, string from, int skip, int count, CancellationToken ct = default);
 
     /// <summary>
     /// The newest commits on the current branch, at most <paramref name="max"/>, with <paramref name="text"/> in their
@@ -343,9 +348,11 @@ public class GitService : IGitService
 
     private const string CommitFormat = $"%H{FieldSep}%P{FieldSep}%an{FieldSep}%aI{FieldSep}%s{FieldSep}%b{RecordSep}";
 
-    public async Task<List<CommitInfo>> GetRecentCommitsAsync(string path, int count = 30, CancellationToken ct = default)
+    public async Task<List<CommitInfo>> GetCommitsAsync(string path, string from, int skip, int count, CancellationToken ct = default)
     {
-        var result = await _runner.RunCaptureAsync(path, $"git log -n {count} --pretty=format:{CommitFormat}", ct);
+        // The -- keeps git from taking the hash for a file's name.
+        var result = await _runner.RunCaptureAsync(path, "git",
+            ["log", $"--skip={skip}", $"-n{count}", $"--pretty=format:{CommitFormat}", from, "--"], ct);
         return ParseCommits(result);
     }
 

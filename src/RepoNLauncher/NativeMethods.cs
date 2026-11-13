@@ -3,8 +3,9 @@ using System.Runtime.InteropServices;
 namespace RepoNLauncher;
 
 /// <summary>
-/// Windows calls: the console-style title bar that matches the app's theme, bringing a window to the front, refreshing
-/// the icons File Explorer shows, Explorer's name order, and where the Downloads folder is.
+/// Windows calls: the console-style title bar that matches the app's theme, bringing a window to the front, keeping
+/// windows on top and moving them as the mouse drags, the mouse and keys held, refreshing the icons File Explorer shows,
+/// Explorer's name order, and where the Downloads folder is.
 /// </summary>
 internal static class NativeMethods
 {
@@ -81,6 +82,135 @@ internal static class NativeMethods
             SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, flags);
         }
         window.Activate();
+    }
+
+    private const uint SWP_NOZORDER = 0x0004;
+
+    /// <summary>
+    /// Puts a window of any process's in the topmost band, over windows pinned on top, or takes it out again; it isn't
+    /// activated either way.
+    /// </summary>
+    public static void SetTopmost(IntPtr hwnd, bool topmost) =>
+        SetWindowPos(hwnd, topmost ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetWindowRect(IntPtr hwnd, out Rect rect);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Rect
+    {
+        public int Left, Top, Right, Bottom;
+    }
+
+    /// <summary>Moves a window by so many device pixels, without activating it or changing its place among the others.</summary>
+    public static void MoveWindowBy(IntPtr hwnd, int dx, int dy)
+    {
+        if ((dx == 0 && dy == 0) || !GetWindowRect(hwnd, out var rect)) return;
+        SetWindowPos(hwnd, IntPtr.Zero, rect.Left + dx, rect.Top + dy, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetCursorPos(out CursorPoint point);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct CursorPoint
+    {
+        public int X, Y;
+    }
+
+    /// <summary>Where the mouse is on the screen, in device pixels, as PointToScreen and PointFromScreen take them.</summary>
+    public static System.Windows.Point CursorPosition() => GetCursorPos(out var point) ? new(point.X, point.Y) : default;
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int key);
+
+    [DllImport("user32.dll")]
+    private static extern int GetSystemMetrics(int index);
+
+    private const int SM_SWAPBUTTON = 23, VK_LBUTTON = 0x01, VK_RBUTTON = 0x02;
+
+    /// <summary>
+    /// Whether the main mouse button is held now, wherever the mouse is: over another window, or another program's, too.
+    /// With the buttons swapped in Windows' settings, that's the right one.
+    /// </summary>
+    public static bool IsPrimaryButtonDown() =>
+        (GetAsyncKeyState(GetSystemMetrics(SM_SWAPBUTTON) != 0 ? VK_RBUTTON : VK_LBUTTON) & 0x8000) != 0;
+
+    /// <summary>Whether the key is held now, even while another process (such as a page's browser) has the keyboard.</summary>
+    public static bool IsKeyDown(System.Windows.Input.Key key) =>
+        (GetAsyncKeyState(System.Windows.Input.KeyInterop.VirtualKeyFromKey(key)) & 0x8000) != 0;
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool IsWindow(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetWindow(IntPtr hwnd, uint command);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetTopWindow(IntPtr hwnd);
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
+    private static extern IntPtr GetWindowLongPtr(IntPtr hwnd, int index);
+
+    private const uint GW_HWNDNEXT = 2, GW_OWNER = 4;
+    private const int GWL_STYLE = -16, GWL_EXSTYLE = -20;
+    private const long WS_CHILD = 0x40000000, WS_CAPTION = 0x00C00000, WS_EX_TOOLWINDOW = 0x00000080;
+
+    /// <summary>The windows on the screen, the one in front first.</summary>
+    public static IEnumerable<IntPtr> WindowsFrontToBack()
+    {
+        for (var hwnd = GetTopWindow(IntPtr.Zero); hwnd != IntPtr.Zero; hwnd = GetWindow(hwnd, GW_HWNDNEXT)) yield return hwnd;
+    }
+
+    /// <summary>
+    /// A window of its own, as the taskbar shows them: with a title bar, not part of another window, not a tool window,
+    /// and not owned by one (an owned window already stays over its owner).
+    /// </summary>
+    public static bool IsAppWindow(IntPtr hwnd)
+    {
+        var style = (long)GetWindowLongPtr(hwnd, GWL_STYLE);
+        var extended = (long)GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+        return (style & WS_CHILD) == 0 && (style & WS_CAPTION) == WS_CAPTION && (extended & WS_EX_TOOLWINDOW) == 0
+               && GetWindow(hwnd, GW_OWNER) == IntPtr.Zero;
+    }
+
+    private delegate void WinEventProc(IntPtr hook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint thread, uint time);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr module, WinEventProc proc, uint processId,
+        uint threadId, uint flags);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool UnhookWinEvent(IntPtr hook);
+
+    private const uint EVENT_OBJECT_SHOW = 0x8002, WINEVENT_OUTOFCONTEXT = 0;
+
+    private static IntPtr _shownHook;
+    private static uint _shownProcess;
+
+    // Kept here, as Windows calls it long after it was handed over.
+    private static WinEventProc? _shownProc;
+    private static Action<IntPtr>? _onShown;
+
+    /// <summary>
+    /// Calls <paramref name="onShown"/> on this thread with each window of the process's shown from now on (whole
+    /// windows, not their parts), instead of those of the process it was watching.
+    /// </summary>
+    public static void WatchWindowsShown(uint processId, Action<IntPtr> onShown)
+    {
+        _onShown = onShown;
+        if (processId == _shownProcess) return;
+        if (_shownHook != IntPtr.Zero) UnhookWinEvent(_shownHook);
+        _shownProc ??= (_, _, hwnd, idObject, idChild, _, _) =>
+        {
+            if (idObject == 0 && idChild == 0 && hwnd != IntPtr.Zero) _onShown?.Invoke(hwnd);
+        };
+        _shownHook = SetWinEventHook(EVENT_OBJECT_SHOW, EVENT_OBJECT_SHOW, IntPtr.Zero, _shownProc, processId, 0, WINEVENT_OUTOFCONTEXT);
+        _shownProcess = _shownHook != IntPtr.Zero ? processId : 0;
     }
 
     [DllImport("shlwapi.dll", CharSet = CharSet.Unicode)]

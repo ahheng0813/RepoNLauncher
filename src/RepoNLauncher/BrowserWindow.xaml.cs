@@ -1,8 +1,6 @@
 using System.Collections.Specialized;
-using System.Diagnostics;
-using System.IO;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
@@ -12,12 +10,13 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.Web.WebView2.Core;
-using Microsoft.Web.WebView2.Wpf;
+using RepoNLauncher.Controls;
 using RepoNLauncher.Models;
 using RepoNLauncher.Services;
 using RepoNLauncher.ViewModels;
 using Application = System.Windows.Application;
 using Brush = System.Windows.Media.Brush;
+using ButtonBase = System.Windows.Controls.Primitives.ButtonBase;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using Point = System.Windows.Point;
@@ -25,37 +24,34 @@ using Point = System.Windows.Point;
 namespace RepoNLauncher;
 
 /// <summary>
-/// The site a project's run serves, in a browser of the dashboard's own: filling a screen of its own, another than the
-/// dashboard's when there is one, or the screen picked in the Run tab. One window per project; running it again shows
-/// the new run's site in the same window. One more is no project's, opened from the dashboard's header to browse
-/// without running anything. Opened without a site, a window starts on a page of the saved sites, which every window
-/// also shows in a bar under its address.
+/// The dashboard's own browser, in tabs as browsers have them: the site a project's run serves has a tab of its own
+/// (running it again shows the new run's site there), opened in a window filling a screen of its own, another than the
+/// dashboard's when there is one, or the screen picked in the Run tab. Tabs move along the tabs, out to a window of their
+/// own, and onto another browser window's tabs by dragging, as in Chrome. Ctrl+N opens another window. A tab opened
+/// without a site starts on a page of the saved sites, which every window also shows in a bar under its address.
 /// </summary>
 public partial class BrowserWindow : Window
 {
-    private static readonly Dictionary<string, BrowserWindow> OpenWindows = new(StringComparer.OrdinalIgnoreCase);
+    // Every browser window open, the one last active first.
+    private static readonly List<BrowserWindow> OpenWindows = new();
 
-    // Edge's data for the sites (their cookies and storage, so a sign-in lasts), beside the file preview's but apart from it.
-    private static readonly string WebViewData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        Path.GetFileName(DashboardConfigService.AppDataDir), "Browser");
+    // Each project's run tab, wherever it's been dragged to.
+    private static readonly Dictionary<string, BrowserTab> ProjectTabs = new(StringComparer.OrdinalIgnoreCase);
 
-    // A dev server can print its address a moment before it answers. Until it does, the window tries again every second
-    // for this long, rather than showing the browser's error page.
-    private static readonly TimeSpan WaitForServer = TimeSpan.FromSeconds(30);
+    // The sites of tabs closed, the latest last, for Ctrl+Shift+T to open again.
+    private static readonly List<(string Url, bool Incognito)> ClosedTabs = new();
 
     private readonly SiteBrowserViewModel _sites;
+    private readonly AdBlockerViewModel _adBlock;
 
-    // The project's name, or Browser for the window of no project's.
-    private readonly string _label;
-    private readonly DispatcherTimer _retry = new() { Interval = TimeSpan.FromSeconds(1) };
+    // Settings' Incognito as the window opened: its tabs keep nothing on this PC. Their browsers can't change that once made.
+    private readonly bool _incognito;
 
-    // The site the run serves (or the one last typed or saved), and until when a failure to reach it means it's still
-    // starting. Empty while the window shows its start page.
-    private string _url;
-    private DateTime _waitUntil;
+    // The tabs in their order along the strip, each one's tab there, and the one shown.
+    private readonly List<BrowserTab> _tabs = new();
+    private readonly Dictionary<BrowserTab, BrowserTabHeader> _headers = new();
+    private BrowserTab? _tab;
 
-    private bool _isLoading;
-    private bool _webViewFailed;
     private bool _closed;
     private bool _isFullScreen;
     private WindowState _stateBeforeFullScreen = WindowState.Normal;
@@ -68,110 +64,86 @@ public partial class BrowserWindow : Window
     // Where the popup lines up with what it opened under: its right edge (the star, at the window's right) or its left.
     private bool _popupAlignRight;
 
-    // Settings' Incognito as the window opened: it keeps nothing on this PC. Its browser can't change that once made.
-    private readonly bool _incognito;
-
-    private readonly AdBlockerViewModel _adBlock;
-
-    // The page shown (or being gone to): its host, whether the ad blocker blocks on it, and how many it has blocked there.
-    private string _pageHost = string.Empty;
-    private bool _filterPage;
-    private int _blocked;
-
-    // Requests are only handed to the window to check while the ad blocker is on.
-    private bool _checkingRequests;
-
-    // Hiding the page's ads: the CSS a script added for each new page puts on it, that script once it's added, and whether
-    // the page started loading before it was, so it's run on the page once that has loaded.
-    private string? _hideCss;
-    private string? _hideScriptId;
-    private bool _hideLate;
-    private Task _hiding = Task.CompletedTask;
-
-    // Names what the hiding script leaves on the page, so pages can't tell it by name (it's new each run).
-    private static readonly string HideKey = "_" + Guid.NewGuid().ToString("N")[..10];
-
-    private BrowserWindow(SiteBrowserViewModel sites, string? projectName, string? url)
+    private BrowserWindow(SiteBrowserViewModel sites, bool incognito)
     {
         InitializeComponent();
         _sites = sites;
         _adBlock = sites.AdBlocker;
-        _incognito = sites.IsIncognito;
+        _incognito = incognito;
         DataContext = sites;
-        _label = projectName ?? "Browser";
-        _url = url ?? string.Empty;
-        Title = WindowTitle(null);
+        Title = "Repo'N'Launcher";
         IncognitoBadge.Visibility = _incognito ? Visibility.Visible : Visibility.Collapsed;
-        Address.Text = _url;
-        if (url != null)
-        {
-            _waitUntil = DateTime.UtcNow + WaitForServer;
-        }
-        else
-        {
-            // Nothing to show yet: the start page until an address is typed or a saved site picked.
-            StartPage.Visibility = Visibility.Visible;
-            Web.Visibility = Visibility.Hidden;
-        }
         _sites.SavedSites.CollectionChanged += OnSavedSitesChanged;
-        _adBlock.Changed += OnAdBlockChanged;
 
         // Placed by hand: Bottom placement follows the pen-tablet "right-handed" setting, which flips popups to the left.
         // The callback works in device pixels.
         SitePopup.CustomPopupPlacementCallback = (popupSize, targetSize, _) => PlaceUnder(popupSize, targetSize, _popupAlignRight);
         ShieldPopup.CustomPopupPlacementCallback = (popupSize, targetSize, _) => PlaceUnder(popupSize, targetSize, alignRight: true);
         UpdateShield();
-        _retry.Tick += (_, _) =>
-        {
-            _retry.Stop();
-            TryNavigate(_url);
-        };
 
         SourceInitialized += (_, _) =>
         {
             NativeMethods.UseImmersiveDarkMode(new WindowInteropHelper(this).Handle);
             if (_maximizeOnceMade) WindowState = WindowState.Maximized;
         };
-        Loaded += async (_, _) =>
+        Loaded += (_, _) =>
         {
             NextScreenButton.Visibility = Screen.AllScreens.Length > 1 ? Visibility.Visible : Visibility.Collapsed;
-            if (StartPage.Visibility == Visibility.Visible) Address.Focus();
-            await StartAsync();
+            if (_tab?.ShowsStartPage == true) Address.Focus();
         };
+        Activated += (_, _) =>
+        {
+            OpenWindows.Remove(this);
+            OpenWindows.Insert(0, this);
+        };
+        OpenWindows.Insert(0, this);
     }
 
     /// <summary>
-    /// Shows the site in the project's browser window (or the one of no project's), opening one on the screen asked for
-    /// if it has none; without a site, it just opens, on its start page.
+    /// Shows the site in the project's tab (or a browser window of no project's), opening a window for it on the screen
+    /// asked for if it has none; without a site, it just opens, on its start page.
     /// </summary>
     public static void Open(SiteBrowserViewModel sites, SiteRequest request)
     {
-        var key = request.ProjectPath ?? string.Empty;
-        if (OpenWindows.TryGetValue(key, out var open))
+        if (request.ProjectPath is { } path && ProjectTabs.TryGetValue(path, out var tab) && tab.Window is { } window)
         {
-            if (request.Url != null) open.Go(request.Url);
-            if (request.Activate) NativeMethods.BringToFront(open);
-            else if (open.WindowState == WindowState.Minimized) SystemCommands.RestoreWindow(open);
+            if (request.Url != null) tab.Go(request.Url);
+            window.Select(tab);
+            ShowWindow(window, request.Activate);
             return;
         }
 
-        var window = new BrowserWindow(sites, request.ProjectName, request.Url);
-        OpenWindows[key] = window;
-        window.Closed += (_, _) => OpenWindows.Remove(key);
-        window.PlaceOn(TargetScreen(request.Screen));
-        window.Show();
+        // The header's Browser: the browser window last used that has no project's run in it.
+        if (request.ProjectPath == null && OpenWindows.FirstOrDefault(w => w._tabs.All(t => t.ProjectPath == null)) is { } browser)
+        {
+            if (request.Url != null) browser.NewTab(request.Url, waitForServer: true);
+            ShowWindow(browser, request.Activate);
+            return;
+        }
+
+        var created = new BrowserWindow(sites, sites.IsIncognito);
+        created.NewTab(request.Url, waitForServer: true, projectPath: request.ProjectPath, projectName: request.ProjectName);
+        created.PlaceOn(TargetScreen(request.Screen));
+        created.Show();
+    }
+
+    private static void ShowWindow(BrowserWindow window, bool activate)
+    {
+        if (activate) NativeMethods.BringToFront(window);
+        else if (window.WindowState == WindowState.Minimized) SystemCommands.RestoreWindow(window);
     }
 
     /// <summary>Moves the open browser windows to the screen picked in the Run tab.</summary>
     public static void MoveAllTo(string? screen)
     {
-        foreach (var window in OpenWindows.Values) window.PlaceOn(TargetScreen(screen));
+        foreach (var window in OpenWindows.ToList()) window.PlaceOn(TargetScreen(screen));
     }
 
     /// <summary>Closes every browser window; they aren't the dashboard's own, so they'd keep the app open.</summary>
     public static void CloseAll()
     {
-        foreach (var window in OpenWindows.Values.ToList()) window.Close();
+        EndDrag();
+        foreach (var window in OpenWindows.ToList()) window.Close();
     }
 
     // The screen picked, else another than the dashboard's, as a screen of its own is the place for the site; with one
@@ -217,6 +189,34 @@ public partial class BrowserWindow : Window
         }
     }
 
+    /// <summary>
+    /// Another browser window, over this one a little down and to the right as browsers open one, the same size and
+    /// maximized if this one is; with <paramref name="tab"/> (taken from the window it's in) or a new tab's start page.
+    /// </summary>
+    private BrowserWindow OpenNewWindow(bool incognito, BrowserTab? tab = null)
+    {
+        var window = new BrowserWindow(_sites, incognito);
+        var bounds = WindowState == WindowState.Normal ? new Rect(Left, Top, ActualWidth, ActualHeight) : RestoreBounds;
+        if (bounds.IsEmpty) bounds = new Rect(Left, Top, Width, Height);
+        window.Width = bounds.Width;
+        window.Height = bounds.Height;
+        window.Left = bounds.Left + 32;
+        window.Top = bounds.Top + 32;
+        window._maximizeOnceMade = (_isFullScreen ? _stateBeforeFullScreen : WindowState) == WindowState.Maximized;
+
+        if (tab == null)
+        {
+            window.NewTab();
+        }
+        else
+        {
+            tab.Window?.RemoveTab(tab);
+            window.AddTab(tab, 0, select: true);
+        }
+        window.Show();
+        return window;
+    }
+
     private CustomPopupPlacement[] PlaceUnder(System.Windows.Size popupSize, System.Windows.Size targetSize, bool alignRight)
     {
         var dpi = VisualTreeHelper.GetDpi(this);
@@ -225,14 +225,12 @@ public partial class BrowserWindow : Window
             PopupPrimaryAxis.Horizontal)];
     }
 
-    private string WindowTitle(string? pageTitle)
+    private string WindowTitle(BrowserTab tab)
     {
-        var label = _incognito ? $"{_label} (Incognito)" : _label;
-        return string.IsNullOrWhiteSpace(pageTitle) ? $"{label} - Repo'N'Launcher" : $"{pageTitle} - {label} - Repo'N'Launcher";
+        var label = tab.ProjectName ?? "Browser";
+        if (_incognito) label = $"{label} (Incognito)";
+        return string.IsNullOrWhiteSpace(tab.PageTitle) ? $"{label} - Repo'N'Launcher" : $"{tab.PageTitle} - {label} - Repo'N'Launcher";
     }
-
-    // Every browser window's environment is made the same way, as Edge needs for windows sharing a data folder.
-    private static Task<CoreWebView2Environment> CreateEnvironmentAsync() => CoreWebView2Environment.CreateAsync(null, WebViewData);
 
     /// <summary>
     /// Clears what the dashboard browser has kept on this PC: history, cookies and sign-ins, form entries, site storage
@@ -240,7 +238,7 @@ public partial class BrowserWindow : Window
     /// </summary>
     public static async Task ClearBrowsingDataAsync(Window host)
     {
-        var environment = await CreateEnvironmentAsync();
+        var environment = await BrowserTab.CreateEnvironmentAsync();
         var controller = await environment.CreateCoreWebView2ControllerAsync(new WindowInteropHelper(host).Handle);
         try
         {
@@ -253,252 +251,380 @@ public partial class BrowserWindow : Window
         }
     }
 
-    private async Task StartAsync()
+    // ---- Tabs ----
+
+    /// <summary>
+    /// A new tab at <paramref name="index"/> (after the others when it's null): on the site, waiting for its server when
+    /// it's a run's, or on its start page.
+    /// </summary>
+    private BrowserTab NewTab(string? url = null, bool waitForServer = false, int? index = null, bool select = true,
+        string? projectPath = null, string? projectName = null)
     {
+        var tab = new BrowserTab(_adBlock, _incognito, projectPath, projectName);
+        if (projectPath != null) ProjectTabs[projectPath] = tab;
+        if (url != null)
+        {
+            if (waitForServer) tab.Go(url);
+            else tab.Browse(url);
+        }
+        AddTab(tab, index ?? _tabs.Count, select);
+        _ = tab.OpenAsync();
+        return tab;
+    }
+
+    // A tab joins the window: new, or from another.
+    private void AddTab(BrowserTab tab, int index, bool select)
+    {
+        index = Math.Clamp(index, 0, _tabs.Count);
+        tab.Window = this;
+        _tabs.Insert(index, tab);
+
+        var header = new BrowserTabHeader
+        {
+            Content = tab,
+            DataContext = tab,
+            ContentTemplate = (DataTemplate)FindResource("TabHeader"),
+            ContextMenu = (ContextMenu)FindResource("TabMenu"),
+            Focusable = false,
+            RenderTransform = new TranslateTransform(),
+        };
+        header.SetBinding(AutomationProperties.NameProperty, nameof(BrowserTab.Title));
+        header.SetBinding(BrowserTabHeader.IsSelectedProperty, nameof(BrowserTab.IsSelected));
+        header.SelectRequested += (_, _) => Select(tab);
+        header.PreviewMouseLeftButtonDown += TabHeader_PreviewMouseLeftButtonDown;
+        header.PreviewMouseLeftButtonUp += (_, _) => EndDrag();
+        header.MouseUp += TabHeader_MouseUp;
+        _headers[tab] = header;
+        TabStrip.Children.Insert(index, header);
+        if (tab.Web.CoreWebView2 != null) ShowPage(tab);
+
+        tab.PropertyChanged += OnTabPropertyChanged;
+        tab.PageChanged += OnTabPageChanged;
+        tab.FullScreenRequested += OnTabFullScreenRequested;
+        tab.NewTabRequested += OnNewTabRequested;
+        tab.CloseRequested += CloseTab;
+        tab.KeepPopupsOnTop(Topmost);
+
+        if (select || _tab == null) Select(tab);
+        else tab.IsSelected = false;
+    }
+
+    /// <summary>
+    /// Puts the tab's page in the window, once its browser is made (elsewhere, so it outlives this window if the tab is
+    /// dragged out of it).
+    /// </summary>
+    internal void ShowPage(BrowserTab tab)
+    {
+        if (tab.Window == this && VisualTreeHelper.GetParent(tab.Web) == null) WebHost.Children.Add(tab.Web);
+    }
+
+    // Takes the tab off the window, to close it or for it to go to another; the window closes with its last tab.
+    private void RemoveTab(BrowserTab tab)
+    {
+        var index = _tabs.IndexOf(tab);
+        if (index < 0) return;
+
+        tab.PropertyChanged -= OnTabPropertyChanged;
+        tab.PageChanged -= OnTabPageChanged;
+        tab.FullScreenRequested -= OnTabFullScreenRequested;
+        tab.NewTabRequested -= OnNewTabRequested;
+        tab.CloseRequested -= CloseTab;
+        _tabs.RemoveAt(index);
+        TabStrip.Children.Remove(_headers[tab]);
+        _headers.Remove(tab);
+        WebHost.Children.Remove(tab.Web);
+        tab.Window = null;
+
+        if (_tab == tab)
+        {
+            tab.IsSelected = false;
+            _tab = null;
+            // The one that takes its place, as browsers do; the one before it when it was the last.
+            if (_tabs.Count > 0) Select(_tabs[Math.Min(index, _tabs.Count - 1)]);
+        }
+        if (_tabs.Count == 0 && !_closed) Close();
+    }
+
+    private void CloseTab(BrowserTab tab)
+    {
+        if (tab.Window != this) return;
+        if (tab.CurrentPage() is { } url)
+        {
+            ClosedTabs.Add((url, tab.Incognito));
+            if (ClosedTabs.Count > 25) ClosedTabs.RemoveAt(0);
+        }
+        RemoveTab(tab);
+        Forget(tab);
+        tab.Dispose();
+    }
+
+    private static void Forget(BrowserTab tab)
+    {
+        if (tab.ProjectPath != null && ProjectTabs.TryGetValue(tab.ProjectPath, out var known) && known == tab)
+            ProjectTabs.Remove(tab.ProjectPath);
+    }
+
+    // Ctrl+Shift+T: the last tab closed of this window's kind (incognito or not), on its site again.
+    private void ReopenClosedTab()
+    {
+        var last = ClosedTabs.FindLastIndex(t => t.Incognito == _incognito);
+        if (last < 0) return;
+        var url = ClosedTabs[last].Url;
+        ClosedTabs.RemoveAt(last);
+        NewTab(url);
+    }
+
+    private void Select(BrowserTab tab)
+    {
+        if (_tab == tab) return;
+        if (_tab != null) _tab.IsSelected = false;
+        _tab = tab;
+        tab.IsSelected = true;
+
+        SitePopup.IsOpen = false;
+        ShieldPopup.IsOpen = false;
+        Address.Text = tab.Address;
+        ShowTab();
+        // The page has the keyboard, or the address on a start page.
+        if (!IsActive) return;
+        if (tab.ShowsStartPage) Address.Focus();
+        else if (tab.Web.Visibility == Visibility.Visible) tab.Web.Focus();
+    }
+
+    // Ctrl+Tab and Ctrl+Shift+Tab: the next tab along, or the one before, round from the ends.
+    private void SelectBy(int step)
+    {
+        if (_tab == null || _tabs.Count < 2) return;
+        Select(_tabs[(_tabs.IndexOf(_tab) + step + _tabs.Count) % _tabs.Count]);
+    }
+
+    // The toolbar, title and what shows instead of the page, for the tab shown.
+    private void ShowTab()
+    {
+        if (_tab is not { } tab) return;
+        Title = WindowTitle(tab);
+        BackButton.IsEnabled = tab.CanGoBack;
+        ForwardButton.IsEnabled = tab.CanGoForward;
+        SetLoading(tab.IsLoading);
+        StartPage.Visibility = tab.ShowsStartPage ? Visibility.Visible : Visibility.Collapsed;
+        WaitingText.Text = tab.Note ?? string.Empty;
+        WaitingNote.Visibility = tab.Note != null ? Visibility.Visible : Visibility.Collapsed;
+        UpdateStar();
+        UpdateShield();
+    }
+
+    private void OnTabPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (sender is not BrowserTab tab || tab != _tab) return;
+        if (e.PropertyName == nameof(BrowserTab.Address) && !Address.IsKeyboardFocusWithin) Address.Text = tab.Address;
+        ShowTab();
+    }
+
+    private void OnTabPageChanged(BrowserTab tab)
+    {
+        if (tab == _tab) ShowTab();
+    }
+
+    private void OnTabFullScreenRequested(BrowserTab tab, bool on)
+    {
+        if (tab == _tab) SetFullScreen(on);
+    }
+
+    // A link that opens another window (target="_blank", or window.open without a size): a tab after the page's, as
+    // browsers open it; with Ctrl held it opens behind, and with Shift in a window of its own.
+    private async void OnNewTabRequested(BrowserTab opener, CoreWebView2NewWindowRequestedEventArgs e)
+    {
+        if (opener.Web.CoreWebView2?.Environment is not { } environment) return;
+        var behind = NativeMethods.IsKeyDown(Key.LeftCtrl) || NativeMethods.IsKeyDown(Key.RightCtrl);
+        var inWindow = NativeMethods.IsKeyDown(Key.LeftShift) || NativeMethods.IsKeyDown(Key.RightShift);
+
+        var deferral = e.GetDeferral();
+        var tab = new BrowserTab(_adBlock, _incognito);
         try
         {
-            // Incognito keeps the window's browsing data in memory, so none of it reaches the data folder.
-            var environment = await CreateEnvironmentAsync();
-            var options = environment.CreateCoreWebView2ControllerOptions();
-            options.IsInPrivateModeEnabled = _incognito;
-            await Web.EnsureCoreWebView2Async(environment, options);
+            tab.ShowOpened(e.Uri);
+            if (inWindow) OpenNewWindow(_incognito, tab);
+            else AddTab(tab, _tabs.IndexOf(opener) + 1, select: !behind);
+
+            if (await tab.InitAsync(environment))
+            {
+                e.NewWindow = tab.Web.CoreWebView2;
+                await tab.StartAsync(navigate: false);
+                return;
+            }
         }
-        catch (Exception e) when (e is WebView2RuntimeNotFoundException or ExternalException or IOException or UnauthorizedAccessException
-                                      or ArgumentException or InvalidOperationException)
+        catch (Exception ex) when (ex is COMException or InvalidOperationException or ArgumentException)
         {
-            // Closed while it was starting, or no Edge to show it with: the default browser shows the site instead.
-            if (_closed) return;
-            _webViewFailed = true;
-            Web.Visibility = Visibility.Collapsed;
-            StartPage.Visibility = Visibility.Collapsed;
-            var opened = _url.Length > 0 ? "the site opened" : "sites open";
-            ShowNote(e is WebView2RuntimeNotFoundException
-                ? $"This window needs Microsoft Edge WebView2, which this PC doesn't have, so {opened} in your default browser."
-                : $"Sites couldn't be shown here ({e.Message.TrimEnd('.')}), so {opened} in your default browser.");
-            OpenInDefaultBrowser(_url);
-            return;
+            // The page that asked went away meanwhile.
+        }
+        finally
+        {
+            deferral.Complete();
         }
 
-        if (_closed) return;
-        var web = Web.CoreWebView2;
-        web.DocumentTitleChanged += (_, _) => Title = WindowTitle(web.DocumentTitle);
-        web.SourceChanged += (_, _) =>
-        {
-            if (!Address.IsKeyboardFocusWithin) Address.Text = web.Source;
-            UpdateStar();
-        };
-        web.HistoryChanged += (_, _) =>
-        {
-            BackButton.IsEnabled = web.CanGoBack;
-            ForwardButton.IsEnabled = web.CanGoForward;
-        };
-        web.NavigationStarting += OnNavigationStarting;
-        web.NavigationCompleted += OnNavigationCompleted;
-        web.WebResourceRequested += OnWebResourceRequested;
-        web.NewWindowRequested += OnNewWindowRequested;
-        web.ContentLoading += (_, _) => _hideLate = _hideCss != null && _hideScriptId == null;
-        web.DOMContentLoaded += (_, _) =>
-        {
-            if (_hideLate && _hideCss != null) _ = RunQuietlyAsync(web.ExecuteScriptAsync(HideScript(_hideCss)));
-            _hideLate = false;
-        };
-        // The page's own full screen, such as a video's, takes the window's with it.
-        web.ContainsFullScreenElementChanged += (_, _) => SetFullScreen(web.ContainsFullScreenElement);
-        // A dev server's HTTPS certificate is its own, which Edge doesn't trust unless it was set up to (ASP.NET's dev-certs,
-        // say). Like Chrome's allow-insecure-localhost, that's let through for this PC's own servers only.
-        web.ServerCertificateErrorDetected += (_, e) =>
-        {
-            if (Uri.TryCreate(e.RequestUri, UriKind.Absolute, out var uri) && uri.IsLoopback)
-                e.Action = CoreWebView2ServerCertificateErrorAction.AlwaysAllow;
-        };
+        // Its browser couldn't be made, or given the page: the page's own pop-up window opens instead, if it still can.
+        tab.Window?.RemoveTab(tab);
+        tab.Dispose();
+    }
 
-        // The ad blocker's rules, read once for every window (on another thread, while this one's browser started), so
-        // the first page is filtered too.
-        await _adBlock.WhenReadyAsync();
-        if (_closed) return;
-        UpdateRequestChecking();
+    private void NewTab_Click(object sender, RoutedEventArgs e)
+    {
+        NewTab();
+        Address.Focus();
+    }
 
-        // The run's site it was opened with, or an address typed or picked while it was starting.
-        if (_url.Length > 0 && !TryNavigate(_url)) ShowStartPage();
+    // Double-clicking past the tabs opens another, as in Firefox.
+    private void TabStrip_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ClickCount != 2 || e.OriginalSource != TabStrip) return;
+        NewTab();
+        Address.Focus();
+        e.Handled = true;
+    }
+
+    private void NewWindow_Click(object sender, RoutedEventArgs e) => OpenNewWindow(_sites.IsIncognito);
+
+    private void TabClose_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: BrowserTab tab }) CloseTab(tab);
+        e.Handled = true;
+    }
+
+    // Pressing a tab shows it, and picks it up to drag; × closes it rather than picking it up.
+    private void TabHeader_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not BrowserTabHeader { DataContext: BrowserTab tab } header || IsInButton(e.OriginalSource, header)) return;
+        Select(tab);
+        BeginDrag(tab, header, e.GetPosition(header));
+        e.Handled = true;
+    }
+
+    // The middle button closes a tab, as in browsers.
+    private void TabHeader_MouseUp(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Middle || sender is not FrameworkElement { DataContext: BrowserTab tab }) return;
+        CloseTab(tab);
+        e.Handled = true;
+    }
+
+    private static bool IsInButton(object source, DependencyObject within)
+    {
+        for (var element = source as DependencyObject; element != null && element != within;
+             element = element is Visual ? VisualTreeHelper.GetParent(element) : LogicalTreeHelper.GetParent(element))
+        {
+            if (element is ButtonBase) return true;
+        }
+        return false;
+    }
+
+    // A tab's menu: the tab is the DataContext of what it was opened on.
+    private static BrowserTab? MenuTab(object sender) =>
+        (sender as MenuItem)?.Parent is ContextMenu { PlacementTarget: FrameworkElement { DataContext: BrowserTab tab } } ? tab : null;
+
+    private void TabMenuNewTab_Click(object sender, RoutedEventArgs e)
+    {
+        if (MenuTab(sender) is not { } tab) return;
+        NewTab(index: _tabs.IndexOf(tab) + 1);
+        Address.Focus();
+    }
+
+    private void TabMenuReload_Click(object sender, RoutedEventArgs e) => MenuTab(sender)?.ReloadOrStop();
+
+    private void TabMenuDuplicate_Click(object sender, RoutedEventArgs e)
+    {
+        if (MenuTab(sender) is not { } tab) return;
+        var url = tab.CurrentPage() ?? (tab.Url.Length > 0 ? tab.Url : null);
+        NewTab(url, index: _tabs.IndexOf(tab) + 1);
+    }
+
+    private void TabMenuMoveToNewWindow_Click(object sender, RoutedEventArgs e)
+    {
+        if (MenuTab(sender) is { } tab && _tabs.Count > 1) OpenNewWindow(_incognito, tab);
+    }
+
+    private void TabMenuClose_Click(object sender, RoutedEventArgs e)
+    {
+        if (MenuTab(sender) is { } tab) CloseTab(tab);
+    }
+
+    private void TabMenuCloseOthers_Click(object sender, RoutedEventArgs e)
+    {
+        if (MenuTab(sender) is not { } tab) return;
+        foreach (var other in _tabs.Where(t => t != tab).ToList()) CloseTab(other);
+    }
+
+    private void TabMenuCloseRight_Click(object sender, RoutedEventArgs e)
+    {
+        if (MenuTab(sender) is not { } tab) return;
+        foreach (var other in _tabs.Skip(_tabs.IndexOf(tab) + 1).ToList()) CloseTab(other);
+    }
+
+    // ---- Windows of the browser's own ----
+
+    /// <summary>
+    /// Watches the tabs' browser for windows of its own it opens: a tab's developer tools (F12, the toolbar's button, or
+    /// Inspect), or a pop-up a page sized itself. Such a window isn't the browser window's, so it'd open behind one
+    /// pinned on top; it's kept over it instead.
+    /// </summary>
+    internal static void WatchBrowserProcess(uint processId) => NativeMethods.WatchWindowsShown(processId, OnBrowserWindowShown);
+
+    // The tab it's for is the one shown in the browser window last active, where F12 was pressed or the page clicked.
+    private static void OnBrowserWindowShown(IntPtr hwnd)
+    {
+        if (!NativeMethods.IsAppWindow(hwnd) || OpenWindows.FirstOrDefault() is not { _tab: { } tab } window) return;
+        tab.AddPopup(hwnd);
+        if (window.Topmost) NativeMethods.SetTopmost(hwnd, true);
+    }
+
+    protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        // Pinned on top, or unpinned: the tabs' developer tools and pop-ups with it.
+        if (e.Property == TopmostProperty)
+        {
+            foreach (var tab in _tabs) tab.KeepPopupsOnTop(Topmost);
+        }
     }
 
     // ---- Ad blocker ----
 
-    private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
-    {
-        SetLoading(true);
-        // A redirect is still the page asked for, so what was blocked on the way counts towards it.
-        if (!e.IsRedirected) _blocked = 0;
-        _pageHost = Uri.TryCreate(e.Uri, UriKind.Absolute, out var uri) ? uri.Host.ToLowerInvariant() : string.Empty;
-        UpdatePage();
-    }
-
-    // The page's site changed, or the ad blocker did: whether it blocks on the page, what it hides there, and the shield.
-    private void UpdatePage()
-    {
-        _filterPage = _adBlock.Filters(_pageHost);
-        _hiding = UpdateHidingAsync();
-        UpdateShield();
-    }
-
-    private void OnAdBlockChanged()
-    {
-        if (_closed) return;
-        UpdateRequestChecking();
-        UpdatePage();
-    }
-
-    private void UpdateRequestChecking()
-    {
-        var web = Web.CoreWebView2;
-        if (web == null || _adBlock.IsEnabled == _checkingRequests) return;
-        _checkingRequests = _adBlock.IsEnabled;
-        if (_checkingRequests) web.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
-        else web.RemoveWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
-    }
-
-    private void OnWebResourceRequested(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
-    {
-        if (!_filterPage) return;
-        var url = e.Request.Uri;
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https" or "ws" or "wss")) return;
-
-        var host = uri.Host.ToLowerInvariant();
-        var context = e.ResourceContext;
-        // The page itself: an address typed or picked shows, even an ad server's.
-        if (context == CoreWebView2WebResourceContext.Document && host == _pageHost) return;
-        if (!_adBlock.Engine.ShouldBlock(url, host, _pageHost, TypeOf(context))) return;
-
-        e.Response = Web.CoreWebView2.Environment.CreateWebResourceResponse(null, 403, "Blocked by the ad blocker", string.Empty);
-        _blocked++;
-        UpdateShield();
-    }
-
-    private static AdRequestType TypeOf(CoreWebView2WebResourceContext context) => context switch
-    {
-        CoreWebView2WebResourceContext.Document => AdRequestType.Subdocument,
-        CoreWebView2WebResourceContext.Script => AdRequestType.Script,
-        CoreWebView2WebResourceContext.Image => AdRequestType.Image,
-        CoreWebView2WebResourceContext.Stylesheet => AdRequestType.Stylesheet,
-        CoreWebView2WebResourceContext.Media => AdRequestType.Media,
-        CoreWebView2WebResourceContext.Font => AdRequestType.Font,
-        CoreWebView2WebResourceContext.XmlHttpRequest or CoreWebView2WebResourceContext.Fetch
-            or CoreWebView2WebResourceContext.EventSource => AdRequestType.XmlHttpRequest,
-        CoreWebView2WebResourceContext.Websocket => AdRequestType.WebSocket,
-        CoreWebView2WebResourceContext.Ping or CoreWebView2WebResourceContext.CspViolationReport => AdRequestType.Ping,
-        _ => AdRequestType.Other,
-    };
-
-    // Pop-ups the lists know as ads, and on Strict any the page opens without a click.
-    private void OnNewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)
-    {
-        if (!_filterPage) return;
-        var unasked = _adBlock.Level == AdBlockLevel.Strict && !e.IsUserInitiated;
-        var listed = Uri.TryCreate(e.Uri, UriKind.Absolute, out var uri)
-                     && _adBlock.Engine.ShouldBlockPopup(e.Uri, uri.Host.ToLowerInvariant(), _pageHost);
-        if (!unasked && !listed) return;
-
-        e.Handled = true;
-        _blocked++;
-        UpdateShield();
-    }
-
-    // The CSS for the page's site goes in a script run as each page starts, before its own scripts; it's added again
-    // only when the CSS changes, as the site does. Added after the page has started, it's run once that has loaded.
-    private async Task UpdateHidingAsync()
-    {
-        var web = Web.CoreWebView2;
-        if (web == null) return;
-        var css = _filterPage ? _adBlock.Engine.HidingCss(_pageHost) : null;
-        if (css == _hideCss) return;
-
-        _hideCss = css;
-        if (_hideScriptId != null)
-        {
-            web.RemoveScriptToExecuteOnDocumentCreated(_hideScriptId);
-            _hideScriptId = null;
-        }
-        if (css == null) return;
-
-        string id;
-        try
-        {
-            id = await web.AddScriptToExecuteOnDocumentCreatedAsync(HideScript(css));
-        }
-        catch (Exception e) when (e is InvalidOperationException or ObjectDisposedException or COMException)
-        {
-            return; // closed meanwhile
-        }
-        if (_closed) return;
-        // Another site's CSS was asked for meanwhile: that one's script stands.
-        if (_hideCss != css || _hideScriptId != null) web.RemoveScriptToExecuteOnDocumentCreated(id);
-        else _hideScriptId = id;
-    }
-
-    // Adopted rather than put in a <style>, so a page whose security policy forbids inline styles still gets it, and its
-    // own scripts don't come across it in the page. Only the page itself: an ad in a frame is blocked at its server.
-    private static string HideScript(string css) => $$"""
-        (() => {
-          if (window.top !== window || window['{{HideKey}}']) return;
-          const sheet = new CSSStyleSheet();
-          sheet.replaceSync({{JsonSerializer.Serialize(css)}});
-          Object.defineProperty(window, '{{HideKey}}', { value: true });
-          const adopt = () => {
-            if (!document.adoptedStyleSheets.includes(sheet)) document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
-          };
-          adopt();
-          document.addEventListener('DOMContentLoaded', adopt);
-          window.addEventListener('load', adopt);
-        })();
-        """;
-
-    private static async Task RunQuietlyAsync(Task task)
-    {
-        try
-        {
-            await task;
-        }
-        catch (Exception e) when (e is InvalidOperationException or ObjectDisposedException or COMException)
-        {
-            // The window closed, or the page went on to another.
-        }
-    }
-
     // Lit while it blocks on the page, with how many it has; muted while it's off, paused, or leaving the site alone.
     private void UpdateShield()
     {
-        var site = AdBlockerViewModel.SiteOf(_pageHost);
-        var showsPage = _pageHost.Length > 0 && StartPage.Visibility != Visibility.Visible;
+        var pageHost = _tab?.PageHost ?? string.Empty;
+        var blocked = _tab?.Blocked ?? 0;
+        var site = AdBlockerViewModel.SiteOf(pageHost);
+        var showsPage = pageHost.Length > 0 && _tab?.ShowsStartPage == false;
         string status;
         var lit = false;
         if (!_adBlock.IsEnabled) status = "Off: pages show their ads.";
         else if (!showsPage) status = "On.";
-        else if (AdBlockerViewModel.IsLocal(_pageHost)) status = "Not on this PC's own sites, such as your projects' local ones.";
-        else if (_adBlock.IsPaused(_pageHost)) status = $"Paused on {site} until the app closes.";
-        else if (_adBlock.Engine.AllowsPage(_pageHost)) status = $"Not on {site}: the filter lists leave it alone, as blocking breaks it.";
+        else if (AdBlockerViewModel.IsLocal(pageHost)) status = "Not on this PC's own sites, such as your projects' local ones.";
+        else if (_adBlock.IsPaused(pageHost)) status = $"Paused on {site} until the app closes.";
+        else if (_adBlock.Engine.AllowsPage(pageHost)) status = $"Not on {site}: the filter lists leave it alone, as blocking breaks it.";
         else
         {
             lit = true;
-            status = _blocked switch
+            status = blocked switch
             {
                 0 => "Nothing blocked on this page.",
                 1 => "1 blocked on this page.",
-                _ => $"{_blocked:N0} blocked on this page.",
+                _ => $"{blocked:N0} blocked on this page.",
             };
         }
 
         ShieldGlyph.Foreground = (Brush)FindResource(lit ? "Accent" : "Text.Muted");
-        ShieldCount.Text = _blocked > 999 ? "999+" : _blocked.ToString();
+        ShieldCount.Text = blocked > 999 ? "999+" : blocked.ToString();
         ShieldCount.Foreground = ShieldGlyph.Foreground;
-        ShieldCount.Visibility = lit && _blocked > 0 ? Visibility.Visible : Visibility.Collapsed;
+        ShieldCount.Visibility = lit && blocked > 0 ? Visibility.Visible : Visibility.Collapsed;
         ShieldButton.ToolTip = $"Ad blocker: {status}";
         AutomationProperties.SetHelpText(ShieldButton, status);
 
         ShieldStatus.Text = status;
-        var canPause = _adBlock.IsEnabled && showsPage && !AdBlockerViewModel.IsLocal(_pageHost) && !_adBlock.Engine.AllowsPage(_pageHost);
+        var canPause = _adBlock.IsEnabled && showsPage && !AdBlockerViewModel.IsLocal(pageHost) && !_adBlock.Engine.AllowsPage(pageHost);
         PauseButton.Visibility = canPause ? Visibility.Visible : Visibility.Collapsed;
-        PauseButton.Content = _adBlock.IsPaused(_pageHost) ? $"Resume on {site}" : $"Pause on {site}";
-        PauseButton.ToolTip = _adBlock.IsPaused(_pageHost)
+        PauseButton.Content = _adBlock.IsPaused(pageHost) ? $"Resume on {site}" : $"Pause on {site}";
+        PauseButton.ToolTip = _adBlock.IsPaused(pageHost)
             ? "Block ads on this site again"
             : "Let this site show its ads until the app closes, in every browser window";
     }
@@ -511,21 +637,16 @@ public partial class BrowserWindow : Window
     }
 
     // Turned on or off, or made stronger or weaker, here: the page is shown again as it now blocks.
-    private async void ShieldOption_Click(object sender, RoutedEventArgs e) => await ReloadForAdBlockAsync();
+    private async void ShieldOption_Click(object sender, RoutedEventArgs e)
+    {
+        if (_tab != null) await _tab.ReloadForAdBlockAsync();
+    }
 
     private async void Pause_Click(object sender, RoutedEventArgs e)
     {
-        _adBlock.SetPaused(_pageHost, !_adBlock.IsPaused(_pageHost));
-        await ReloadForAdBlockAsync();
-    }
-
-    private async Task ReloadForAdBlockAsync()
-    {
-        // The rules a new strength reads may still be on their way; the page waits for them, and the hiding script it gets.
-        await _adBlock.WhenReadyAsync();
-        await _hiding;
-        if (_closed || CurrentPage() == null) return;
-        Web.CoreWebView2?.Reload();
+        if (_tab is not { } tab) return;
+        _adBlock.SetPaused(tab.PageHost, !_adBlock.IsPaused(tab.PageHost));
+        await tab.ReloadForAdBlockAsync();
     }
 
     private void ShieldSettings_Click(object sender, RoutedEventArgs e)
@@ -534,143 +655,27 @@ public partial class BrowserWindow : Window
         _sites.OpenSettings();
     }
 
-    /// <summary>Shows the run's site, waiting a while for its server to answer.</summary>
-    private void Go(string url)
-    {
-        _url = url;
-        Address.Text = url;
-        _waitUntil = DateTime.UtcNow + WaitForServer;
-        _retry.Stop();
-        // The page shows once the server has answered (or the wait is given up), as OnNavigationCompleted says.
-        StartPage.Visibility = Visibility.Collapsed;
+    // ---- Toolbar ----
 
-        if (_webViewFailed) OpenInDefaultBrowser(url);
-        else TryNavigate(url); // until it's ready, StartAsync goes there once it is
-    }
-
-    /// <summary>
-    /// Shows a site typed in the address or saved: straight away, with the browser's own page if it doesn't answer,
-    /// rather than waiting for it as for a run's. False when it isn't an address the browser can go to.
-    /// </summary>
-    private bool Browse(string url)
-    {
-        if (_webViewFailed)
-        {
-            OpenInDefaultBrowser(url);
-            return true;
-        }
-        if (!TryNavigate(url)) return false;
-
-        _url = url;
-        _waitUntil = DateTime.MinValue;
-        _retry.Stop();
-        if (!Address.IsKeyboardFocusWithin) Address.Text = url;
-        StartPage.Visibility = Visibility.Collapsed;
-        WaitingNote.Visibility = Visibility.Collapsed;
-        Web.Visibility = Visibility.Visible;
-        UpdateStar();
-        return true;
-    }
-
-    // Until the browser is ready there's nothing to go there with; StartAsync goes to _url once it is.
-    private bool TryNavigate(string url)
-    {
-        try
-        {
-            Web.CoreWebView2?.Navigate(url);
-            return true;
-        }
-        catch (ArgumentException)
-        {
-            return false;
-        }
-    }
-
-    private void ShowStartPage()
-    {
-        _url = string.Empty;
-        Address.Text = string.Empty;
-        Web.Visibility = Visibility.Hidden;
-        StartPage.Visibility = Visibility.Visible;
-        UpdateStar();
-        UpdateShield();
-    }
-
-    private void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
-    {
-        // While the server starts, a failure is most likely it not answering yet; Edge reports a refused connection as
-        // Unknown, not CannotConnect. A cancelled one is a stop, or another page asked for.
-        if (!e.IsSuccess && e.WebErrorStatus != CoreWebView2WebErrorStatus.OperationCanceled && DateTime.UtcNow < _waitUntil)
-        {
-            Web.Visibility = Visibility.Hidden;
-            ShowNote($"Waiting for {_url} to answer…");
-            _retry.Start();
-            SetLoading(true);
-            return;
-        }
-
-        // Once it has answered (or given up waiting), a failure shows as it is: the server stopped, say.
-        _waitUntil = DateTime.MinValue;
-        WaitingNote.Visibility = Visibility.Collapsed;
-        StartPage.Visibility = Visibility.Collapsed;
-        Web.Visibility = Visibility.Visible;
-        SetLoading(false);
-        UpdateStar();
-        UpdateShield();
-    }
-
-    private void ShowNote(string text)
-    {
-        WaitingText.Text = text;
-        WaitingNote.Visibility = Visibility.Visible;
-    }
-
-    // While a page loads, or the window waits for the server, Reload is Stop.
+    // While a page loads, or the tab waits for the server, Reload is Stop.
     private void SetLoading(bool loading)
     {
-        _isLoading = loading;
         ReloadButton.Content = loading ? "" : "";
         ReloadButton.ToolTip = loading ? "Stop" : "Reload (F5)";
         AutomationProperties.SetName(ReloadButton, loading ? "Stop" : "Reload");
     }
 
-    private void Reload_Click(object sender, RoutedEventArgs e)
+    private void Reload_Click(object sender, RoutedEventArgs e) => _tab?.ReloadOrStop();
+
+    private void Back_Click(object sender, RoutedEventArgs e) => _tab?.GoBack();
+
+    private void Forward_Click(object sender, RoutedEventArgs e) => _tab?.GoForward();
+
+    private void DevTools_Click(object sender, RoutedEventArgs e) => _tab?.OpenDevTools();
+
+    private void OpenInDefaultBrowser_Click(object sender, RoutedEventArgs e)
     {
-        var web = Web.CoreWebView2;
-        if (web == null || StartPage.Visibility == Visibility.Visible) return;
-
-        if (!_isLoading)
-        {
-            web.Reload();
-            return;
-        }
-
-        // Stopping a wait shows the browser's own page for the address it couldn't reach.
-        var waiting = _retry.IsEnabled;
-        _retry.Stop();
-        _waitUntil = DateTime.MinValue;
-        web.Stop();
-        if (waiting)
-        {
-            WaitingNote.Visibility = Visibility.Collapsed;
-            Web.Visibility = Visibility.Visible;
-            SetLoading(false);
-            web.Navigate(_url);
-        }
-    }
-
-    private void Back_Click(object sender, RoutedEventArgs e) => Web.CoreWebView2?.GoBack();
-
-    private void Forward_Click(object sender, RoutedEventArgs e) => Web.CoreWebView2?.GoForward();
-
-    private void DevTools_Click(object sender, RoutedEventArgs e) => Web.CoreWebView2?.OpenDevToolsWindow();
-
-    private void OpenInDefaultBrowser_Click(object sender, RoutedEventArgs e) => OpenInDefaultBrowser(Web.CoreWebView2?.Source ?? _url);
-
-    private static void OpenInDefaultBrowser(string url)
-    {
-        if (!url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) && !url.StartsWith("http://", StringComparison.OrdinalIgnoreCase)) return;
-        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        if (_tab != null) BrowserTab.OpenInDefaultBrowser(_tab.Web.CoreWebView2?.Source ?? _tab.Url);
     }
 
     private void NextScreen_Click(object sender, RoutedEventArgs e)
@@ -681,28 +686,27 @@ public partial class BrowserWindow : Window
         PlaceOn(screens[(index + 1) % screens.Count]);
     }
 
-
     private void FullScreen_Click(object sender, RoutedEventArgs e) => SetFullScreen(!_isFullScreen);
 
     // An address goes there (without a scheme, such as localhost:3000, http for this PC's sites and https for others');
     // anything else is searched for, as Settings says.
     private void Address_KeyDown(object sender, KeyEventArgs e)
     {
-        var web = Web.CoreWebView2;
+        if (_tab is not { } tab) return;
         if (e.Key == Key.Escape)
         {
-            if (StartPage.Visibility == Visibility.Visible) Address.Text = string.Empty;
-            else if (web != null) Address.Text = web.Source;
-            if (Web.Visibility == Visibility.Visible) Web.Focus();
+            if (tab.ShowsStartPage) Address.Text = string.Empty;
+            else if (tab.Web.CoreWebView2 is { } web) Address.Text = web.Source;
+            if (tab.Web.Visibility == Visibility.Visible) tab.Web.Focus();
             e.Handled = true;
         }
         else if (e.Key == Key.Enter)
         {
             var text = Address.Text.Trim();
             if (text.Length == 0) return;
-            if (Browse(AddressInput.Resolve(text, _sites.SearchEngine)))
+            if (tab.Browse(AddressInput.Resolve(text, _sites.SearchEngine)))
             {
-                if (web != null) Web.Focus();
+                if (tab.Web.CoreWebView2 != null) tab.Web.Focus();
             }
             else
             {
@@ -719,7 +723,7 @@ public partial class BrowserWindow : Window
 
     private void SavedSite_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement { DataContext: SavedSite site }) Browse(site.Url);
+        if (sender is FrameworkElement { DataContext: SavedSite site }) _tab?.Browse(site.Url);
     }
 
     private void Star_Click(object sender, RoutedEventArgs e) => SaveOrEditPage();
@@ -727,36 +731,18 @@ public partial class BrowserWindow : Window
     // The star, or Ctrl+D: saves the page shown, named after its title, and opens it to rename; on a saved site, just that.
     private void SaveOrEditPage()
     {
-        if (CurrentPage() is not { } url) return;
+        if (_tab?.CurrentPage() is not { } url) return;
         if (Toolbar.Visibility != Visibility.Visible) RevealToolbar(); // in full screen, for the popup to show under the star
 
         var saved = _sites.FindSaved(url);
-        var site = saved ?? _sites.Save(url, PageName(url));
+        var site = saved ?? _sites.Save(url, _tab.PageName(url));
         EditSite(site, StarButton, saved == null ? "SITE SAVED" : "SAVED SITE");
-    }
-
-    // The page shown, when it's a site that can be saved: not the start page, nor the browser's own pages.
-    private string? CurrentPage()
-    {
-        if (_webViewFailed || StartPage.Visibility == Visibility.Visible) return null;
-        var source = Web.CoreWebView2?.Source;
-        return source != null && (source.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
-                                  || source.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-            ? source
-            : null;
-    }
-
-    private string PageName(string url)
-    {
-        var title = Web.CoreWebView2?.DocumentTitle?.Trim();
-        if (!string.IsNullOrEmpty(title) && title != url) return title;
-        return Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Authority : url;
     }
 
     // Lit while the page shown is saved, so the star says whether it is.
     private void UpdateStar()
     {
-        var url = CurrentPage();
+        var url = _tab?.CurrentPage();
         var saved = _sites.FindSaved(url) != null;
         StarButton.IsEnabled = url != null;
         StarButton.Content = saved ? "" : "";
@@ -875,7 +861,7 @@ public partial class BrowserWindow : Window
 
     private void SiteMenuOpenInDefaultBrowser_Click(object sender, RoutedEventArgs e)
     {
-        if (MenuSite(sender).Site is { } site) OpenInDefaultBrowser(site.Url);
+        if (MenuSite(sender).Site is { } site) BrowserTab.OpenInDefaultBrowser(site.Url);
     }
 
     private void SiteMenuEdit_Click(object sender, RoutedEventArgs e)
@@ -888,32 +874,75 @@ public partial class BrowserWindow : Window
         if (MenuSite(sender).Site is { } site) _sites.Remove(site);
     }
 
+    // ---- Keys and full screen ----
+
     // The page has the keyboard most of the time; it passes these keys on, as it does F5, F12 and Alt+arrows to Edge.
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        var modifiers = Keyboard.Modifiers;
+        var ctrl = modifiers == ModifierKeys.Control;
+        var ctrlShift = modifiers == (ModifierKeys.Control | ModifierKeys.Shift);
         if (key == Key.F11)
         {
             SetFullScreen(!_isFullScreen);
-            e.Handled = true;
         }
         else if (key == Key.Escape && _isFullScreen && !SitePopup.IsOpen && !ShieldPopup.IsOpen
-                 && Web.CoreWebView2?.ContainsFullScreenElement != true)
+                 && _tab?.Web.CoreWebView2?.ContainsFullScreenElement != true)
         {
             SetFullScreen(false);
-            e.Handled = true;
         }
-        else if ((key == Key.L && Keyboard.Modifiers == ModifierKeys.Control) || (key == Key.D && Keyboard.Modifiers == ModifierKeys.Alt))
+        else if ((key == Key.L && ctrl) || (key == Key.D && modifiers == ModifierKeys.Alt))
         {
             Address.Focus();
-            e.Handled = true;
         }
-        else if (key == Key.D && Keyboard.Modifiers == ModifierKeys.Control)
+        else if (key == Key.D && ctrl)
         {
             SaveOrEditPage();
-            e.Handled = true;
         }
+        else if (key == Key.T && ctrl)
+        {
+            NewTab();
+            Address.Focus();
+        }
+        else if (key == Key.T && ctrlShift)
+        {
+            ReopenClosedTab();
+        }
+        else if (key == Key.N && (ctrl || ctrlShift))
+        {
+            OpenNewWindow(ctrlShift || _sites.IsIncognito);
+        }
+        else if ((key == Key.W || key == Key.F4) && ctrl)
+        {
+            if (_tab != null) CloseTab(_tab);
+        }
+        else if ((key == Key.Tab && ctrl) || (key == Key.PageDown && ctrl))
+        {
+            SelectBy(1);
+        }
+        else if ((key == Key.Tab && ctrlShift) || (key == Key.PageUp && ctrl))
+        {
+            SelectBy(-1);
+        }
+        else if (ctrl && TabNumber(key) is { } number)
+        {
+            // Ctrl+1 to Ctrl+8: that tab; Ctrl+9: the last.
+            if (_tabs.Count > 0) Select(_tabs[number == 9 ? _tabs.Count - 1 : Math.Min(number, _tabs.Count) - 1]);
+        }
+        else
+        {
+            return;
+        }
+        e.Handled = true;
     }
+
+    private static int? TabNumber(Key key) => key switch
+    {
+        >= Key.D1 and <= Key.D9 => key - Key.D0,
+        >= Key.NumPad1 and <= Key.NumPad9 => key - Key.NumPad0,
+        _ => null,
+    };
 
     private void SetFullScreen(bool on)
     {
@@ -951,7 +980,7 @@ public partial class BrowserWindow : Window
 
     private void Toolbar_MouseLeave(object sender, MouseEventArgs e)
     {
-        if (!_isFullScreen || Address.IsKeyboardFocusWithin || SitePopup.IsOpen || ShieldPopup.IsOpen) return;
+        if (!_isFullScreen || _drag != null || Address.IsKeyboardFocusWithin || SitePopup.IsOpen || ShieldPopup.IsOpen) return;
         Toolbar.Visibility = Visibility.Collapsed;
         RevealStrip.Visibility = Visibility.Visible;
     }
@@ -959,10 +988,15 @@ public partial class BrowserWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _closed = true;
-        _retry.Stop();
+        if (_drag?.Window == this) EndDrag();
+        OpenWindows.Remove(this);
         _sites.SavedSites.CollectionChanged -= OnSavedSitesChanged;
-        _adBlock.Changed -= OnAdBlockChanged;
-        Web.Dispose();
+        foreach (var tab in _tabs.ToList())
+        {
+            Forget(tab);
+            tab.Dispose();
+        }
+        _tabs.Clear();
         base.OnClosed(e);
     }
 }

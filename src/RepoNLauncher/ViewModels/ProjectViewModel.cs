@@ -87,6 +87,9 @@ public partial class ProjectViewModel : ObservableObject
     public static IReadOnlyList<ProjectKind> AllKinds { get; } = Enum.GetValues<ProjectKind>();
 
     private const int CommitSearchMax = 200;
+
+    // How many commits the Commits tab lists at first, and how many more each time it's scrolled near the end.
+    private const int CommitPageSize = 50;
     private static readonly TimeSpan CommitSearchPause = TimeSpan.FromMilliseconds(450);
 
     private readonly IGitService _git;
@@ -256,11 +259,22 @@ public partial class ProjectViewModel : ObservableObject
     /// <summary>Where that line is among the shown file's matches.</summary>
     [ObservableProperty] private string _commitMatchNote = string.Empty;
 
+    /// <summary>The next page of older commits is on its way, shown at the bottom of the list.</summary>
+    [ObservableProperty] private bool _isLoadingMoreCommits;
+
     private CancellationTokenSource? _commitSearchTyping;
     private CancellationTokenSource? _commitsLoading;
+    private CancellationTokenSource? _moreCommitsLoading;
 
     // What the commit list was found with; the files and diffs shown are marked with the same.
     private string _commitsSearchedFor = string.Empty;
+
+    // The commit the listed history starts from, so the pages after the first still line up when new commits are
+    // made or pulled meanwhile; null while a search is listed.
+    private string? _commitsFrom;
+
+    // The last page came back full, so there may be older commits still to list.
+    private bool _hasMoreCommits;
 
     // What's shown under the list, so Next and Previous wait while a step's commit or file is still opening.
     private CommitInfo? _commitFilesShownFor;
@@ -693,7 +707,11 @@ public partial class ProjectViewModel : ObservableObject
         if (!_git.IsGitRepo(Path)) return;
 
         // A newer load (more typing, a refresh) takes over from one still running, and its git searches are stopped.
+        // So does a page of older commits still on its way: it belongs to the list being replaced.
         _commitsLoading?.Cancel();
+        _moreCommitsLoading?.Cancel();
+        _moreCommitsLoading = null;
+        IsLoadingMoreCommits = false;
         var loading = _commitsLoading = new CancellationTokenSource();
         var search = CommitSearch.Trim();
         CommitSearchNote = search.Length > 0 ? "Searching..." : string.Empty;
@@ -701,12 +719,19 @@ public partial class ProjectViewModel : ObservableObject
         try
         {
             var selected = SelectedCommit?.Hash;
+            // The history starts over from its newest page, but when the picked commit is further down than that it
+            // reaches past it by a page, so it stays picked even after new commits came in above it.
+            var reach = _commitsSearchedFor.Length == 0 && SelectedCommit != null ? Commits.IndexOf(SelectedCommit) + 1 : 0;
+            var count = reach > CommitPageSize ? reach + CommitPageSize : CommitPageSize;
             var commits = search.Length > 0
                 ? await _git.SearchCommitsAsync(Path, search, CommitSearchMax, loading.Token)
-                : await _git.GetRecentCommitsAsync(Path, 30, loading.Token);
+                : await _git.GetCommitsAsync(Path, "HEAD", 0, count, loading.Token);
             if (loading.IsCancellationRequested) return;
 
             _commitsSearchedFor = search;
+            // git log lists the commit it starts from first, so the later pages carry on from this HEAD.
+            _commitsFrom = search.Length > 0 ? null : commits.FirstOrDefault()?.Hash;
+            _hasMoreCommits = _commitsFrom != null && commits.Count == count;
             Commits.Clear();
             foreach (var c in commits) Commits.Add(c);
             // The picked commit stays picked while it's still in the list.
@@ -731,6 +756,40 @@ public partial class ProjectViewModel : ObservableObject
             {
                 _commitsLoading = null;
                 IsBusy = false;
+            }
+            loading.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Adds the next page of older commits to the end of the list, as it's scrolled near there. Once the branch's first
+    /// commit is listed there's nothing more to ask for; a search lists its matches all at once.
+    /// </summary>
+    [RelayCommand]
+    private async Task LoadMoreCommitsAsync()
+    {
+        // Not while the list itself is still loading, nor while the page before is still on its way.
+        if (!_hasMoreCommits || _commitsFrom is not { } from || _commitsLoading != null || _moreCommitsLoading != null) return;
+
+        var loading = _moreCommitsLoading = new CancellationTokenSource();
+        IsLoadingMoreCommits = true;
+        try
+        {
+            var commits = await _git.GetCommitsAsync(Path, from, Commits.Count, CommitPageSize, loading.Token);
+            if (loading.IsCancellationRequested) return;
+
+            foreach (var c in commits) Commits.Add(c);
+            _hasMoreCommits = commits.Count == CommitPageSize;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            if (_moreCommitsLoading == loading)
+            {
+                _moreCommitsLoading = null;
+                IsLoadingMoreCommits = false;
             }
             loading.Dispose();
         }
