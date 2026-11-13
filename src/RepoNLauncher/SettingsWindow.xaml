@@ -5,7 +5,7 @@
         xmlns:conv="clr-namespace:RepoNLauncher.Converters"
         Title="Settings - Repo'N'Launcher" Width="720" Height="720" MinWidth="560" MinHeight="460"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
-        Background="{StaticResource Bg.App}"
+        Background="{DynamicResource Bg.App}"
         FontFamily="{StaticResource Font.Mono}">
 
     <Window.Resources>
@@ -16,20 +16,20 @@
         <conv:EnumEqualsConverter x:Key="EnumEquals"/>
 
         <Style x:Key="SectionLabel" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
 
         <Style x:Key="Note" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
             <Setter Property="FontSize" Value="11.5"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
 
         <Style x:Key="Error" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Danger}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Danger}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="Margin" Value="0,6,0,0"/>
@@ -37,8 +37,8 @@
 
         <!-- A block of settings: boxed like the dashboard's panels -->
         <Style x:Key="Group" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource Bg.PanelAlt}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource Border.Subtle}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.PanelAlt}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Subtle}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="14,12"/>
             <Setter Property="Margin" Value="0,0,0,14"/>
@@ -46,7 +46,7 @@
 
         <Style x:Key="TextLink" TargetType="Button">
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="{StaticResource Cyan}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Cyan}"/>
             <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="HorizontalAlignment" Value="Left"/>
             <Setter Property="Template">
@@ -69,13 +69,13 @@
             <TextBlock TextTrimming="CharacterEllipsis">
                 <Run Text="{Binding Example, Mode=OneWay}"/>
                 <Run Text="  "/>
-                <Run Text="{Binding Note, Mode=OneWay}" Foreground="{StaticResource Text.Muted}" FontSize="11"/>
+                <Run Text="{Binding Note, Mode=OneWay}" Foreground="{DynamicResource Text.Muted}" FontSize="11"/>
             </TextBlock>
         </DataTemplate>
 
         <!-- An About row: label on the left, value on the right -->
         <Style x:Key="RowLabel" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Margin" Value="0,5,16,5"/>
@@ -99,7 +99,7 @@
                         <Border Style="{StaticResource Group}">
                             <StackPanel>
                                 <TextBlock Text="PREVIEW" Style="{StaticResource SectionLabel}"/>
-                                <TextBlock Text="{Binding Preview}" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource Accent}"
+                                <TextBlock Text="{Binding Preview}" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource Accent}"
                                            TextWrapping="Wrap" AutomationProperties.Name="Preview of the date and time format"/>
                                 <TextBlock Style="{StaticResource Note}" Margin="0,8,0,0"
                                            Text="Used for commit dates in Commits, file dates in the phone's Files, and times such as when updates and AI usage were last checked. Dates are shown in this PC's time zone."/>
@@ -156,28 +156,28 @@
                                         <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
                                             <Setter Property="FontSize" Value="12"/>
                                             <Setter Property="Margin" Value="0,2,14,2"/>
-                                            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
                                         </Style>
                                     </Grid.Resources>
-                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="yyyy" Foreground="{StaticResource Text.Primary}"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="yyyy" Foreground="{DynamicResource Text.Primary}"/>
                                     <TextBlock Grid.Row="0" Grid.Column="1" Text="year, 2026"/>
-                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="MM MMM MMMM" Foreground="{StaticResource Text.Primary}"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="MM MMM MMMM" Foreground="{DynamicResource Text.Primary}"/>
                                     <TextBlock Grid.Row="1" Grid.Column="1" Text="03, Mar, March"/>
-                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="d dd" Foreground="{StaticResource Text.Primary}"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="d dd" Foreground="{DynamicResource Text.Primary}"/>
                                     <TextBlock Grid.Row="2" Grid.Column="1" Text="day, 5 or 05"/>
-                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="ddd dddd" Foreground="{StaticResource Text.Primary}"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="ddd dddd" Foreground="{DynamicResource Text.Primary}"/>
                                     <TextBlock Grid.Row="3" Grid.Column="1" Text="Wed, Wednesday"/>
-                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="'text'" Foreground="{StaticResource Text.Primary}"/>
+                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="'text'" Foreground="{DynamicResource Text.Primary}"/>
                                     <TextBlock Grid.Row="4" Grid.Column="1" Text="shown as typed"/>
-                                    <TextBlock Grid.Row="0" Grid.Column="2" Text="HH" Foreground="{StaticResource Text.Primary}"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Text="HH" Foreground="{DynamicResource Text.Primary}"/>
                                     <TextBlock Grid.Row="0" Grid.Column="3" Text="hour 00-23"/>
-                                    <TextBlock Grid.Row="1" Grid.Column="2" Text="h hh" Foreground="{StaticResource Text.Primary}"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="2" Text="h hh" Foreground="{DynamicResource Text.Primary}"/>
                                     <TextBlock Grid.Row="1" Grid.Column="3" Text="hour 1-12"/>
-                                    <TextBlock Grid.Row="2" Grid.Column="2" Text="mm" Foreground="{StaticResource Text.Primary}"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="2" Text="mm" Foreground="{DynamicResource Text.Primary}"/>
                                     <TextBlock Grid.Row="2" Grid.Column="3" Text="minutes"/>
-                                    <TextBlock Grid.Row="3" Grid.Column="2" Text="ss" Foreground="{StaticResource Text.Primary}"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="2" Text="ss" Foreground="{DynamicResource Text.Primary}"/>
                                     <TextBlock Grid.Row="3" Grid.Column="3" Text="seconds"/>
-                                    <TextBlock Grid.Row="4" Grid.Column="2" Text="tt" Foreground="{StaticResource Text.Primary}"/>
+                                    <TextBlock Grid.Row="4" Grid.Column="2" Text="tt" Foreground="{DynamicResource Text.Primary}"/>
                                     <TextBlock Grid.Row="4" Grid.Column="3" Text="AM or PM"/>
                                 </Grid>
                                 <Button Content="Every code, on Microsoft Learn" Style="{StaticResource TextLink}" Margin="0,8,0,0"
@@ -191,6 +191,35 @@
             <TabItem Header="General">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="0,0,6,0">
+                        <!-- Dark or light: every open window changes as it's picked. The header's sun/moon button flips it too. -->
+                        <Border Style="{StaticResource Group}">
+                            <StackPanel>
+                                <TextBlock Text="THEME" Style="{StaticResource SectionLabel}"/>
+                                <RadioButton GroupName="Theme" Margin="0,0,0,8" AutomationProperties.Name="Dark"
+                                             IsChecked="{Binding Theme, Converter={StaticResource EnumEquals}, ConverterParameter=Dark}">
+                                    <StackPanel>
+                                        <TextBlock Text="Dark"/>
+                                        <TextBlock Style="{StaticResource Note}" Margin="0,2,0,0" Text="Light text on black, like Command Prompt."/>
+                                    </StackPanel>
+                                </RadioButton>
+                                <RadioButton GroupName="Theme" Margin="0,0,0,8" AutomationProperties.Name="Light"
+                                             IsChecked="{Binding Theme, Converter={StaticResource EnumEquals}, ConverterParameter=Light}">
+                                    <StackPanel>
+                                        <TextBlock Text="Light"/>
+                                        <TextBlock Style="{StaticResource Note}" Margin="0,2,0,0" Text="Dark text on white."/>
+                                    </StackPanel>
+                                </RadioButton>
+                                <RadioButton GroupName="Theme" AutomationProperties.Name="Match Windows"
+                                             IsChecked="{Binding Theme, Converter={StaticResource EnumEquals}, ConverterParameter=MatchWindows}">
+                                    <StackPanel>
+                                        <TextBlock Text="Match Windows"/>
+                                        <TextBlock Style="{StaticResource Note}" Margin="0,2,0,0"
+                                                   Text="Dark or light as Windows' app mode is set (Settings, Personalization, Colors), changing when it does."/>
+                                    </StackPanel>
+                                </RadioButton>
+                            </StackPanel>
+                        </Border>
+
                         <!-- GitHub account: the same sign-in as the header's -->
                         <Border Style="{StaticResource Group}">
                             <StackPanel>
@@ -199,10 +228,10 @@
                                     <Button DockPanel.Dock="Right" Content="Sign out" Style="{StaticResource Button.Secondary}" Margin="0"
                                             Command="{Binding GitHub.SignOutCommand}"/>
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Path Data="{StaticResource GitHubMark}" Fill="{StaticResource Text.Primary}" Width="14" Height="14"
+                                        <Path Data="{StaticResource GitHubMark}" Fill="{DynamicResource Text.Primary}" Width="14" Height="14"
                                               Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                         <TextBlock VerticalAlignment="Center">
-                                            <Run Text="Signed in as" Foreground="{StaticResource Text.Secondary}"/>
+                                            <Run Text="Signed in as" Foreground="{DynamicResource Text.Secondary}"/>
                                             <Run Text="{Binding GitHub.Login, Mode=OneWay}" FontWeight="SemiBold"/>
                                         </TextBlock>
                                     </StackPanel>
@@ -210,12 +239,12 @@
                                 <DockPanel Visibility="{Binding GitHub.Login, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}">
                                     <Button DockPanel.Dock="Right" Style="{StaticResource Button.Secondary}" Margin="0" Click="SignIn_Click">
                                         <StackPanel Orientation="Horizontal">
-                                            <Path Data="{StaticResource GitHubMark}" Fill="{StaticResource Text.Primary}" Width="14" Height="14"
+                                            <Path Data="{StaticResource GitHubMark}" Fill="{DynamicResource Text.Primary}" Width="14" Height="14"
                                                   Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                             <TextBlock Text="Sign in with GitHub"/>
                                         </StackPanel>
                                     </Button>
-                                    <TextBlock Text="Not signed in" Foreground="{StaticResource Text.Secondary}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Not signed in" Foreground="{DynamicResource Text.Secondary}" VerticalAlignment="Center"/>
                                 </DockPanel>
                                 <TextBlock Style="{StaticResource Note}" Margin="0,8,0,0"
                                            Text="Only Repos on this PC, Clone from GitHub and Create Pull Request use it. The sign-in is encrypted for your Windows account."/>
@@ -228,7 +257,7 @@
                                 <DockPanel>
                                     <Button DockPanel.Dock="Right" Content="Edit…" Style="{StaticResource Button.Secondary}" Margin="0"
                                             Click="EditOpenWithApps_Click"/>
-                                    <TextBlock Foreground="{StaticResource Text.Secondary}" VerticalAlignment="Center" TextWrapping="Wrap"
+                                    <TextBlock Foreground="{DynamicResource Text.Secondary}" VerticalAlignment="Center" TextWrapping="Wrap"
                                                Text="{Binding OpenWithApps.Count, StringFormat='{}Programs of your own under OPEN IN, beside Explorer and the IDEs ({0} added)'}"/>
                                 </DockPanel>
                             </StackPanel>
@@ -238,7 +267,7 @@
                         <Border Style="{StaticResource Group}" Visibility="{Binding CanHaveDesktopIcon, Converter={StaticResource BoolToVisibility}}">
                             <StackPanel>
                                 <TextBlock Text="DESKTOP ICON" Style="{StaticResource SectionLabel}"/>
-                                <TextBlock Text="There's a Repo'N'Launcher icon on your desktop." Foreground="{StaticResource Text.Secondary}"
+                                <TextBlock Text="There's a Repo'N'Launcher icon on your desktop." Foreground="{DynamicResource Text.Secondary}"
                                            Visibility="{Binding HasDesktopIcon, Converter={StaticResource BoolToVisibility}}"/>
                                 <DockPanel>
                                     <DockPanel.Style>
@@ -252,7 +281,7 @@
                                     </DockPanel.Style>
                                     <Button DockPanel.Dock="Right" Content="Create desktop icon" Style="{StaticResource Button.Secondary}" Margin="0"
                                             Command="{Binding CreateDesktopIconCommand}"/>
-                                    <TextBlock Text="It's in the Start menu. It can have an icon on your desktop too." Foreground="{StaticResource Text.Secondary}"
+                                    <TextBlock Text="It's in the Start menu. It can have an icon on your desktop too." Foreground="{DynamicResource Text.Secondary}"
                                                VerticalAlignment="Center" TextWrapping="Wrap"/>
                                 </DockPanel>
                                 <TextBlock Text="{Binding DesktopIconError}" Style="{StaticResource Error}"
@@ -280,7 +309,7 @@
                                 <DockPanel>
                                     <Button DockPanel.Dock="Right" Content="Uninstall…" Style="{StaticResource Button.Danger}" Margin="8,0,0,0"
                                             Click="Uninstall_Click"/>
-                                    <TextBlock Foreground="{StaticResource Text.Secondary}" VerticalAlignment="Center" TextWrapping="Wrap"
+                                    <TextBlock Foreground="{DynamicResource Text.Secondary}" VerticalAlignment="Center" TextWrapping="Wrap"
                                                Text="Removes the app and everything it keeps on this PC. Your projects' own folders stay as they are."/>
                                 </DockPanel>
                             </StackPanel>
@@ -297,7 +326,7 @@
                         <Border Style="{StaticResource Group}">
                             <StackPanel>
                                 <TextBlock Text="SITES" Style="{StaticResource SectionLabel}"/>
-                                <TextBlock Text="Open a project's local site (http://localhost:…) in" Foreground="{StaticResource Text.Secondary}"
+                                <TextBlock Text="Open a project's local site (http://localhost:…) in" Foreground="{DynamicResource Text.Secondary}"
                                            TextWrapping="Wrap" Margin="0,0,0,8"/>
                                 <ComboBox Height="32" ItemsSource="{Binding Targets}" SelectedItem="{Binding SelectedTarget}"
                                           DropDownOpened="SiteTargets_DropDownOpened" AutomationProperties.Name="Open sites in"/>
@@ -312,7 +341,7 @@
                                 <DockPanel>
                                     <ComboBox DockPanel.Dock="Right" Height="32" Width="170" ItemsSource="{Binding SearchEngines}"
                                               SelectedItem="{Binding SearchEngine}" AutomationProperties.Name="Search with"/>
-                                    <TextBlock Text="Search what's typed in the address with" Foreground="{StaticResource Text.Secondary}"
+                                    <TextBlock Text="Search what's typed in the address with" Foreground="{DynamicResource Text.Secondary}"
                                                VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,12,0"/>
                                 </DockPanel>
                                 <TextBlock Style="{StaticResource Note}" Margin="0,8,0,0"
@@ -344,7 +373,7 @@
                                     <Button DockPanel.Dock="Right" Content="Clear browsing data" Style="{StaticResource Button.Secondary}"
                                             Margin="8,0,0,0" VerticalAlignment="Top" Command="{Binding ClearBrowsingDataCommand}"/>
                                     <StackPanel>
-                                        <TextBlock Foreground="{StaticResource Text.Secondary}" TextWrapping="Wrap"
+                                        <TextBlock Foreground="{DynamicResource Text.Secondary}" TextWrapping="Wrap"
                                                    Text="Clears everything it has kept so far, which signs you out of sites."/>
                                         <TextBlock Text="{Binding ClearStatus}" Style="{StaticResource Note}" Margin="0,4,0,0"
                                                    Visibility="{Binding ClearStatus, Converter={StaticResource StringNotEmptyToVisibility}}"/>
@@ -359,7 +388,7 @@
                                 <CheckBox Content="Block ads in the dashboard browser" IsChecked="{Binding IsEnabled}"/>
 
                                 <StackPanel Margin="0,12,0,0" IsEnabled="{Binding IsEnabled}">
-                                    <TextBlock Text="Strength" Foreground="{StaticResource Text.Secondary}" FontSize="12" Margin="0,0,0,6"/>
+                                    <TextBlock Text="Strength" Foreground="{DynamicResource Text.Secondary}" FontSize="12" Margin="0,0,0,6"/>
                                     <RadioButton GroupName="AdBlockLevel" Margin="0,0,0,8"
                                                  IsChecked="{Binding Level, Converter={StaticResource EnumEquals}, ConverterParameter=Light}" AutomationProperties.Name="Light">
                                         <StackPanel>
@@ -400,7 +429,7 @@
                                             </Style.Triggers>
                                         </Style>
                                     </StackPanel.Style>
-                                    <TextBlock Text="Paused until the app closes on" Foreground="{StaticResource Text.Secondary}" FontSize="12"
+                                    <TextBlock Text="Paused until the app closes on" Foreground="{DynamicResource Text.Secondary}" FontSize="12"
                                                Margin="0,0,0,6"/>
                                     <ItemsControl ItemsSource="{Binding PausedSites}" Focusable="False">
                                         <ItemsControl.ItemTemplate>
@@ -420,7 +449,7 @@
                                     <Button DockPanel.Dock="Right" Content="Update now" Style="{StaticResource Button.Secondary}"
                                             Margin="8,0,0,0" VerticalAlignment="Top" Command="{Binding UpdateListsCommand}"/>
                                     <StackPanel>
-                                        <TextBlock Text="Filter lists" Foreground="{StaticResource Text.Secondary}" FontSize="12"/>
+                                        <TextBlock Text="Filter lists" Foreground="{DynamicResource Text.Secondary}" FontSize="12"/>
                                         <TextBlock Text="{Binding ListsStatus}" Style="{StaticResource Note}" Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </DockPanel>
@@ -443,8 +472,8 @@
                         <Border Style="{StaticResource Group}">
                             <StackPanel>
                                 <TextBlock Text="VERSION" Style="{StaticResource SectionLabel}"/>
-                                <TextBlock Text="{Binding VersionText}" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource Accent}"/>
-                                <TextBlock Text="{Binding Status}" Foreground="{StaticResource Text.Secondary}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding VersionText}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource Accent}"/>
+                                <TextBlock Text="{Binding Status}" Foreground="{DynamicResource Text.Secondary}" Margin="0,6,0,0" TextWrapping="Wrap"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
                                     <Button Content="Check for updates" Style="{StaticResource Button.Secondary}" Command="{Binding CheckCommand}"
                                             Visibility="{Binding CanUpdate, Converter={StaticResource BoolToVisibility}}"/>
@@ -474,10 +503,10 @@
                         <Border Style="{StaticResource Group}">
                             <StackPanel>
                                 <TextBlock FontSize="18"
-                                    ><Run Text="C:\" Foreground="{StaticResource Text.Muted}"
-                                    /><Run Text="{Binding AppName, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource Accent}"
-                                    /><Run Text="&gt;_" Foreground="{StaticResource Text.Muted}"/></TextBlock>
-                                <TextBlock Text="{Binding Description}" Foreground="{StaticResource Text.Secondary}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                                    ><Run Text="C:\" Foreground="{DynamicResource Text.Muted}"
+                                    /><Run Text="{Binding AppName, Mode=OneWay}" FontWeight="Bold" Foreground="{DynamicResource Accent}"
+                                    /><Run Text="&gt;_" Foreground="{DynamicResource Text.Muted}"/></TextBlock>
+                                <TextBlock Text="{Binding Description}" Foreground="{DynamicResource Text.Secondary}" TextWrapping="Wrap" Margin="0,8,0,0"/>
                             </StackPanel>
                         </Border>
 
@@ -520,7 +549,7 @@
                                         Command="{Binding OpenLinkCommand}" CommandParameter="{Binding LicenseUrl}" ToolTip="{Binding LicenseUrl}"/>
 
                                 <TextBlock Grid.Row="5" Text="RUNS ON" Style="{StaticResource RowLabel}"/>
-                                <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Runtime}" Foreground="{StaticResource Text.Secondary}"
+                                <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Runtime}" Foreground="{DynamicResource Text.Secondary}"
                                            VerticalAlignment="Center" TextWrapping="Wrap"/>
                             </Grid>
                         </Border>
@@ -528,7 +557,7 @@
                         <StackPanel Orientation="Horizontal">
                             <Button Content="Copy version info" Style="{StaticResource Button.Secondary}" Command="{Binding CopyVersionInfoCommand}"
                                     ToolTip="The version and what it runs on, to paste into a bug report"/>
-                            <TextBlock Text="{Binding CopyNote}" Foreground="{StaticResource Text.Muted}" FontSize="12" VerticalAlignment="Center"
+                            <TextBlock Text="{Binding CopyNote}" Foreground="{DynamicResource Text.Muted}" FontSize="12" VerticalAlignment="Center"
                                        Margin="6,0,0,0"/>
                         </StackPanel>
 

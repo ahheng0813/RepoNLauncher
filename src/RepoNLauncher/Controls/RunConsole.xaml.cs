@@ -11,6 +11,7 @@ using System.Windows.Navigation;
 using System.Windows.Threading;
 using ICSharpCode.AvalonEdit.Document;
 using ICSharpCode.AvalonEdit.Rendering;
+using RepoNLauncher.Services;
 using RepoNLauncher.ViewModels;
 using Brush = System.Windows.Media.Brush;
 using Brushes = System.Windows.Media.Brushes;
@@ -42,7 +43,8 @@ public partial class RunConsole : UserControl
     // A search that long is a paste gone wrong rather than something to look for.
     private const int MaxSelectionToSearch = 200;
 
-    private readonly SearchMarker _marker;
+    private readonly SearchMarker _marker = new();
+    private readonly DashboardLineColorizer _dashboardLines = new();
 
     // New output while searching moves the count on, at most this often rather than at every line.
     private readonly DispatcherTimer _recount = new() { Interval = TimeSpan.FromMilliseconds(200) };
@@ -85,20 +87,22 @@ public partial class RunConsole : UserControl
 
         var area = Output.TextArea;
         area.Caret.CaretBrush = Brushes.Transparent;
-        area.SelectionBrush = Frozen(new SolidColorBrush(Color.FromArgb(0x60, 0xCC, 0xCC, 0xCC)));
         area.SelectionForeground = null;
         area.SelectionBorder = null;
         area.SelectionCornerRadius = 0;
 
         var view = area.TextView;
-        view.LinkTextForegroundBrush = Resource("Cyan", Brushes.Cyan);
-        view.LineTransformers.Add(new DashboardLineColorizer(Resource("Cyan", Brushes.Cyan)));
-        var warning = (Resource("Warning", Brushes.Gold) as SolidColorBrush)?.Color ?? Colors.Gold;
-        _marker = new SearchMarker(
-            Frozen(new SolidColorBrush(Color.FromArgb(0x60, warning.R, warning.G, warning.B))),
-            Frozen(new SolidColorBrush(warning)),
-            Resource("Bg.App", Brushes.Black));
+        view.LineTransformers.Add(_dashboardLines);
         view.LineTransformers.Add(_marker);
+        ApplyColors();
+        // A theme change while the console isn't loaded is picked up when it is.
+        Loaded += (_, _) =>
+        {
+            ThemeService.Changed -= OnThemeChanged;
+            ThemeService.Changed += OnThemeChanged;
+            ApplyColors();
+        };
+        Unloaded += (_, _) => ThemeService.Changed -= OnThemeChanged;
 
         Output.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler(Output_ScrollChanged));
         Output.AddHandler(System.Windows.Documents.Hyperlink.RequestNavigateEvent, new RequestNavigateEventHandler(Output_LinkClicked));
@@ -132,6 +136,23 @@ public partial class RunConsole : UserControl
     }
 
     private Brush Resource(string key, Brush fallback) => TryFindResource(key) as Brush ?? fallback;
+
+    private void OnThemeChanged(object? sender, EventArgs e) => ApplyColors();
+
+    // The editor takes brushes rather than resource references, so they're set from the palette again when it changes.
+    private void ApplyColors()
+    {
+        var area = Output.TextArea;
+        area.SelectionBrush = Resource("Console.Selection", Brushes.Gray);
+        var cyan = Resource("Cyan", Brushes.Cyan);
+        area.TextView.LinkTextForegroundBrush = cyan;
+        _dashboardLines.Brush = cyan;
+        var warning = (Resource("Warning", Brushes.Gold) as SolidColorBrush)?.Color ?? Colors.Gold;
+        _marker.MatchBrush = Frozen(new SolidColorBrush(Color.FromArgb(0x60, warning.R, warning.G, warning.B)));
+        _marker.CurrentBrush = Frozen(new SolidColorBrush(warning));
+        _marker.CurrentTextBrush = Resource("Bg.App", Brushes.Black);
+        area.TextView.Redraw();
+    }
 
     private static Brush Frozen(Brush brush)
     {
@@ -471,21 +492,28 @@ public partial class RunConsole : UserControl
     }
 
     /// <summary>Colors the dashboard's own lines ("[dashboard] ...") apart from the app's output.</summary>
-    private sealed class DashboardLineColorizer(Brush brush) : DocumentColorizingTransformer
+    private sealed class DashboardLineColorizer : DocumentColorizingTransformer
     {
         private const string Prefix = "[dashboard]";
+
+        public Brush Brush { get; set; } = Brushes.Cyan;
 
         protected override void ColorizeLine(DocumentLine line)
         {
             if (line.Length < Prefix.Length || CurrentContext.Document.GetText(line.Offset, Prefix.Length) != Prefix) return;
+            var brush = Brush;
             ChangeLinePart(line.Offset, line.EndOffset, element => element.TextRunProperties.SetForegroundBrush(brush));
         }
     }
 
     /// <summary>Marks every place a line has the search text, and the one the arrows are on more strongly.</summary>
-    private sealed class SearchMarker(Brush match, Brush current, Brush currentText) : DocumentColorizingTransformer
+    private sealed class SearchMarker : DocumentColorizingTransformer
     {
         public string Term { get; set; } = string.Empty;
+
+        public Brush MatchBrush { get; set; } = Brushes.Transparent;
+        public Brush CurrentBrush { get; set; } = Brushes.Transparent;
+        public Brush CurrentTextBrush { get; set; } = Brushes.Black;
 
         /// <summary>Where the match the arrows are on starts; -1 for none.</summary>
         public int Current { get; set; } = -1;
@@ -496,6 +524,7 @@ public partial class RunConsole : UserControl
             if (term.Length == 0 || line.Length < term.Length) return;
 
             var text = CurrentContext.Document.GetText(line);
+            Brush match = MatchBrush, current = CurrentBrush, currentText = CurrentTextBrush;
             for (var at = text.IndexOf(term, StringComparison.OrdinalIgnoreCase); at >= 0;
                  at = text.IndexOf(term, at + term.Length, StringComparison.OrdinalIgnoreCase))
             {

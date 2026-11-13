@@ -1,8 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
-using Brush = System.Windows.Media.Brush;
-using Brushes = System.Windows.Media.Brushes;
 
 namespace RepoNLauncher.Controls;
 
@@ -35,13 +33,15 @@ public static class TextHighlight
         var start = 0;
         if (!string.IsNullOrEmpty(match))
         {
-            var background = block.TryFindResource("Warning") as Brush ?? Brushes.Gold;
-            var foreground = block.TryFindResource("Bg.App") as Brush ?? Brushes.Black;
             for (var at = text.IndexOf(match, StringComparison.OrdinalIgnoreCase); at >= 0;
                  at = text.IndexOf(match, start, StringComparison.OrdinalIgnoreCase))
             {
                 if (at > start) block.Inlines.Add(new Run(text[start..at]));
-                block.Inlines.Add(new Run(text.Substring(at, match.Length)) { Background = background, Foreground = foreground });
+                // Resource references, so the mark follows a change of theme
+                var found = new Run(text.Substring(at, match.Length));
+                found.SetResourceReference(TextElement.BackgroundProperty, "Warning");
+                found.SetResourceReference(TextElement.ForegroundProperty, "Bg.App");
+                block.Inlines.Add(found);
                 start = at + match.Length;
             }
         }

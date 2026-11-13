@@ -6,7 +6,7 @@
         xmlns:ctl="clr-namespace:RepoNLauncher.Controls"
         Title="AI chat - Repo'N'Launcher" Width="1240" Height="840" MinWidth="920" MinHeight="560"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource Bg.App}"
+        Background="{DynamicResource Bg.App}"
         FontFamily="{StaticResource Font.Mono}">
 
     <Window.Resources>
@@ -14,13 +14,13 @@
         <conv:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibility"/>
 
         <Style x:Key="Muted" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
             <Setter Property="FontSize" Value="11.5"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
 
         <Style x:Key="Placeholder" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
             <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="IsHitTestVisible" Value="False"/>
             <Setter Property="Margin" Value="10,0,10,0"/>
@@ -30,7 +30,7 @@
 
         <!-- All / Claude / Codex switch -->
         <Style x:Key="Segment" TargetType="RadioButton">
-            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -41,11 +41,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Foreground" Value="{StaticResource Text.Primary}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
-                                <Setter Property="Foreground" Value="{StaticResource Text.Primary}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Bg.Hover}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -62,7 +62,7 @@
         </Grid.ColumnDefinitions>
 
         <!-- ===== Saved chats ===== -->
-        <Border Grid.Column="0" Background="{StaticResource Bg.Panel}">
+        <Border Grid.Column="0" Background="{DynamicResource Bg.Panel}">
             <DockPanel Margin="12,14,12,12">
                 <DockPanel DockPanel.Dock="Top">
                     <controls:PinOnTopButton DockPanel.Dock="Right" Margin="2,0,0,0"/>
@@ -70,8 +70,8 @@
                             ToolTip="Look for new chats" AutomationProperties.Name="Refresh chats" Command="{Binding RefreshHistoryCommand}"/>
                     <Button Style="{StaticResource Button.Primary}" Margin="0" Command="{Binding NewChatCommand}" AutomationProperties.Name="New chat">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource Text.OnAccent}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock Text="New chat" Foreground="{StaticResource Text.OnAccent}"/>
+                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{DynamicResource Text.OnAccent}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="New chat" Foreground="{DynamicResource Text.OnAccent}"/>
                         </StackPanel>
                     </Button>
                 </DockPanel>
@@ -82,7 +82,7 @@
                                Visibility="{Binding Search, Converter={StaticResource StringNotEmptyToVisibility}, ConverterParameter=Invert}"/>
                 </Grid>
 
-                <Border DockPanel.Dock="Top" Margin="0,10,0,10" Background="{StaticResource Bg.PanelAlt}" CornerRadius="0" Padding="3">
+                <Border DockPanel.Dock="Top" Margin="0,10,0,10" Background="{DynamicResource Bg.PanelAlt}" CornerRadius="0" Padding="3">
                     <UniformGrid Columns="3">
                         <RadioButton Style="{StaticResource Segment}" Content="All" IsChecked="{Binding ShowAll}"/>
                         <RadioButton Style="{StaticResource Segment}" Content="Claude" IsChecked="{Binding ShowClaude}"/>
@@ -104,19 +104,19 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <Path Data="{Binding Agent, Converter={StaticResource AgentMark}}" Fill="{StaticResource Text.Primary}"
+                                <Path Data="{Binding Agent, Converter={StaticResource AgentMark}}" Fill="{DynamicResource Text.Primary}"
                                       Width="20" Height="20" Stretch="Uniform" VerticalAlignment="Top" Margin="1,2,11,0"/>
                                 <StackPanel Grid.Column="1">
                                     <TextBlock Text="{Binding Title}" FontSize="12.5" TextTrimming="CharacterEllipsis" ToolTip="{Binding Title}"/>
-                                    <TextBlock Text="{Binding Details}" FontSize="11" Foreground="{StaticResource Text.Muted}" TextTrimming="CharacterEllipsis"
+                                    <TextBlock Text="{Binding Details}" FontSize="11" Foreground="{DynamicResource Text.Muted}" TextTrimming="CharacterEllipsis"
                                                Margin="0,2,0,0"/>
                                 </StackPanel>
-                                <Rectangle x:Name="Running" Grid.Column="2" Width="7" Height="7" Fill="{StaticResource Accent}" Margin="8,0,0,0"
+                                <Rectangle x:Name="Running" Grid.Column="2" Width="7" Height="7" Fill="{DynamicResource Accent}" Margin="8,0,0,0"
                                          VerticalAlignment="Center" Visibility="Collapsed" ToolTip="Working"/>
                                 <!-- On hover, over the end of the row: open this chat in a pane of its own beside the others -->
                                 <Button x:Name="OpenBeside" Grid.Column="1" Grid.ColumnSpan="2" Content="&#xE90D;" Style="{StaticResource Button.Ghost}"
                                         HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-4,0"
-                                        Background="{StaticResource Bg.Hover}" Visibility="Collapsed"
+                                        Background="{DynamicResource Bg.Hover}" Visibility="Collapsed"
                                         ToolTip="Open beside the chats on screen" AutomationProperties.Name="Open beside"
                                         Command="{Binding DataContext.OpenBesideCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}"/>
@@ -140,10 +140,10 @@
         </Border>
 
         <GridSplitter Grid.Column="1" Width="5" Background="Transparent" ResizeBehavior="PreviousAndNext" Focusable="False"/>
-        <Border Grid.Column="1" Width="1" Background="{StaticResource Border.Subtle}" HorizontalAlignment="Left" IsHitTestVisible="False"/>
+        <Border Grid.Column="1" Width="1" Background="{DynamicResource Border.Subtle}" HorizontalAlignment="Left" IsHitTestVisible="False"/>
 
         <!-- ===== The open chats: one, or up to four side by side ===== -->
-        <ItemsControl Grid.Column="2" ItemsSource="{Binding Panes}" Focusable="False" Background="{StaticResource Border.Subtle}">
+        <ItemsControl Grid.Column="2" ItemsSource="{Binding Panes}" Focusable="False" Background="{DynamicResource Border.Subtle}">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
                     <ctl:ChatPanesPanel Gap="1"/>

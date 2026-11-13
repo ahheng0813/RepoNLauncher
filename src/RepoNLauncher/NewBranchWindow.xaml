@@ -4,7 +4,7 @@
         xmlns:conv="clr-namespace:RepoNLauncher.Converters"
         Title="New branch - Repo'N'Launcher" Width="480" SizeToContent="Height" ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
-        Background="{StaticResource Bg.App}"
+        Background="{DynamicResource Bg.App}"
         FontFamily="{StaticResource Font.Mono}"
         FocusManager.FocusedElement="{Binding ElementName=NameBox}">
 
@@ -12,14 +12,14 @@
         <conv:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibility"/>
 
         <Style x:Key="FieldLabel" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Margin" Value="0,0,0,6"/>
         </Style>
 
         <Style x:Key="Note" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
             <Setter Property="FontSize" Value="11.5"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
@@ -39,7 +39,7 @@
                 <DataTemplate>
                     <TextBlock TextTrimming="CharacterEllipsis">
                         <Run Text="{Binding Name, Mode=OneWay}" FontFamily="{StaticResource Font.Mono}"/>
-                        <Run Text="{Binding Note, Mode=OneWay}" Foreground="{StaticResource Text.Muted}" FontSize="11"/>
+                        <Run Text="{Binding Note, Mode=OneWay}" Foreground="{DynamicResource Text.Muted}" FontSize="11"/>
                     </TextBlock>
                 </DataTemplate>
             </ComboBox.ItemTemplate>
@@ -48,7 +48,7 @@
 
         <CheckBox Content="Switch to it now" IsChecked="{Binding SwitchTo}" Margin="0,14,0,0"/>
 
-        <TextBlock Text="{Binding Error}" Foreground="{StaticResource Danger}" TextWrapping="Wrap" FontSize="12.5" Margin="0,14,0,0"
+        <TextBlock Text="{Binding Error}" Foreground="{DynamicResource Danger}" TextWrapping="Wrap" FontSize="12.5" Margin="0,14,0,0"
                    Visibility="{Binding Error, Converter={StaticResource StringNotEmptyToVisibility}}"/>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">

@@ -6,7 +6,7 @@
         xmlns:conv="clr-namespace:RepoNLauncher.Converters"
         Title="Repo'N'Launcher" Height="800" Width="1200"
         WindowStartupLocation="Manual"
-        Background="{StaticResource Bg.App}"
+        Background="{DynamicResource Bg.App}"
         FontFamily="{StaticResource Font.Mono}"
         PreviewKeyDown="Window_PreviewKeyDown">
 
@@ -15,7 +15,7 @@
         <!-- A saved site in the bar under the address: its name, the address in its tooltip -->
         <Style x:Key="SiteChip" TargetType="Button">
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="{StaticResource Text.Primary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
             <Setter Property="Margin" Value="0,0,2,0"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -25,10 +25,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Bg.Hover}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Accent.Muted}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Accent.Muted}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -48,7 +48,7 @@
         <!-- The ad blocker's shield: the shield, with how many it blocked on the page beside it -->
         <Style x:Key="ShieldButton" TargetType="Button">
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -57,7 +57,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Bg.Hover}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -66,20 +66,20 @@
         </Style>
 
         <Style x:Key="ChoiceNote" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
             <Setter Property="FontSize" Value="11.5"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="Margin" Value="0,2,0,0"/>
         </Style>
 
         <Style x:Key="FieldLabel" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Margin" Value="0,0,0,4"/>
         </Style>
         <!-- × on a tab -->
         <Style x:Key="TabClose" TargetType="Button">
-            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
             <Setter Property="Focusable" Value="False"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -90,8 +90,8 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
-                                <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Bg.Hover}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -108,9 +108,9 @@
                             Visibility="Hidden" ToolTip="Close tab (Ctrl+W)" AutomationProperties.Name="Close tab" Click="TabClose_Click"/>
                     <Grid DockPanel.Dock="Left" Width="16" Height="16" Margin="0,0,8,0" VerticalAlignment="Center">
                         <TextBlock x:Name="Globe" Text="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="13" Visibility="Collapsed"
-                                   Foreground="{StaticResource Text.Muted}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                   Foreground="{DynamicResource Text.Muted}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         <Image x:Name="Icon" Source="{Binding Favicon}" Width="16" Height="16" RenderOptions.BitmapScalingMode="HighQuality"/>
-                        <Ellipse x:Name="Spinner" Width="14" Height="14" Stroke="{StaticResource Accent}" StrokeThickness="2"
+                        <Ellipse x:Name="Spinner" Width="14" Height="14" Stroke="{DynamicResource Accent}" StrokeThickness="2"
                                  StrokeDashArray="6 13" RenderTransformOrigin="0.5,0.5" Visibility="Collapsed">
                             <Ellipse.RenderTransform>
                                 <RotateTransform/>
@@ -118,7 +118,7 @@
                         </Ellipse>
                     </Grid>
                     <TextBlock x:Name="Label" Text="{Binding Title}" FontSize="12" TextTrimming="CharacterEllipsis"
-                               VerticalAlignment="Center" Foreground="{StaticResource Text.Secondary}"/>
+                               VerticalAlignment="Center" Foreground="{DynamicResource Text.Secondary}"/>
                 </DockPanel>
             </Grid>
             <DataTemplate.Triggers>
@@ -131,16 +131,16 @@
                         <Condition Binding="{Binding IsSelected}" Value="False"/>
                         <Condition Binding="{Binding IsMouseOver, ElementName=Root}" Value="True"/>
                     </MultiDataTrigger.Conditions>
-                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.PanelAlt}"/>
-                    <Setter TargetName="Label" Property="Foreground" Value="{StaticResource Text.Primary}"/>
+                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Bg.PanelAlt}"/>
+                    <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource Text.Primary}"/>
                 </MultiDataTrigger>
                 <Trigger SourceName="Root" Property="IsMouseOver" Value="True">
                     <Setter TargetName="Close" Property="Visibility" Value="Visible"/>
                 </Trigger>
                 <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Elevated}"/>
-                    <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Border.Subtle}"/>
-                    <Setter TargetName="Label" Property="Foreground" Value="{StaticResource Text.Primary}"/>
+                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Bg.Elevated}"/>
+                    <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Border.Subtle}"/>
+                    <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource Text.Primary}"/>
                     <Setter TargetName="Close" Property="Visibility" Value="Visible"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsLoading}" Value="True">
@@ -189,8 +189,8 @@
         <StackPanel x:Name="Toolbar" Grid.Row="0" MouseLeave="Toolbar_MouseLeave">
             <!-- The tabs: click one to show it, drag it along the tabs to move it, out of the window for a window of its own,
                  or onto another browser window's tabs to join them; + (Ctrl+T), or double-clicking past the tabs, opens one -->
-            <Grid x:Name="TabBar" Background="{StaticResource Bg.Console}">
-                <Rectangle Height="1" VerticalAlignment="Bottom" Fill="{StaticResource Border.Subtle}"/>
+            <Grid x:Name="TabBar" Background="{DynamicResource Bg.Console}">
+                <Rectangle Height="1" VerticalAlignment="Bottom" Fill="{DynamicResource Border.Subtle}"/>
                 <controls:BrowserTabPanel x:Name="TabStrip" Margin="6,6,6,0" Background="Transparent" ClipToBounds="True"
                                           MouseLeftButtonDown="TabStrip_MouseLeftButtonDown">
                     <Button Content="&#xE710;" Style="{StaticResource Button.Ghost}" Margin="4,0,0,0" ToolTip="New tab (Ctrl+T)"
@@ -198,7 +198,7 @@
                 </controls:BrowserTabPanel>
             </Grid>
 
-            <Border Background="{StaticResource Bg.Elevated}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="0,0,0,1"
+            <Border Background="{DynamicResource Bg.Elevated}" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="0,0,0,1"
                     Padding="8,6">
             <StackPanel>
                 <DockPanel>
@@ -241,7 +241,7 @@
 
                     <!-- Incognito: this window keeps nothing on this PC -->
                     <TextBlock x:Name="IncognitoBadge" DockPanel.Dock="Right" Text="&#xED1A;" FontFamily="Segoe MDL2 Assets" FontSize="13"
-                               Foreground="{StaticResource Text.Secondary}" VerticalAlignment="Center" Margin="4,0,8,0"
+                               Foreground="{DynamicResource Text.Secondary}" VerticalAlignment="Center" Margin="4,0,8,0"
                                Visibility="Collapsed" ToolTip="Incognito: this window keeps no history, cookies or sign-ins on this PC"
                                AutomationProperties.Name="Incognito"/>
 
@@ -278,7 +278,7 @@
                                     ContextMenu="{StaticResource SiteMenu}" AutomationProperties.Name="{Binding Name}">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="11"
-                                               Foreground="{StaticResource Text.Muted}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                               Foreground="{DynamicResource Text.Muted}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                     <TextBlock Text="{Binding Name}" FontSize="12" MaxWidth="200" TextTrimming="CharacterEllipsis"
                                                VerticalAlignment="Center"/>
                                 </StackPanel>
@@ -293,20 +293,20 @@
         <!-- Shown instead of the page while the app's server doesn't answer yet -->
         <StackPanel x:Name="WaitingNote" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24"
                     Visibility="Collapsed">
-            <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="34" Foreground="{StaticResource Text.Muted}"
+            <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="34" Foreground="{DynamicResource Text.Muted}"
                        HorizontalAlignment="Center" Margin="0,0,0,12"/>
-            <TextBlock x:Name="WaitingText" Foreground="{StaticResource Text.Secondary}" TextWrapping="Wrap" TextAlignment="Center"/>
+            <TextBlock x:Name="WaitingText" Foreground="{DynamicResource Text.Secondary}" TextWrapping="Wrap" TextAlignment="Center"/>
         </StackPanel>
 
         <!-- Opened without a site (from the dashboard's header, or before the project has run): where to go -->
         <ScrollViewer x:Name="StartPage" Grid.Row="1" VerticalScrollBarVisibility="Auto" Visibility="Collapsed" Focusable="False">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24" MaxWidth="760">
-                <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="34" Foreground="{StaticResource Text.Muted}"
+                <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="34" Foreground="{DynamicResource Text.Muted}"
                            HorizontalAlignment="Center" Margin="0,0,0,12"/>
                 <TextBlock Text="Type an address above, such as localhost:3000, or what to search for, and press Enter."
-                           Foreground="{StaticResource Text.Secondary}" TextWrapping="Wrap" TextAlignment="Center"/>
+                           Foreground="{DynamicResource Text.Secondary}" TextWrapping="Wrap" TextAlignment="Center"/>
                 <TextBlock Text="On a page, ☆ (Ctrl+D) saves it, to open it again from here or the bar under the address."
-                           Foreground="{StaticResource Text.Muted}" FontSize="12" TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0"/>
+                           Foreground="{DynamicResource Text.Muted}" FontSize="12" TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0"/>
 
                 <StackPanel Margin="0,28,0,0">
                     <StackPanel.Style>
@@ -318,7 +318,7 @@
                             </Style.Triggers>
                         </Style>
                     </StackPanel.Style>
-                    <TextBlock Text="SAVED SITES" Foreground="{StaticResource Text.Secondary}" FontWeight="SemiBold" FontSize="12"
+                    <TextBlock Text="SAVED SITES" Foreground="{DynamicResource Text.Secondary}" FontWeight="SemiBold" FontSize="12"
                                HorizontalAlignment="Center" Margin="0,0,0,10"/>
                     <ItemsControl ItemsSource="{Binding SavedSites}" HorizontalAlignment="Center" Focusable="False">
                         <ItemsControl.ItemsPanel>
@@ -333,7 +333,7 @@
                                         ToolTip="{Binding Url}" AutomationProperties.Name="{Binding Name}">
                                     <StackPanel Width="210">
                                         <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="{Binding Url}" Foreground="{StaticResource Text.Muted}" FontSize="11"
+                                        <TextBlock Text="{Binding Url}" Foreground="{DynamicResource Text.Muted}" FontSize="11"
                                                    TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
                                     </StackPanel>
                                 </Button>
@@ -350,17 +350,17 @@
         <!-- Saving a site, or editing a saved one: its name and address. A window of its own, so it shows over the page. -->
         <Popup x:Name="SitePopup" Placement="Custom" AllowsTransparency="True" StaysOpen="False"
                Opened="SitePopup_Opened" Closed="SitePopup_Closed">
-            <Border Background="{StaticResource Bg.Elevated}" BorderBrush="{StaticResource Border.Strong}"
+            <Border Background="{DynamicResource Bg.Elevated}" BorderBrush="{DynamicResource Border.Strong}"
                     BorderThickness="1" Padding="14,12" Width="360">
                 <StackPanel>
-                    <TextBlock x:Name="SitePopupHeading" Text="SAVED SITE" Foreground="{StaticResource Text.Secondary}"
+                    <TextBlock x:Name="SitePopupHeading" Text="SAVED SITE" Foreground="{DynamicResource Text.Secondary}"
                                FontWeight="SemiBold" FontSize="12" Margin="0,0,0,10"/>
                     <TextBlock Text="Name" Style="{StaticResource FieldLabel}"/>
                     <TextBox x:Name="SiteName" AutomationProperties.Name="Saved site's name" KeyDown="SiteEditor_KeyDown"/>
                     <TextBlock Text="Address" Style="{StaticResource FieldLabel}" Margin="0,10,0,4"/>
                     <TextBox x:Name="SiteAddress" FontFamily="{StaticResource Font.Mono}" AutomationProperties.Name="Saved site's address"
                              KeyDown="SiteEditor_KeyDown"/>
-                    <TextBlock x:Name="SiteAddressError" Foreground="{StaticResource Danger}" FontSize="11.5" TextWrapping="Wrap"
+                    <TextBlock x:Name="SiteAddressError" Foreground="{DynamicResource Danger}" FontSize="11.5" TextWrapping="Wrap"
                                Margin="0,4,0,0" Visibility="Collapsed"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
                         <Button Content="Remove" Style="{StaticResource Button.Danger}" Click="RemoveSite_Click"
@@ -374,13 +374,13 @@
         <!-- The ad blocker's options, under the shield: on or off, how strong, and pausing it on the page's site -->
         <Popup x:Name="ShieldPopup" Placement="Custom" AllowsTransparency="True" StaysOpen="False"
                PlacementTarget="{Binding ElementName=ShieldButton}">
-            <Border Background="{StaticResource Bg.Elevated}" BorderBrush="{StaticResource Border.Strong}"
+            <Border Background="{DynamicResource Bg.Elevated}" BorderBrush="{DynamicResource Border.Strong}"
                     BorderThickness="1" Padding="14,12" Width="380" DataContext="{Binding AdBlocker}">
                 <StackPanel>
-                    <TextBlock Text="AD BLOCKER" Foreground="{StaticResource Text.Secondary}" FontWeight="SemiBold" FontSize="12"
+                    <TextBlock Text="AD BLOCKER" Foreground="{DynamicResource Text.Secondary}" FontWeight="SemiBold" FontSize="12"
                                Margin="0,0,0,10"/>
                     <CheckBox Content="Block ads" IsChecked="{Binding IsEnabled}" Click="ShieldOption_Click"/>
-                    <TextBlock x:Name="ShieldStatus" Foreground="{StaticResource Text.Secondary}" FontSize="12" TextWrapping="Wrap"
+                    <TextBlock x:Name="ShieldStatus" Foreground="{DynamicResource Text.Secondary}" FontSize="12" TextWrapping="Wrap"
                                Margin="0,8,0,0"/>
 
                     <StackPanel Margin="0,12,0,0" IsEnabled="{Binding IsEnabled}">

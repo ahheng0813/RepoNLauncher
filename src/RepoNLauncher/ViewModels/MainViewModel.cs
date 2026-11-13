@@ -108,6 +108,8 @@ public partial class MainViewModel : ObservableObject
         AgentChat = new AgentChatViewModel(() => Projects.Select(p => new ProjectOption(p.Name, p.Path)), () => SelectedProject?.Path);
 
         _config = _configService.Load();
+        // Before any window opens, so none starts in the other palette
+        ThemeService.Apply(_config.Theme);
         _config.DateTimeFormat ??= new DateTimeFormatSettings();
         DateTimeDisplay.Apply(_config.DateTimeFormat);
         _config.SavedSites ??= new List<SavedSite>();
@@ -131,7 +133,8 @@ public partial class MainViewModel : ObservableObject
                 PersistConfig();
             }),
         };
-        Settings = new SettingsViewModel(_config.DateTimeFormat, SaveDateTimeFormat, Updates, GitHub, OpenWithApps, Emulators, SiteBrowser);
+        Settings = new SettingsViewModel(_config.DateTimeFormat, SaveDateTimeFormat, Updates, GitHub, OpenWithApps, Emulators, SiteBrowser,
+            ThemeService.Choice, SaveTheme);
         CloneRepos = new CloneReposViewModel(GitHub, git, IsOnDashboard, paths => AddProjectsFrom("Clone from GitHub", paths),
             () => _config.Projects.Select(p => p.Path), DefaultCloneFolder(), SaveCloneFolder);
         LoadProjectsFromConfig();
@@ -270,6 +273,12 @@ public partial class MainViewModel : ObservableObject
     private void SaveDateTimeFormat(DateTimeFormatSettings format)
     {
         _config.DateTimeFormat = format;
+        PersistConfig();
+    }
+
+    private void SaveTheme(AppTheme theme)
+    {
+        _config.Theme = theme;
         PersistConfig();
     }
 

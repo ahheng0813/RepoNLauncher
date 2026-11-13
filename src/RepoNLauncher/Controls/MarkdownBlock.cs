@@ -9,6 +9,7 @@ using Markdig.Extensions.Tables;
 using Markdig.Extensions.TaskLists;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
+using RepoNLauncher.Services;
 using Brush = System.Windows.Media.Brush;
 using Brushes = System.Windows.Media.Brushes;
 using Color = System.Windows.Media.Color;
@@ -30,6 +31,7 @@ namespace RepoNLauncher.Controls;
 /// <summary>
 /// Markdown, shown as a read-only rich text box so it can be selected and copied: headings, lists, code, quotes,
 /// tables and links. Renders when shown, so a reply streaming into a hidden copy isn't re-rendered on every word.
+/// Renders again in the new colors when the theme changes.
 /// </summary>
 public sealed class MarkdownBlock : RichTextBox
 {
@@ -54,14 +56,23 @@ public sealed class MarkdownBlock : RichTextBox
         VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
         HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
         FocusVisualStyle = null;
-        SelectionBrush = Brush("Accent");
+        SetResourceReference(SelectionBrushProperty, "Accent");
         Document = new FlowDocument();
         AddHandler(Hyperlink.RequestNavigateEvent, new System.Windows.Navigation.RequestNavigateEventHandler(OnNavigate));
         IsVisibleChanged += (_, _) =>
         {
             if (IsVisible && _stale) Render();
         };
+        // Only while loaded, so a closed chat's replies aren't kept alive by the event
+        Loaded += (_, _) =>
+        {
+            ThemeService.Changed -= OnThemeChanged;
+            ThemeService.Changed += OnThemeChanged;
+        };
+        Unloaded += (_, _) => ThemeService.Changed -= OnThemeChanged;
     }
+
+    private void OnThemeChanged(object? sender, EventArgs e) => OnMarkdownChanged();
 
     public string? Markdown
     {

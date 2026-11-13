@@ -4,7 +4,7 @@
         xmlns:conv="clr-namespace:RepoNLauncher.Converters"
         Title="Create pull request - Repo'N'Launcher" Width="640" SizeToContent="Height" ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
-        Background="{StaticResource Bg.App}"
+        Background="{DynamicResource Bg.App}"
         FontFamily="{StaticResource Font.Mono}">
 
     <Window.Resources>
@@ -12,14 +12,14 @@
         <conv:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibility"/>
 
         <Style x:Key="FieldLabel" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Margin" Value="0,0,0,6"/>
         </Style>
 
         <Style x:Key="Note" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
             <Setter Property="FontSize" Value="11.5"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
@@ -27,11 +27,11 @@
 
     <StackPanel Margin="24,22,24,20">
         <StackPanel Orientation="Horizontal">
-            <Path Data="{StaticResource GitHubMark}" Fill="{StaticResource Text.Primary}" Width="22" Height="22" Stretch="Uniform"
+            <Path Data="{StaticResource GitHubMark}" Fill="{DynamicResource Text.Primary}" Width="22" Height="22" Stretch="Uniform"
                   VerticalAlignment="Center" Margin="0,0,10,0"/>
             <TextBlock Text="Create pull request" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center"/>
         </StackPanel>
-        <TextBlock Text="{Binding RepoText}" Foreground="{StaticResource Text.Muted}" FontFamily="{StaticResource Font.Mono}" FontSize="12"
+        <TextBlock Text="{Binding RepoText}" Foreground="{DynamicResource Text.Muted}" FontFamily="{StaticResource Font.Mono}" FontSize="12"
                    Margin="0,6,0,18"/>
 
         <!-- A branch here or on GitHub (the current one at first), into one GitHub has -->
@@ -50,13 +50,13 @@
                         <DataTemplate>
                             <TextBlock TextTrimming="CharacterEllipsis">
                                 <Run Text="{Binding Name, Mode=OneWay}" FontFamily="{StaticResource Font.Mono}"/>
-                                <Run Text="{Binding Note, Mode=OneWay}" Foreground="{StaticResource Text.Muted}" FontSize="11"/>
+                                <Run Text="{Binding Note, Mode=OneWay}" Foreground="{DynamicResource Text.Muted}" FontSize="11"/>
                             </TextBlock>
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
             </StackPanel>
-            <TextBlock Grid.Column="1" Text="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource Text.Muted}"
+            <TextBlock Grid.Column="1" Text="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource Text.Muted}"
                        VerticalAlignment="Bottom" Margin="14,0,14,9"/>
             <StackPanel Grid.Column="2">
                 <TextBlock Text="INTO" Style="{StaticResource FieldLabel}"/>
@@ -68,7 +68,7 @@
                    Visibility="{Binding CommitsText, Converter={StaticResource StringNotEmptyToVisibility}}"/>
 
         <!-- GitHub allows one open pull request per branch -->
-        <Border Background="{StaticResource Bg.PanelAlt}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
+        <Border Background="{DynamicResource Bg.PanelAlt}" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1"
                 CornerRadius="0" Padding="12,10" Margin="0,14,0,0"
                 Visibility="{Binding Existing, Converter={StaticResource NullToVisibility}}">
             <DockPanel>
@@ -106,7 +106,7 @@
             <ProgressBar DockPanel.Dock="Left" Width="60" IsIndeterminate="True" VerticalAlignment="Center" Margin="0,0,10,0"/>
             <TextBlock Text="{Binding BusyText}" TextWrapping="Wrap" FontSize="12.5" VerticalAlignment="Center"/>
         </DockPanel>
-        <TextBlock Text="{Binding Error}" Foreground="{StaticResource Danger}" TextWrapping="Wrap" FontSize="12.5" Margin="0,14,0,0"
+        <TextBlock Text="{Binding Error}" Foreground="{DynamicResource Danger}" TextWrapping="Wrap" FontSize="12.5" Margin="0,14,0,0"
                    Visibility="{Binding Error, Converter={StaticResource StringNotEmptyToVisibility}}"/>
 
         <DockPanel Margin="0,22,0,0">

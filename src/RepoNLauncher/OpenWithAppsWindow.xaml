@@ -3,13 +3,13 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Open-in apps - Repo'N'Launcher" Width="860" Height="460" MinWidth="620" MinHeight="300"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
-        Background="{StaticResource Bg.App}"
+        Background="{DynamicResource Bg.App}"
         FontFamily="{StaticResource Font.Mono}">
 
     <DockPanel Margin="20">
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,14">
             <TextBlock Text="Open-in apps" FontSize="17" FontWeight="SemiBold"/>
-            <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="12.5" TextWrapping="Wrap" Margin="0,6,0,0"
+            <TextBlock Foreground="{DynamicResource Text.Secondary}" FontSize="12.5" TextWrapping="Wrap" Margin="0,6,0,0"
                        Text="These appear under OPEN IN for every project. In Arguments, {path} is replaced with the project's folder, and the app starts in that folder (handy for terminals)."/>
         </StackPanel>
 
@@ -21,7 +21,7 @@
             </StackPanel>
         </DockPanel>
 
-        <Border Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
+        <Border Background="{DynamicResource Bg.Panel}" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1"
                 CornerRadius="0" Padding="12">
             <DockPanel>
                 <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
@@ -31,14 +31,14 @@
                         <ColumnDefinition Width="190"/>
                         <ColumnDefinition Width="34"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="NAME" Foreground="{StaticResource Text.Secondary}" FontWeight="SemiBold" FontSize="12"/>
-                    <TextBlock Grid.Column="1" Text="PROGRAM" Foreground="{StaticResource Text.Secondary}" FontWeight="SemiBold" FontSize="12"/>
-                    <TextBlock Grid.Column="2" Text="ARGUMENTS" Foreground="{StaticResource Text.Secondary}" FontWeight="SemiBold" FontSize="12"/>
+                    <TextBlock Grid.Column="0" Text="NAME" Foreground="{DynamicResource Text.Secondary}" FontWeight="SemiBold" FontSize="12"/>
+                    <TextBlock Grid.Column="1" Text="PROGRAM" Foreground="{DynamicResource Text.Secondary}" FontWeight="SemiBold" FontSize="12"/>
+                    <TextBlock Grid.Column="2" Text="ARGUMENTS" Foreground="{DynamicResource Text.Secondary}" FontWeight="SemiBold" FontSize="12"/>
                 </Grid>
 
                 <Grid>
                     <TextBlock Text="No apps yet. Press + Add app and pick the program, e.g. Cursor.exe or a JetBrains IDE."
-                               Foreground="{StaticResource Text.Muted}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Foreground="{DynamicResource Text.Muted}" HorizontalAlignment="Center" VerticalAlignment="Center"
                                TextWrapping="Wrap" TextAlignment="Center" Margin="20">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">

@@ -12,6 +12,6 @@ public partial class EmulatorsWindow : Window
         InitializeComponent();
         DataContext = viewModel;
 
-        SourceInitialized += (_, _) => NativeMethods.UseImmersiveDarkMode(new WindowInteropHelper(this).Handle);
+        SourceInitialized += (_, _) => NativeMethods.UseThemedTitleBar(new WindowInteropHelper(this).Handle);
     }
 }

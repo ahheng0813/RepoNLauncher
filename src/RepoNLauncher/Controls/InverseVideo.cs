@@ -3,9 +3,10 @@ using System.Windows;
 namespace RepoNLauncher.Controls;
 
 /// <summary>
-/// Inverse video, the way a console shows a selection: dark text on a light block. Set on an element with a light
-/// background (a primary button), and the text inside turns dark. It's inherited, so it reaches the text in the
-/// element's content and template, where the app-wide TextBlock style's own color would otherwise win.
+/// Inverse video, the way a console shows a selection: the text and background colors swapped (dark text on a light
+/// block in the dark theme, light on dark in the light one). Set on an element whose background is the Accent block (a
+/// primary button), and the text inside takes Text.OnAccent. It's inherited, so it reaches the text in the element's
+/// content and template, where the app-wide TextBlock style's own color would otherwise win.
 /// </summary>
 public static class InverseVideo
 {

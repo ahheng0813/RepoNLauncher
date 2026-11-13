@@ -29,7 +29,7 @@ public partial class PhoneScreenWindow : Window
         SourceInitialized += (_, _) =>
         {
             var hwnd = new WindowInteropHelper(this).Handle;
-            NativeMethods.UseImmersiveDarkMode(hwnd);
+            NativeMethods.UseThemedTitleBar(hwnd);
             HwndSource.FromHwnd(hwnd)?.AddHook(WndProc);
         };
         Activated += (_, _) => UpdateHotkeys();

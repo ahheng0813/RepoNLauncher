@@ -8,7 +8,7 @@
         xmlns:services="clr-namespace:RepoNLauncher.Services"
         Title="Run - Repo'N'Launcher" Height="760" Width="1100" MinWidth="560" MinHeight="320"
         WindowStartupLocation="Manual"
-        Background="{StaticResource Bg.App}"
+        Background="{DynamicResource Bg.App}"
         FontFamily="{StaticResource Font.Mono}"
         PreviewKeyDown="Window_PreviewKeyDown">
 
@@ -17,7 +17,7 @@
     </Window.Resources>
 
     <DockPanel>
-        <Border DockPanel.Dock="Top" Background="{StaticResource Bg.Elevated}" BorderBrush="{StaticResource Border.Subtle}"
+        <Border DockPanel.Dock="Top" Background="{DynamicResource Bg.Elevated}" BorderBrush="{DynamicResource Border.Subtle}"
                 BorderThickness="0,0,0,1" Padding="14,8">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
@@ -39,11 +39,11 @@
                     <Rectangle Width="8" Height="8" VerticalAlignment="Center">
                         <Rectangle.Style>
                             <Style TargetType="Rectangle">
-                                <Setter Property="Fill" Value="{StaticResource Text.Muted}"/>
+                                <Setter Property="Fill" Value="{DynamicResource Text.Muted}"/>
                                 <Setter Property="ToolTip" Value="Not running"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                        <Setter Property="Fill" Value="{StaticResource Success}"/>
+                                        <Setter Property="Fill" Value="{DynamicResource Success}"/>
                                         <Setter Property="ToolTip" Value="Running"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -51,7 +51,7 @@
                         </Rectangle.Style>
                     </Rectangle>
                     <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14" Margin="10,0,0,0" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding Branch}" Foreground="{StaticResource Text.Muted}" FontFamily="{StaticResource Font.Mono}"
+                    <TextBlock Text="{Binding Branch}" Foreground="{DynamicResource Text.Muted}" FontFamily="{StaticResource Font.Mono}"
                                FontSize="12" Margin="10,1,0,0" VerticalAlignment="Center"/>
 
                     <!-- Addresses the running server printed -->

@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 namespace RepoNLauncher;
 
 /// <summary>
-/// Windows calls: the console-style title bar that matches the app's theme, bringing a window to the front, keeping
+/// Windows calls: the console-style title bar in the app's theme colors, bringing a window to the front, keeping
 /// windows on top and moving them as the mouse drags, the mouse and keys held, refreshing the icons File Explorer shows,
 /// Explorer's name order, and where the Downloads folder is.
 /// </summary>
@@ -32,29 +32,33 @@ internal static class NativeMethods
     private const int DWMWA_TEXT_COLOR = 36;
     private const int DWMWCP_DONOTROUND = 1;
 
-    // COLORREFs (0x00BBGGRR) for the theme's Bg.App, Text.Primary and Border.Subtle
-    private const int ConsoleBlack = 0x000C0C0C;
-    private const int ConsoleGray = 0x00CCCCCC;
-    private const int BoxLine = 0x003A3A3A;
-
     /// <summary>
-    /// A dark title bar, and on Windows 11 a console window's: black caption, gray title, square corners and a thin
-    /// gray edge. Older Windows ignores what it doesn't know and keeps the plain dark one.
+    /// A title bar in the theme's colors (Services\ThemeService.cs), and on Windows 11 a console window's: the caption in
+    /// Bg.App, the title in Text.Primary, square corners and a thin Border.Subtle edge. Older Windows ignores what it
+    /// doesn't know and keeps a plain dark or light one. Called again for every open window when the theme changes.
     /// </summary>
-    public static void UseImmersiveDarkMode(IntPtr hwnd)
+    public static void UseThemedTitleBar(IntPtr hwnd)
     {
-        int enabled = 1;
-        if (DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_20H1, ref enabled, sizeof(int)) != 0)
+        if (hwnd == IntPtr.Zero) return;
+
+        int dark = Services.ThemeService.IsLight ? 0 : 1;
+        if (DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_20H1, ref dark, sizeof(int)) != 0)
         {
-            DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_1809, ref enabled, sizeof(int));
+            DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_1809, ref dark, sizeof(int));
         }
 
-        int caption = ConsoleBlack, text = ConsoleGray, border = BoxLine, corners = DWMWCP_DONOTROUND;
+        int caption = ColorRef("Bg.App"), text = ColorRef("Text.Primary"), border = ColorRef("Border.Subtle"), corners = DWMWCP_DONOTROUND;
         DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, ref caption, sizeof(int));
         DwmSetWindowAttribute(hwnd, DWMWA_TEXT_COLOR, ref text, sizeof(int));
         DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, ref border, sizeof(int));
         DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref corners, sizeof(int));
     }
+
+    // A palette color as a COLORREF (0x00BBGGRR)
+    private static int ColorRef(string key) =>
+        System.Windows.Application.Current?.TryFindResource(key) is System.Windows.Media.SolidColorBrush { Color: var c }
+            ? c.R | c.G << 8 | c.B << 16
+            : 0;
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool SetWindowPos(IntPtr hwnd, IntPtr after, int x, int y, int width, int height, uint flags);

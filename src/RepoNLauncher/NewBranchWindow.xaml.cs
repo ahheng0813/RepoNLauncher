@@ -14,7 +14,7 @@ public partial class NewBranchWindow : Window
         DataContext = viewModel;
 
         viewModel.Finished += () => DialogResult = true;
-        SourceInitialized += (_, _) => NativeMethods.UseImmersiveDarkMode(new WindowInteropHelper(this).Handle);
+        SourceInitialized += (_, _) => NativeMethods.UseThemedTitleBar(new WindowInteropHelper(this).Handle);
         Loaded += (_, _) => _ = viewModel.LoadAsync();
     }
 

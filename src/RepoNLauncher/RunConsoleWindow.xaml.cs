@@ -34,7 +34,7 @@ public partial class RunConsoleWindow : Window
 
         SourceInitialized += (_, _) =>
         {
-            NativeMethods.UseImmersiveDarkMode(new WindowInteropHelper(this).Handle);
+            NativeMethods.UseThemedTitleBar(new WindowInteropHelper(this).Handle);
             if (_maximizeOnceMade) WindowState = WindowState.Maximized;
         };
         Loaded += (_, _) => NextScreenButton.Visibility = Screen.AllScreens.Length > 1 ? Visibility.Visible : Visibility.Collapsed;

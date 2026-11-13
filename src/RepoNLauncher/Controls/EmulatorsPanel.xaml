@@ -11,19 +11,19 @@
         <conv:NullToVisibilityConverter x:Key="NullToVisibility"/>
 
         <Style x:Key="SectionLabel" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="12"/>
         </Style>
 
         <Style x:Key="Note" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
             <Setter Property="FontSize" Value="11.5"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
 
         <Style x:Key="RowState" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Margin" Value="0,0,8,0"/>
         </Style>
@@ -37,19 +37,19 @@
                        Visibility="{Binding CanUseEmulators, Converter={StaticResource BoolToVisibility}}"/>
         </DockPanel>
 
-        <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Foreground="{StaticResource Text.Secondary}" FontSize="12"
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Foreground="{DynamicResource Text.Secondary}" FontSize="12"
                    TextWrapping="Wrap" Margin="0,12,0,0" AutomationProperties.Name="Emulators status"
                    Visibility="{Binding Status, Converter={StaticResource StringNotEmptyToVisibility}}"/>
 
         <!-- What's missing before emulators can be used -->
-        <Border DockPanel.Dock="Top" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"
+        <Border DockPanel.Dock="Top" Background="{DynamicResource Bg.Panel}" BorderBrush="{DynamicResource Border.Subtle}"
                 BorderThickness="1" CornerRadius="0" Padding="16,14"
                 Visibility="{Binding SetupNote, Converter={StaticResource StringNotEmptyToVisibility}}">
             <TextBlock Text="{Binding SetupNote}" TextWrapping="Wrap"/>
         </Border>
 
         <!-- Create -->
-        <Border DockPanel.Dock="Bottom" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource Bg.Panel}" BorderBrush="{DynamicResource Border.Subtle}"
                 BorderThickness="1" CornerRadius="0" Padding="16,14" Margin="0,14,0,0"
                 Visibility="{Binding CanUseEmulators, Converter={StaticResource BoolToVisibility}}">
             <StackPanel>
@@ -71,18 +71,18 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Text="Name" VerticalAlignment="Center" Margin="0,0,16,0" Foreground="{StaticResource Text.Secondary}"/>
+                    <TextBlock Grid.Row="0" Text="Name" VerticalAlignment="Center" Margin="0,0,16,0" Foreground="{DynamicResource Text.Secondary}"/>
                     <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}"
                              AutomationProperties.Name="Emulator name"/>
-                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding NameError}" Foreground="{StaticResource Danger}" FontSize="12"
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding NameError}" Foreground="{DynamicResource Danger}" FontSize="12"
                                TextWrapping="Wrap" Margin="0,5,0,0"
                                Visibility="{Binding NameError, Converter={StaticResource StringNotEmptyToVisibility}}"/>
 
-                    <TextBlock Grid.Row="2" Text="Device" VerticalAlignment="Center" Margin="0,10,16,0" Foreground="{StaticResource Text.Secondary}"/>
+                    <TextBlock Grid.Row="2" Text="Device" VerticalAlignment="Center" Margin="0,10,16,0" Foreground="{DynamicResource Text.Secondary}"/>
                     <ComboBox Grid.Row="2" Grid.Column="1" Height="32" Margin="0,10,0,0" ItemsSource="{Binding Devices}"
                               SelectedItem="{Binding SelectedDevice}" DisplayMemberPath="Label" AutomationProperties.Name="Device"/>
 
-                    <TextBlock Grid.Row="3" Text="Android" VerticalAlignment="Center" Margin="0,10,16,0" Foreground="{StaticResource Text.Secondary}"/>
+                    <TextBlock Grid.Row="3" Text="Android" VerticalAlignment="Center" Margin="0,10,16,0" Foreground="{DynamicResource Text.Secondary}"/>
                     <ComboBox Grid.Row="3" Grid.Column="1" Height="32" Margin="0,10,0,0" ItemsSource="{Binding Images}"
                               SelectedItem="{Binding SelectedImage}" DisplayMemberPath="Label" AutomationProperties.Name="System image"/>
                 </Grid>
@@ -113,7 +113,7 @@
                 <ItemsControl ItemsSource="{Binding Emulators}" Focusable="False">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
+                            <Border Background="{DynamicResource Bg.Panel}" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1"
                                     CornerRadius="0" Padding="14,10" Margin="0,0,0,8">
                                 <DockPanel>
                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
@@ -126,8 +126,8 @@
                                                    Visibility="{Binding IsDeleting, Converter={StaticResource BoolToVisibility}}"/>
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0"
                                                     Visibility="{Binding IsShownRunning, Converter={StaticResource BoolToVisibility}}">
-                                            <Rectangle Width="7" Height="7" Fill="{StaticResource Success}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                            <TextBlock Text="Running" Foreground="{StaticResource Text.Secondary}"/>
+                                            <Rectangle Width="7" Height="7" Fill="{DynamicResource Success}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                            <TextBlock Text="Running" Foreground="{DynamicResource Text.Secondary}"/>
                                         </StackPanel>
 
                                         <Button Content="Start" Style="{StaticResource Button.Secondary}" Margin="0"
@@ -183,7 +183,7 @@
                                                  AutomationProperties.Name="New name for the emulator"
                                                  Visibility="{Binding IsRenaming, Converter={StaticResource BoolToVisibility}}"
                                                  IsVisibleChanged="RenameBox_IsVisibleChanged" PreviewKeyDown="RenameBox_PreviewKeyDown"/>
-                                        <TextBlock Text="{Binding RenameError}" Foreground="{StaticResource Danger}" FontSize="12"
+                                        <TextBlock Text="{Binding RenameError}" Foreground="{DynamicResource Danger}" FontSize="12"
                                                    TextWrapping="Wrap" Margin="0,5,0,0"
                                                    Visibility="{Binding RenameError, Converter={StaticResource StringNotEmptyToVisibility}}"/>
                                         <TextBlock Text="{Binding Details}" Style="{StaticResource Note}" Margin="0,3,0,0"/>

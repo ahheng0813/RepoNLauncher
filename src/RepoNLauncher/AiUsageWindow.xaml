@@ -6,7 +6,7 @@
         xmlns:vm="clr-namespace:RepoNLauncher.ViewModels"
         Title="AI usage - Repo'N'Launcher" Width="1040" Height="720" MinWidth="760" MinHeight="460"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource Bg.App}"
+        Background="{DynamicResource Bg.App}"
         FontFamily="{StaticResource Font.Mono}">
 
     <Window.Resources>
@@ -14,13 +14,13 @@
         <conv:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibility"/>
 
         <Style x:Key="SectionLabel" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="12"/>
         </Style>
 
         <Style x:Key="Muted" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
             <Setter Property="FontSize" Value="11.5"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
@@ -34,11 +34,11 @@
         <Style x:Key="HeaderCell" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="TextAlignment" Value="Right"/>
-            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
         </Style>
 
         <DataTemplate DataType="{x:Type vm:AiToolCardViewModel}">
-            <Border Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
+            <Border Background="{DynamicResource Bg.Panel}" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1"
                     CornerRadius="0" Padding="18,16">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="0,0,4,0">
@@ -51,21 +51,21 @@
                                     <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="7,1,0,0"/>
                                 </StackPanel>
                             </Button>
-                            <Path Data="{Binding Name, Converter={StaticResource AgentMark}}" Fill="{StaticResource Text.Primary}"
+                            <Path Data="{Binding Name, Converter={StaticResource AgentMark}}" Fill="{DynamicResource Text.Primary}"
                                   Width="36" Height="36" Stretch="Uniform"/>
                             <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                                    <Rectangle x:Name="SignInDot" Width="7" Height="7" Fill="{StaticResource Success}"
+                                    <Rectangle x:Name="SignInDot" Width="7" Height="7" Fill="{DynamicResource Success}"
                                              VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                    <TextBlock Text="{Binding SignInText}" FontSize="12" Foreground="{StaticResource Text.Secondary}"/>
+                                    <TextBlock Text="{Binding SignInText}" FontSize="12" Foreground="{DynamicResource Text.Secondary}"/>
                                 </StackPanel>
                             </StackPanel>
                         </DockPanel>
                         <TextBlock Text="{Binding Account}" Style="{StaticResource Muted}" Margin="48,6,0,0"
                                    Visibility="{Binding Account, Converter={StaticResource StringNotEmptyToVisibility}}"/>
 
-                        <Border Background="{StaticResource Bg.PanelAlt}" CornerRadius="0" Padding="12,10" Margin="0,14,0,0"
+                        <Border Background="{DynamicResource Bg.PanelAlt}" CornerRadius="0" Padding="12,10" Margin="0,14,0,0"
                                 Visibility="{Binding SignInHint, Converter={StaticResource StringNotEmptyToVisibility}}">
                             <DockPanel>
                                 <Button DockPanel.Dock="Right" Content="Sign in" Style="{StaticResource Button.Primary}" Margin="10,0,0,0"
@@ -75,8 +75,8 @@
                                         Tag="{Binding InstallUrl}" ToolTip="{Binding InstallUrl}" Click="OpenLink_Click"
                                         Visibility="{Binding InstallUrl, Converter={StaticResource StringNotEmptyToVisibility}}">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="Install" Foreground="{StaticResource Text.OnAccent}"/>
-                                        <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource Text.OnAccent}"
+                                        <TextBlock Text="Install" Foreground="{DynamicResource Text.OnAccent}"/>
+                                        <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{DynamicResource Text.OnAccent}"
                                                    VerticalAlignment="Center" Margin="7,1,0,0"/>
                                     </StackPanel>
                                 </Button>
@@ -95,8 +95,8 @@
                                             <TextBlock Text="{Binding Label}" FontSize="13"/>
                                         </DockPanel>
                                         <Grid Height="6" Margin="0,6,0,5">
-                                            <Border Background="{StaticResource Bg.PanelAlt}" CornerRadius="0"/>
-                                            <Border x:Name="Fill" Background="{StaticResource Accent}" CornerRadius="0" RenderTransformOrigin="0,0.5">
+                                            <Border Background="{DynamicResource Bg.PanelAlt}" CornerRadius="0"/>
+                                            <Border x:Name="Fill" Background="{DynamicResource Accent}" CornerRadius="0" RenderTransformOrigin="0,0.5">
                                                 <Border.RenderTransform>
                                                     <ScaleTransform ScaleX="{Binding Fraction}"/>
                                                 </Border.RenderTransform>
@@ -106,10 +106,10 @@
                                     </StackPanel>
                                     <DataTemplate.Triggers>
                                         <DataTrigger Binding="{Binding Level}" Value="High">
-                                            <Setter TargetName="Fill" Property="Background" Value="{StaticResource Warning}"/>
+                                            <Setter TargetName="Fill" Property="Background" Value="{DynamicResource Warning}"/>
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding Level}" Value="Full">
-                                            <Setter TargetName="Fill" Property="Background" Value="{StaticResource Danger}"/>
+                                            <Setter TargetName="Fill" Property="Background" Value="{DynamicResource Danger}"/>
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding IsOutdated}" Value="True">
                                             <Setter TargetName="Row" Property="Opacity" Value="0.5"/>
@@ -144,7 +144,7 @@
                             <ItemsControl ItemsSource="{Binding Periods}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border BorderBrush="{StaticResource Border.Subtle}" BorderThickness="0,1,0,0" Padding="0,7">
+                                        <Border BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="0,1,0,0" Padding="0,7">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
@@ -181,8 +181,8 @@
                                             <TextBlock Grid.Column="0" Text="{Binding Model}" FontFamily="{StaticResource Font.Mono}" FontSize="12"
                                                        TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                                             <Grid Grid.Column="1" Height="6" VerticalAlignment="Center">
-                                                <Border Background="{StaticResource Bg.PanelAlt}" CornerRadius="0"/>
-                                                <Border Background="{StaticResource Cyan}" CornerRadius="0" RenderTransformOrigin="0,0.5">
+                                                <Border Background="{DynamicResource Bg.PanelAlt}" CornerRadius="0"/>
+                                                <Border Background="{DynamicResource Cyan}" CornerRadius="0" RenderTransformOrigin="0,0.5">
                                                     <Border.RenderTransform>
                                                         <ScaleTransform ScaleX="{Binding Share}"/>
                                                     </Border.RenderTransform>
@@ -190,7 +190,7 @@
                                             </Grid>
                                             <TextBlock Grid.Column="2" Text="{Binding ShareText}" Style="{StaticResource Cell}"/>
                                             <TextBlock Grid.Column="3" Text="{Binding Tokens}" Style="{StaticResource Cell}"
-                                                       Foreground="{StaticResource Text.Secondary}"/>
+                                                       Foreground="{DynamicResource Text.Secondary}"/>
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -201,7 +201,7 @@
             </Border>
             <DataTemplate.Triggers>
                 <DataTrigger Binding="{Binding IsSignedIn}" Value="False">
-                    <Setter TargetName="SignInDot" Property="Fill" Value="{StaticResource Text.Muted}"/>
+                    <Setter TargetName="SignInDot" Property="Fill" Value="{DynamicResource Text.Muted}"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding HasLocalSessions}" Value="False">
                     <Setter TargetName="NoSessions" Property="Visibility" Value="Visible"/>
@@ -218,7 +218,7 @@
                     VerticalAlignment="Top" Command="{Binding RefreshCommand}"/>
             <StackPanel>
                 <TextBlock Text="AI usage" FontSize="17" FontWeight="SemiBold"/>
-                <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="12.5" TextWrapping="Wrap" Margin="0,6,0,0"
+                <TextBlock Foreground="{DynamicResource Text.Secondary}" FontSize="12.5" TextWrapping="Wrap" Margin="0,6,0,0"
                            Text="Your Claude Code and Codex plans and token use. Token use is read from each tool's files on this PC; for plan limits, the tool itself is asked. Their sign-ins are never read."/>
                 <TextBlock x:Name="StatusText" Text="{Binding Status}" Style="{StaticResource Muted}" Margin="0,4,0,0"/>
             </StackPanel>

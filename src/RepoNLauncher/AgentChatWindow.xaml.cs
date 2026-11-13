@@ -15,7 +15,7 @@ public partial class AgentChatWindow : Window
         InitializeComponent();
         DataContext = viewModel;
 
-        SourceInitialized += (_, _) => NativeMethods.UseImmersiveDarkMode(new WindowInteropHelper(this).Handle);
+        SourceInitialized += (_, _) => NativeMethods.UseThemedTitleBar(new WindowInteropHelper(this).Handle);
         Activated += (_, _) => viewModel.OnActivated();
     }
 }

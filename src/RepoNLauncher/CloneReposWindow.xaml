@@ -6,7 +6,7 @@
         xmlns:vm="clr-namespace:RepoNLauncher.ViewModels"
         Title="Clone from GitHub - Repo'N'Launcher" Width="1060" Height="740" MinWidth="760" MinHeight="460"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource Bg.App}"
+        Background="{DynamicResource Bg.App}"
         FontFamily="{StaticResource Font.Mono}">
 
     <Window.Resources>
@@ -19,7 +19,7 @@
         <!-- One segment of the All / Not on this PC / On this PC switch. Its text follows the button's Foreground. -->
         <Style x:Key="FilterTab" TargetType="RadioButton">
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
@@ -28,11 +28,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Bg.Hover}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Accent.Muted}"/>
-                                <Setter Property="Foreground" Value="{StaticResource Text.Primary}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Accent.Muted}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -48,13 +48,13 @@
 
         <Style x:Key="FilterTabCount" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
             <Setter Property="FontSize" Value="11.5"/>
-            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
             <Setter Property="Margin" Value="7,0,0,0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
         <Style x:Key="Badge" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource Bg.PanelAlt}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.PanelAlt}"/>
             <Setter Property="CornerRadius" Value="0"/>
             <Setter Property="Padding" Value="6,1"/>
             <Setter Property="Margin" Value="8,0,0,0"/>
@@ -63,7 +63,7 @@
 
         <Style x:Key="BadgeText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
             <Setter Property="FontSize" Value="10.5"/>
-            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
         </Style>
 
         <DataTemplate DataType="{x:Type vm:CloneRepoViewModel}">
@@ -82,7 +82,7 @@
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding FullName}" FontWeight="SemiBold" FontSize="13.5"/>
-                            <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource Text.Muted}"
+                            <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{DynamicResource Text.Muted}"
                                        VerticalAlignment="Center" Margin="8,0,0,0" ToolTip="Private repo"
                                        Visibility="{Binding Repo.IsPrivate, Converter={StaticResource BoolToVisibility}}"/>
                             <Border Style="{StaticResource Badge}" Visibility="{Binding Repo.IsFork, Converter={StaticResource BoolToVisibility}}">
@@ -96,12 +96,12 @@
                                 <TextBlock Text="On dashboard" Style="{StaticResource BadgeText}"/>
                             </Border>
                         </StackPanel>
-                        <TextBlock FontSize="11.5" Foreground="{StaticResource Text.Muted}" TextTrimming="CharacterEllipsis" Margin="0,3,0,0">
+                        <TextBlock FontSize="11.5" Foreground="{DynamicResource Text.Muted}" TextTrimming="CharacterEllipsis" Margin="0,3,0,0">
                             <Run Text="{Binding PushedText, Mode=OneWay}"/>
                             <Run x:Name="DescriptionDot" Text=" · "/>
-                            <Run Text="{Binding Repo.Description, Mode=OneWay}" Foreground="{StaticResource Text.Secondary}"/>
+                            <Run Text="{Binding Repo.Description, Mode=OneWay}" Foreground="{DynamicResource Text.Secondary}"/>
                         </TextBlock>
-                        <TextBlock x:Name="CloneText" Text="{Binding CloneText}" FontSize="12" Foreground="{StaticResource Cyan}"
+                        <TextBlock x:Name="CloneText" Text="{Binding CloneText}" FontSize="12" Foreground="{DynamicResource Cyan}"
                                    TextWrapping="Wrap" Margin="0,4,0,0" ToolTip="{Binding CloneText}"
                                    Visibility="{Binding CloneText, Converter={StaticResource StringNotEmptyToVisibility}}"/>
                     </StackPanel>
@@ -109,7 +109,7 @@
                     <!-- Not on this PC: the branch to check out once it's cloned -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0"
                                 Visibility="{Binding LocalPath, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}">
-                        <TextBlock Text="Branch" Foreground="{StaticResource Text.Muted}" FontSize="11.5" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="Branch" Foreground="{DynamicResource Text.Muted}" FontSize="11.5" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <ComboBox Width="200" Height="30" ItemsSource="{Binding Branches}" SelectedItem="{Binding Branch}"
                                   IsEnabled="{Binding CanPickBranch}" DropDownOpened="Branches_DropDownOpened"
                                   AutomationProperties.Name="{Binding FullName, StringFormat='Branch for {0}'}"
@@ -118,7 +118,7 @@
                                 <DataTemplate>
                                     <TextBlock TextTrimming="CharacterEllipsis">
                                         <Run Text="{Binding Name, Mode=OneWay}" FontFamily="{StaticResource Font.Mono}"/>
-                                        <Run Text="{Binding Note, Mode=OneWay}" Foreground="{StaticResource Text.Muted}" FontSize="11"/>
+                                        <Run Text="{Binding Note, Mode=OneWay}" Foreground="{DynamicResource Text.Muted}" FontSize="11"/>
                                     </TextBlock>
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
@@ -128,7 +128,7 @@
                     <!-- On this PC: where, and adding it to the dashboard -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0"
                                 Visibility="{Binding IsOnPc, Converter={StaticResource BoolToVisibility}}">
-                        <TextBlock Text="{Binding LocalPath}" FontFamily="{StaticResource Font.Mono}" FontSize="11" Foreground="{StaticResource Text.Secondary}"
+                        <TextBlock Text="{Binding LocalPath}" FontFamily="{StaticResource Font.Mono}" FontSize="11" Foreground="{DynamicResource Text.Secondary}"
                                    VerticalAlignment="Center" MaxWidth="280" TextTrimming="CharacterEllipsis" ToolTip="{Binding LocalPath}"/>
                         <Button Content="Add to dashboard" Style="{StaticResource Button.Secondary}" Margin="10,0,0,0" Padding="10,4"
                                 Command="{Binding DataContext.AddToDashboardCommand, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -138,32 +138,32 @@
                     </StackPanel>
 
                     <Border Grid.Column="3" x:Name="Chip" CornerRadius="0" Padding="10,2" MinWidth="96" VerticalAlignment="Center"
-                            Background="{StaticResource Bg.PanelAlt}">
+                            Background="{DynamicResource Bg.PanelAlt}">
                         <TextBlock x:Name="ChipText" Text="{Binding LocalLabel}" FontSize="11" FontWeight="SemiBold"
-                                   Foreground="{StaticResource Text.Muted}" HorizontalAlignment="Center"/>
+                                   Foreground="{DynamicResource Text.Muted}" HorizontalAlignment="Center"/>
                     </Border>
                 </Grid>
             </Border>
             <DataTemplate.Triggers>
                 <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
-                    <Setter TargetName="Row" Property="Background" Value="{StaticResource Bg.Hover}"/>
+                    <Setter TargetName="Row" Property="Background" Value="{DynamicResource Bg.Hover}"/>
                 </Trigger>
                 <DataTrigger Binding="{Binding Repo.Description}" Value="{x:Null}">
                     <Setter TargetName="DescriptionDot" Property="Text" Value=""/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsOnPc}" Value="True">
-                    <Setter TargetName="Chip" Property="Background" Value="{StaticResource Accent.Muted}"/>
-                    <Setter TargetName="ChipText" Property="Foreground" Value="{StaticResource Accent.Hover}"/>
+                    <Setter TargetName="Chip" Property="Background" Value="{DynamicResource Accent.Muted}"/>
+                    <Setter TargetName="ChipText" Property="Foreground" Value="{DynamicResource Accent.Hover}"/>
                     <Setter TargetName="Chip" Property="ToolTip" Value="{Binding LocalPath}"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding CloneState}" Value="Failed">
-                    <Setter TargetName="CloneText" Property="Foreground" Value="{StaticResource Danger}"/>
+                    <Setter TargetName="CloneText" Property="Foreground" Value="{DynamicResource Danger}"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding CloneState}" Value="Done">
-                    <Setter TargetName="CloneText" Property="Foreground" Value="{StaticResource Success}"/>
+                    <Setter TargetName="CloneText" Property="Foreground" Value="{DynamicResource Success}"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding CloneState}" Value="Waiting">
-                    <Setter TargetName="CloneText" Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+                    <Setter TargetName="CloneText" Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
                 </DataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>
@@ -174,21 +174,21 @@
             <controls:PinOnTopButton DockPanel.Dock="Right" Margin="12,0,0,0" VerticalAlignment="Top"/>
             <StackPanel>
                 <TextBlock Text="Clone from GitHub" FontSize="17" FontWeight="SemiBold"/>
-                <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="12.5" TextWrapping="Wrap" Margin="0,6,0,0"
+                <TextBlock Foreground="{DynamicResource Text.Secondary}" FontSize="12.5" TextWrapping="Wrap" Margin="0,6,0,0"
                            Text="Every repo your GitHub account can see, and whether this PC has a clone of it. Tick the ones to clone, pick a branch for any that shouldn't use the default, and press Clone."/>
             </StackPanel>
         </DockPanel>
 
         <!-- Shown when signed out: the list comes from the GitHub account -->
-        <Border DockPanel.Dock="Top" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"
+        <Border DockPanel.Dock="Top" Background="{DynamicResource Bg.Panel}" BorderBrush="{DynamicResource Border.Subtle}"
                 BorderThickness="1" CornerRadius="0" Padding="14,10" Margin="0,0,0,12"
                 Visibility="{Binding Account.Login, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}">
             <DockPanel>
                 <Button DockPanel.Dock="Right" Style="{StaticResource Button.Primary}" Margin="0" Click="SignIn_Click">
                     <StackPanel Orientation="Horizontal">
-                        <Path Data="{StaticResource GitHubMark}" Fill="{StaticResource Text.OnAccent}" Width="14" Height="14" Stretch="Uniform"
+                        <Path Data="{StaticResource GitHubMark}" Fill="{DynamicResource Text.OnAccent}" Width="14" Height="14" Stretch="Uniform"
                               VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock Text="Sign in with GitHub" Foreground="{StaticResource Text.OnAccent}" FontWeight="SemiBold"/>
+                        <TextBlock Text="Sign in with GitHub" Foreground="{DynamicResource Text.OnAccent}" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Button>
                 <TextBlock Text="Sign in to GitHub to list your repos." VerticalAlignment="Center"/>
@@ -200,12 +200,12 @@
                     ToolTip="Get the list from GitHub again, and look through this PC again"/>
             <ProgressBar DockPanel.Dock="Left" Width="70" IsIndeterminate="True" VerticalAlignment="Center" Margin="4,0,10,0"
                          Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"/>
-            <TextBlock x:Name="StatusText" Text="{Binding Status}" Foreground="{StaticResource Text.Secondary}" FontSize="12.5"
+            <TextBlock x:Name="StatusText" Text="{Binding Status}" Foreground="{DynamicResource Text.Secondary}" FontSize="12.5"
                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="4,0,0,0" ToolTip="{Binding Status}"/>
         </DockPanel>
 
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
-            <Border DockPanel.Dock="Left" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"
+            <Border DockPanel.Dock="Left" Background="{DynamicResource Bg.Panel}" BorderBrush="{DynamicResource Border.Subtle}"
                     BorderThickness="1" CornerRadius="0">
                 <StackPanel Orientation="Horizontal">
                     <RadioButton Style="{StaticResource FilterTab}" ToolTip="Every repo your GitHub account can see"
@@ -240,7 +240,7 @@
             <Grid Margin="12,0,0,0" MaxWidth="320" HorizontalAlignment="Right">
                 <TextBox Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Search repos" Width="300"
                          VerticalAlignment="Center"/>
-                <TextBlock Text="Search by name or description" Foreground="{StaticResource Text.Muted}" FontSize="12"
+                <TextBlock Text="Search by name or description" Foreground="{DynamicResource Text.Muted}" FontSize="12"
                            VerticalAlignment="Center" Margin="10,0,0,0" IsHitTestVisible="False">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
@@ -259,7 +259,7 @@
         <!-- Where the clones go, and the buttons -->
         <StackPanel DockPanel.Dock="Bottom" Margin="0,14,0,0">
             <DockPanel>
-                <TextBlock DockPanel.Dock="Left" Text="Clone into" Foreground="{StaticResource Text.Secondary}"
+                <TextBlock DockPanel.Dock="Left" Text="Clone into" Foreground="{DynamicResource Text.Secondary}"
                            VerticalAlignment="Center" Margin="0,0,12,0"/>
                 <Button DockPanel.Dock="Right" Content="Browse…" Style="{StaticResource Button.Secondary}" Margin="8,0,0,0"
                         Command="{Binding BrowseCloneFolderCommand}" IsEnabled="{Binding IsCloning, Converter={StaticResource InverseBoolean}}"/>
@@ -269,7 +269,7 @@
             </DockPanel>
             <DockPanel Margin="0,12,0,0">
                 <TextBlock DockPanel.Dock="Left" Text="{Binding CheckedCount, StringFormat='{}{0} selected'}"
-                           Foreground="{StaticResource Text.Secondary}" FontSize="12.5" VerticalAlignment="Center"/>
+                           Foreground="{DynamicResource Text.Secondary}" FontSize="12.5" VerticalAlignment="Center"/>
                 <CheckBox DockPanel.Dock="Left" Content="Add them to the dashboard" IsChecked="{Binding AddClonesToDashboard}"
                           VerticalAlignment="Center" Margin="20,0,0,0"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
@@ -283,10 +283,10 @@
             </DockPanel>
         </StackPanel>
 
-        <Border Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
+        <Border Background="{DynamicResource Bg.Panel}" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1"
                 CornerRadius="0" Padding="6">
             <Grid>
-                <TextBlock Text="No repos to show." Foreground="{StaticResource Text.Muted}"
+                <TextBlock Text="No repos to show." Foreground="{DynamicResource Text.Muted}"
                            HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">

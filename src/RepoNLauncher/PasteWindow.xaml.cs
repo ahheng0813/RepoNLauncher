@@ -21,7 +21,7 @@ public partial class PasteWindow : Window
     {
         InitializeComponent();
         DataContext = preview;
-        SourceInitialized += (_, _) => NativeMethods.UseImmersiveDarkMode(new WindowInteropHelper(this).Handle);
+        SourceInitialized += (_, _) => NativeMethods.UseThemedTitleBar(new WindowInteropHelper(this).Handle);
         Loaded += (_, _) => _ = MakeThumbnailsAsync(preview);
     }
 

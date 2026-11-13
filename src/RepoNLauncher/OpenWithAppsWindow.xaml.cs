@@ -20,7 +20,7 @@ public partial class OpenWithAppsWindow : Window
             new OpenWithAppEditor { Name = a.Name, Program = a.Program, Arguments = a.Arguments }));
         AppList.ItemsSource = _apps;
 
-        SourceInitialized += (_, _) => NativeMethods.UseImmersiveDarkMode(new WindowInteropHelper(this).Handle);
+        SourceInitialized += (_, _) => NativeMethods.UseThemedTitleBar(new WindowInteropHelper(this).Handle);
     }
 
     public List<OpenWithApp>? Result { get; private set; }

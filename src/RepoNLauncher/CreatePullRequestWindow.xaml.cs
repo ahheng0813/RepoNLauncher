@@ -19,7 +19,7 @@ public partial class CreatePullRequestWindow : Window
         viewModel.OpenLink = url => Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
         viewModel.Finished += () => DialogResult = true;
 
-        SourceInitialized += (_, _) => NativeMethods.UseImmersiveDarkMode(new WindowInteropHelper(this).Handle);
+        SourceInitialized += (_, _) => NativeMethods.UseThemedTitleBar(new WindowInteropHelper(this).Handle);
         Loaded += (_, _) => _ = viewModel.LoadAsync();
     }
 

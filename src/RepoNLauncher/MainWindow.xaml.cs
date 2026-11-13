@@ -45,7 +45,7 @@ public partial class MainWindow : Window
         SourceInitialized += (_, _) =>
         {
             var hwnd = new WindowInteropHelper(this).Handle;
-            NativeMethods.UseImmersiveDarkMode(hwnd);
+            NativeMethods.UseThemedTitleBar(hwnd);
         };
         Loaded += (_, _) =>
         {

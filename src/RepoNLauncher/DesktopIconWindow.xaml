@@ -3,13 +3,13 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Repo'N'Launcher" Width="420" SizeToContent="Height" ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
-        Background="{StaticResource Bg.App}"
+        Background="{DynamicResource Bg.App}"
         FontFamily="{StaticResource Font.Mono}">
 
     <StackPanel Margin="24,22,24,20">
         <TextBlock Text="Repo'N'Launcher is installed" FontSize="17" FontWeight="SemiBold"/>
         <TextBlock Text="It's in the Start menu. It can have an icon on your desktop too."
-                   Foreground="{StaticResource Text.Secondary}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                   Foreground="{DynamicResource Text.Secondary}" TextWrapping="Wrap" Margin="0,8,0,0"/>
 
         <CheckBox x:Name="CreateIconBox" Content="Create Desktop Icon" IsChecked="True" Margin="0,18,0,0"/>
 

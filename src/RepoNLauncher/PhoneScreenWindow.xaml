@@ -5,7 +5,7 @@
         Title="Phone Screen - Repo'N'Launcher" Height="860" Width="420"
         WindowStartupLocation="CenterScreen"
         Topmost="{Binding IsPinnedOnTop}"
-        Background="Black"
+        Background="{DynamicResource Bg.Console}"
         FontFamily="{StaticResource Font.Mono}">
 
     <Window.Resources>
@@ -22,7 +22,7 @@
         <Border x:Name="RevealStrip" Grid.Row="0" Height="4" Background="Transparent" Visibility="Collapsed"
                 MouseEnter="RevealStrip_MouseEnter"/>
 
-        <Border x:Name="Toolbar" Grid.Row="0" Background="{StaticResource Bg.Elevated}" BorderBrush="{StaticResource Border.Subtle}"
+        <Border x:Name="Toolbar" Grid.Row="0" Background="{DynamicResource Bg.Elevated}" BorderBrush="{DynamicResource Border.Subtle}"
                 BorderThickness="0,0,0,1" Padding="10,6" MouseLeave="Toolbar_MouseLeave">
             <DockPanel>
                 <controls:DeviceTools x:Name="Tools" DockPanel.Dock="Bottom" Margin="-6,4,0,0"/>
@@ -35,8 +35,8 @@
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsPinnedOnTop}" Value="True">
                                         <Setter Property="Content" Value="&#xE840;"/>
-                                        <Setter Property="Foreground" Value="{StaticResource Accent}"/>
-                                        <Setter Property="Background" Value="{StaticResource Accent.Muted}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+                                        <Setter Property="Background" Value="{DynamicResource Accent.Muted}"/>
                                         <Setter Property="ToolTip" Value="Pinned on top — click to unpin"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -58,14 +58,14 @@
                     <Button Content="Dock back" Style="{StaticResource Button.Secondary}" Margin="0"
                             ToolTip="Put the screen back in the dashboard's side panel" Command="{Binding TogglePopOutCommand}"/>
                 </StackPanel>
-                <TextBlock Text="{Binding Status}" Foreground="{StaticResource Text.Secondary}" FontSize="12"
+                <TextBlock Text="{Binding Status}" Foreground="{DynamicResource Text.Secondary}" FontSize="12"
                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
             </DockPanel>
         </Border>
 
         <!-- Only visible while there's no screen: the host's native window covers it otherwise -->
         <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="24">
-            <TextBlock Text="{Binding Status}" Foreground="{StaticResource Text.Secondary}"
+            <TextBlock Text="{Binding Status}" Foreground="{DynamicResource Text.Secondary}"
                        HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/>
             <Button Content="▶  Show" HorizontalAlignment="Center" Margin="0,14,0,0" Command="{Binding ShowCommand}">
                 <Button.Style>

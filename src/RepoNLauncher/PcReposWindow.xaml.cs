@@ -14,7 +14,7 @@ public partial class PcReposWindow : Window
         InitializeComponent();
         DataContext = _viewModel = viewModel;
 
-        SourceInitialized += (_, _) => NativeMethods.UseImmersiveDarkMode(new WindowInteropHelper(this).Handle);
+        SourceInitialized += (_, _) => NativeMethods.UseThemedTitleBar(new WindowInteropHelper(this).Handle);
         // Opening the window is asking for the list, so the first time it scans straight away.
         Loaded += (_, _) =>
         {

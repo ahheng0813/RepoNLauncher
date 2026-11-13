@@ -7,7 +7,7 @@
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         Width="1180" Height="660" MinWidth="720" MinHeight="440"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource Bg.App}"
+        Background="{DynamicResource Bg.App}"
         FontFamily="{StaticResource Font.Mono}">
 
     <Window.Resources>
@@ -20,7 +20,7 @@
         <!-- A Segoe MDL2 glyph that stays lit while it's on: the views, and the preview pane -->
         <Style x:Key="GlyphToggle" TargetType="ToggleButton">
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
@@ -30,12 +30,12 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
-                                <Setter Property="Foreground" Value="{StaticResource Text.Primary}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Bg.Hover}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Accent.Muted}"/>
-                                <Setter Property="Foreground" Value="{StaticResource Accent.Hover}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Accent.Muted}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Accent.Hover}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -44,7 +44,7 @@
         </Style>
 
         <Style x:Key="SectionLabel" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="12"/>
         </Style>
@@ -53,13 +53,13 @@
             <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
         </Style>
 
         <!-- A place beside the files: its icon, then its name -->
         <Style x:Key="PlaceButton" TargetType="Button">
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="{StaticResource Text.Primary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -69,7 +69,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Bg.Hover}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -80,7 +80,7 @@
         <!-- A folder of the path above the files -->
         <Style x:Key="StepButton" TargetType="Button">
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="{StaticResource Text.Primary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -89,7 +89,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Bg.Hover}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -99,7 +99,7 @@
 
         <Style x:Key="TextLink" TargetType="Button">
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="{StaticResource Cyan}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Cyan}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -121,7 +121,7 @@
             <Setter Property="Padding" Value="4,5"/>
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="{StaticResource Accent.Muted}"/>
+                    <Setter Property="Background" Value="{DynamicResource Accent.Muted}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -141,13 +141,13 @@
                             <Style TargetType="TextBlock" BasedOn="{StaticResource Glyph}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsFolder}" Value="True">
-                                        <Setter Property="Foreground" Value="{StaticResource Warning}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource Warning}"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </TextBlock.Style>
                     </TextBlock>
-                    <Border HorizontalAlignment="Center" VerticalAlignment="Center" BorderBrush="{StaticResource Border.Strong}"
+                    <Border HorizontalAlignment="Center" VerticalAlignment="Center" BorderBrush="{DynamicResource Border.Strong}"
                             BorderThickness="1" Visibility="{Binding Thumbnail, Converter={StaticResource NullToVisibility}}">
                         <Image Source="{Binding Thumbnail}" Stretch="Uniform" MaxWidth="86" MaxHeight="86"
                                RenderOptions.BitmapScalingMode="HighQuality"/>
@@ -180,7 +180,7 @@
         <Style x:Key="FileTileItem" TargetType="ListViewItem">
             <Setter Property="Margin" Value="2"/>
             <Setter Property="Padding" Value="0,4"/>
-            <Setter Property="Foreground" Value="{StaticResource Text.Primary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -190,10 +190,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Bg.Hover}"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Accent.Muted}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Accent.Muted}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -223,7 +223,7 @@
 
         <!-- How the last thing went, the work under way, and what's selected -->
         <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
-            <TextBlock DockPanel.Dock="Right" Text="{Binding SelectionText}" Foreground="{StaticResource Text.Muted}" FontSize="12"
+            <TextBlock DockPanel.Dock="Right" Text="{Binding SelectionText}" Foreground="{DynamicResource Text.Muted}" FontSize="12"
                        VerticalAlignment="Center" Margin="14,0,0,0"/>
             <Button DockPanel.Dock="Right" Content="Stop" Style="{StaticResource Button.Secondary}" Margin="10,0,0,0" Padding="12,3"
                     Command="{Binding StopCopyingCommand}" ToolTip="Stop copying, and remove what it left half copied"
@@ -233,7 +233,7 @@
             <Button DockPanel.Dock="Right" Content="Show in folder" Style="{StaticResource TextLink}" VerticalAlignment="Center"
                     Margin="10,0,0,0" Command="{Binding ShowSavedCommand}"
                     Visibility="{Binding CanShowSaved, Converter={StaticResource BoolToVisibility}}"/>
-            <TextBlock Text="{Binding Status}" Foreground="{StaticResource Text.Secondary}" FontSize="12" TextWrapping="Wrap"
+            <TextBlock Text="{Binding Status}" Foreground="{DynamicResource Text.Secondary}" FontSize="12" TextWrapping="Wrap"
                        VerticalAlignment="Center"/>
         </DockPanel>
 
@@ -258,7 +258,7 @@
         </WrapPanel>
 
         <!-- A name for a new folder, or a new name -->
-        <Border DockPanel.Dock="Bottom" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource Bg.Panel}" BorderBrush="{DynamicResource Border.Subtle}"
                 BorderThickness="1" CornerRadius="0" Padding="12,10" Margin="0,12,0,0"
                 Visibility="{Binding IsNaming, Converter={StaticResource BoolToVisibility}}">
             <DockPanel>
@@ -266,7 +266,7 @@
                         Command="{Binding CancelNameCommand}"/>
                 <Button DockPanel.Dock="Right" Content="{Binding NamingAction}" Style="{StaticResource Button.Primary}" Margin="10,0,0,0"
                         Command="{Binding ConfirmNameCommand}"/>
-                <TextBlock DockPanel.Dock="Left" Text="{Binding NamingLabel}" Foreground="{StaticResource Text.Secondary}" FontSize="12.5"
+                <TextBlock DockPanel.Dock="Left" Text="{Binding NamingLabel}" Foreground="{DynamicResource Text.Secondary}" FontSize="12.5"
                            VerticalAlignment="Center" Margin="0,0,12,0" MaxWidth="320" TextTrimming="CharacterEllipsis"/>
                 <TextBox x:Name="NameBox" Text="{Binding NameText, UpdateSourceTrigger=PropertyChanged}" KeyDown="NameBox_KeyDown"
                          AutomationProperties.Name="Name"/>
@@ -315,7 +315,7 @@
                             <DataTemplate DataType="{x:Type vm:PathStep}">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE76C;" Style="{StaticResource Glyph}" FontSize="9" Margin="2,1,2,0"
-                                               Foreground="{StaticResource Text.Muted}"
+                                               Foreground="{DynamicResource Text.Muted}"
                                                Visibility="{Binding HasArrow, Converter={StaticResource BoolToVisibility}}"/>
                                     <Button Content="{Binding Name}" Style="{StaticResource StepButton}" ToolTip="{Binding Path}"
                                             Command="{Binding DataContext.GoToCommand, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -347,7 +347,7 @@
                                                         <Style TargetType="TextBlock" BasedOn="{StaticResource Glyph}">
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding IsFolder}" Value="True">
-                                                                    <Setter Property="Foreground" Value="{StaticResource Warning}"/>
+                                                                    <Setter Property="Foreground" Value="{DynamicResource Warning}"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
@@ -364,7 +364,7 @@
                                     </GridViewColumn.Header>
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate DataType="{x:Type vm:PhoneFileItem}">
-                                            <TextBlock Text="{Binding Size}" Foreground="{StaticResource Text.Secondary}" FontSize="12.5"/>
+                                            <TextBlock Text="{Binding Size}" Foreground="{DynamicResource Text.Secondary}" FontSize="12.5"/>
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>
@@ -374,14 +374,14 @@
                                     </GridViewColumn.Header>
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate DataType="{x:Type vm:PhoneFileItem}">
-                                            <TextBlock Text="{conv:DateTimeText File.Modified}" Foreground="{StaticResource Text.Secondary}" FontSize="12.5"/>
+                                            <TextBlock Text="{conv:DateTimeText File.Modified}" Foreground="{DynamicResource Text.Secondary}" FontSize="12.5"/>
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>
                                 <GridViewColumn Header="Kind" Width="95">
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate DataType="{x:Type vm:PhoneFileItem}">
-                                            <TextBlock Text="{Binding Kind}" Foreground="{StaticResource Text.Muted}" FontSize="12.5"/>
+                                            <TextBlock Text="{Binding Kind}" Foreground="{DynamicResource Text.Muted}" FontSize="12.5"/>
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>
@@ -391,7 +391,7 @@
 
                     <ProgressBar IsIndeterminate="True" VerticalAlignment="Top" Height="2" Margin="1,37,1,0"
                                  Visibility="{Binding IsListing, Converter={StaticResource BoolToVisibility}}"/>
-                    <TextBlock Text="{Binding ListNote}" Foreground="{StaticResource Text.Muted}" FontSize="12.5" TextWrapping="Wrap"
+                    <TextBlock Text="{Binding ListNote}" Foreground="{DynamicResource Text.Muted}" FontSize="12.5" TextWrapping="Wrap"
                                TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="30,40,30,0"
                                IsHitTestVisible="False" Visibility="{Binding ListNote, Converter={StaticResource StringNotEmptyToVisibility}}"/>
                 </Grid>
@@ -401,17 +401,17 @@
                           ResizeBehavior="PreviousAndNext" Focusable="False" ToolTip="Drag to resize the preview"/>
 
             <!-- What's selected, bigger -->
-            <Border x:Name="PreviewPane" Grid.Column="3" DataContext="{Binding Preview}" Background="{StaticResource Bg.Panel}"
-                    BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1" CornerRadius="0">
+            <Border x:Name="PreviewPane" Grid.Column="3" DataContext="{Binding Preview}" Background="{DynamicResource Bg.Panel}"
+                    BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1" CornerRadius="0">
                 <DockPanel Margin="14">
                     <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0"
                                 Visibility="{Binding Title, Converter={StaticResource StringNotEmptyToVisibility}}">
                         <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                        <TextBlock Text="{Binding Details}" Foreground="{StaticResource Text.Secondary}" FontSize="12" TextWrapping="Wrap"
+                        <TextBlock Text="{Binding Details}" Foreground="{DynamicResource Text.Secondary}" FontSize="12" TextWrapping="Wrap"
                                    Margin="0,4,0,0" Visibility="{Binding Details, Converter={StaticResource StringNotEmptyToVisibility}}"/>
-                        <TextBlock Text="{Binding Modified}" Foreground="{StaticResource Text.Muted}" FontSize="12" Margin="0,2,0,0"
+                        <TextBlock Text="{Binding Modified}" Foreground="{DynamicResource Text.Muted}" FontSize="12" Margin="0,2,0,0"
                                    Visibility="{Binding Modified, Converter={StaticResource StringNotEmptyToVisibility}}"/>
-                        <TextBlock Text="{Binding Note}" Foreground="{StaticResource Text.Secondary}" FontSize="12" TextWrapping="Wrap"
+                        <TextBlock Text="{Binding Note}" Foreground="{DynamicResource Text.Secondary}" FontSize="12" TextWrapping="Wrap"
                                    Margin="0,8,0,0" Visibility="{Binding Note, Converter={StaticResource StringNotEmptyToVisibility}}"/>
                         <Button Content="Open on this PC" Style="{StaticResource TextLink}" HorizontalAlignment="Left" Margin="0,8,0,0"
                                 Command="{Binding DataContext.OpenItemCommand, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -422,7 +422,7 @@
                                  Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"/>
 
                     <Grid>
-                        <TextBlock Text="Select a file to preview it." Foreground="{StaticResource Text.Muted}" FontSize="12.5"
+                        <TextBlock Text="Select a file to preview it." Foreground="{DynamicResource Text.Muted}" FontSize="12.5"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"
                                    Visibility="{Binding Kind, Converter={StaticResource EnumToVisibility}, ConverterParameter=Nothing}"/>
                         <TextBlock Text="{Binding Glyph}" Style="{StaticResource Glyph}" FontSize="72" HorizontalAlignment="Center"

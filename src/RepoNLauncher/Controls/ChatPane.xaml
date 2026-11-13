@@ -4,7 +4,7 @@
              xmlns:conv="clr-namespace:RepoNLauncher.Converters"
              xmlns:vm="clr-namespace:RepoNLauncher.ViewModels"
              xmlns:ctl="clr-namespace:RepoNLauncher.Controls"
-             Background="{StaticResource Bg.App}">
+             Background="{DynamicResource Bg.App}">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
@@ -14,13 +14,13 @@
         <FontFamily x:Key="Mono">Cascadia Mono, Consolas</FontFamily>
 
         <Style x:Key="Muted" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
             <Setter Property="FontSize" Value="11.5"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
 
         <Style x:Key="Placeholder" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
             <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="IsHitTestVisible" Value="False"/>
             <Setter Property="Margin" Value="10,0,10,0"/>
@@ -33,8 +33,8 @@
             <Setter Property="IsReadOnly" Value="True"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{StaticResource Text.Primary}"/>
-            <Setter Property="SelectionBrush" Value="{StaticResource Accent}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="SelectionBrush" Value="{DynamicResource Accent}"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="FontSize" Value="13.5"/>
             <Setter Property="Template">
@@ -56,9 +56,9 @@
         <Style x:Key="ComposerBox" TargetType="TextBox">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{StaticResource Text.Primary}"/>
-            <Setter Property="CaretBrush" Value="{StaticResource Text.Primary}"/>
-            <Setter Property="SelectionBrush" Value="{StaticResource Accent}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="SelectionBrush" Value="{DynamicResource Accent}"/>
             <Setter Property="FontSize" Value="13.5"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="AcceptsReturn" Value="True"/>
@@ -85,7 +85,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Panel}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Bg.Panel}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -111,17 +111,17 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{StaticResource Bg.PanelAlt}" BorderBrush="{StaticResource Border.Subtle}"
+                        <Border x:Name="Bd" Background="{DynamicResource Bg.PanelAlt}" BorderBrush="{DynamicResource Border.Subtle}"
                                 BorderThickness="1" CornerRadius="0" Padding="12,8" Margin="0,0,0,6">
                             <ContentPresenter HorizontalAlignment="Left"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Border.Strong}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Border.Strong}"/>
                             </Trigger>
                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Accent}"/>
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Accent.Muted}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Accent.Muted}"/>
                             </DataTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -170,8 +170,8 @@
         </Style>
 
         <Style x:Key="Card" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource Bg.Panel}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource Accent}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Panel}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="0"/>
             <Setter Property="Padding" Value="16,13"/>
@@ -190,7 +190,7 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border CornerRadius="0" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1" Margin="6,0,0,6" Padding="1">
+                            <Border CornerRadius="0" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1" Margin="6,0,0,6" Padding="1">
                                 <Image Source="{Binding}" MaxHeight="180" MaxWidth="320" Stretch="Uniform"/>
                             </Border>
                         </DataTemplate>
@@ -204,10 +204,10 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Background="{StaticResource Bg.PanelAlt}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
+                            <Border Background="{DynamicResource Bg.PanelAlt}" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1"
                                     CornerRadius="0" Padding="8,4" Margin="6,0,0,6">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource Text.Secondary}"
+                                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{DynamicResource Text.Secondary}"
                                                VerticalAlignment="Center" Margin="0,0,6,0"/>
                                     <TextBlock Text="{Binding}" FontSize="12"/>
                                 </StackPanel>
@@ -215,7 +215,7 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <Border Background="{StaticResource Bg.Elevated}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
+                <Border Background="{DynamicResource Bg.Elevated}" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1"
                         CornerRadius="0" Padding="14,9" HorizontalAlignment="Right"
                         Visibility="{Binding HasText, Converter={StaticResource BoolToVisibility}}">
                     <TextBox Style="{StaticResource SelectableText}" Text="{Binding Text, Mode=OneWay}"/>
@@ -248,15 +248,15 @@
             <StackPanel Margin="0,4,0,4">
                 <Button Style="{StaticResource LinkButton}" Command="{Binding ToggleCommand}" HorizontalAlignment="Left">
                     <StackPanel Orientation="Horizontal" Background="Transparent">
-                        <TextBlock x:Name="Chevron" Text="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="9" Foreground="{StaticResource Text.Muted}"
+                        <TextBlock x:Name="Chevron" Text="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="9" Foreground="{DynamicResource Text.Muted}"
                                    VerticalAlignment="Center" Margin="0,0,7,0"/>
-                        <TextBlock Text="Thinking" FontStyle="Italic" FontSize="12.5" Foreground="{StaticResource Text.Muted}"/>
+                        <TextBlock Text="Thinking" FontStyle="Italic" FontSize="12.5" Foreground="{DynamicResource Text.Muted}"/>
                     </StackPanel>
                 </Button>
-                <Border x:Name="Body" Visibility="Collapsed" BorderBrush="{StaticResource Border.Strong}" BorderThickness="2,0,0,0"
+                <Border x:Name="Body" Visibility="Collapsed" BorderBrush="{DynamicResource Border.Strong}" BorderThickness="2,0,0,0"
                         Padding="12,2,0,2" Margin="3,6,0,4">
                     <TextBox Style="{StaticResource SelectableText}" Text="{Binding Text, Mode=OneWay}" FontSize="12.5" FontStyle="Italic"
-                             Foreground="{StaticResource Text.Secondary}"/>
+                             Foreground="{DynamicResource Text.Secondary}"/>
                 </Border>
             </StackPanel>
             <DataTemplate.Triggers>
@@ -272,25 +272,25 @@
                 <Button Style="{StaticResource RowButton}" Command="{Binding ToggleCommand}">
                     <DockPanel>
                         <TextBlock x:Name="Chevron" DockPanel.Dock="Right" Text="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="9"
-                                   Foreground="{StaticResource Text.Muted}" VerticalAlignment="Center" Margin="8,0,2,0"/>
+                                   Foreground="{DynamicResource Text.Muted}" VerticalAlignment="Center" Margin="8,0,2,0"/>
                         <Grid Width="14" Margin="0,0,9,0" VerticalAlignment="Center">
-                            <Rectangle x:Name="Dot" Width="7" Height="7" Fill="{StaticResource Accent}"/>
-                            <TextBlock x:Name="Glyph" Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource Success}"
+                            <Rectangle x:Name="Dot" Width="7" Height="7" Fill="{DynamicResource Accent}"/>
+                            <TextBlock x:Name="Glyph" Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{DynamicResource Success}"
                                        HorizontalAlignment="Center" Visibility="Collapsed"/>
                         </Grid>
-                        <TextBlock Text="{Binding Tool.Title}" FontWeight="SemiBold" FontSize="12.5" Foreground="{StaticResource Text.Secondary}"
+                        <TextBlock Text="{Binding Tool.Title}" FontWeight="SemiBold" FontSize="12.5" Foreground="{DynamicResource Text.Secondary}"
                                    VerticalAlignment="Center" Margin="0,0,9,0"/>
                         <TextBlock Text="{Binding Tool.Summary}" FontFamily="{StaticResource Mono}" FontSize="12" TextTrimming="CharacterEllipsis"
                                    VerticalAlignment="Center"/>
                     </DockPanel>
                 </Button>
-                <Border x:Name="Details" Visibility="Collapsed" Background="{StaticResource Bg.Console}" BorderBrush="{StaticResource Border.Subtle}"
+                <Border x:Name="Details" Visibility="Collapsed" Background="{DynamicResource Bg.Console}" BorderBrush="{DynamicResource Border.Subtle}"
                         BorderThickness="1" CornerRadius="0" Padding="12,8" Margin="31,2,0,8">
                     <StackPanel>
                         <TextBox Style="{StaticResource SelectableMono}" Text="{Binding Tool.Detail, Mode=OneWay}" MaxHeight="300"
                                  Visibility="{Binding Tool.Detail, Converter={StaticResource StringNotEmptyToVisibility}}"/>
                         <TextBox x:Name="Output" Style="{StaticResource SelectableMono}" Text="{Binding Output, Mode=OneWay}" MaxHeight="320"
-                                 Foreground="{StaticResource Text.Secondary}" Margin="0,6,0,0"
+                                 Foreground="{DynamicResource Text.Secondary}" Margin="0,6,0,0"
                                  Visibility="{Binding Output, Converter={StaticResource StringNotEmptyToVisibility}}"/>
                     </StackPanel>
                 </Border>
@@ -304,11 +304,11 @@
                     <Setter TargetName="Dot" Property="Visibility" Value="Collapsed"/>
                     <Setter TargetName="Glyph" Property="Visibility" Value="Visible"/>
                     <Setter TargetName="Glyph" Property="Text" Value="&#xE711;"/>
-                    <Setter TargetName="Glyph" Property="Foreground" Value="{StaticResource Danger}"/>
-                    <Setter TargetName="Output" Property="Foreground" Value="{StaticResource Danger}"/>
+                    <Setter TargetName="Glyph" Property="Foreground" Value="{DynamicResource Danger}"/>
+                    <Setter TargetName="Output" Property="Foreground" Value="{DynamicResource Danger}"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Status}" Value="Waiting">
-                    <Setter TargetName="Dot" Property="Fill" Value="{StaticResource Warning}"/>
+                    <Setter TargetName="Dot" Property="Fill" Value="{DynamicResource Warning}"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsExpanded}" Value="True">
                     <Setter TargetName="Details" Property="Visibility" Value="Visible"/>
@@ -328,8 +328,8 @@
                         <Run Text="{Binding Tool.Title, Mode=OneWay}"/><Run Text="?"/>
                     </TextBlock>
                     <TextBlock Text="{Binding Tool.Summary}" FontFamily="{StaticResource Mono}" FontSize="12" TextWrapping="Wrap"
-                               Foreground="{StaticResource Text.Secondary}" Margin="0,6,0,0"/>
-                    <Border Background="{StaticResource Bg.Console}" CornerRadius="0" Padding="10,8" Margin="0,8,0,0"
+                               Foreground="{DynamicResource Text.Secondary}" Margin="0,6,0,0"/>
+                    <Border Background="{DynamicResource Bg.Console}" CornerRadius="0" Padding="10,8" Margin="0,8,0,0"
                             Visibility="{Binding Tool.Detail, Converter={StaticResource StringNotEmptyToVisibility}}">
                         <TextBox Style="{StaticResource SelectableMono}" Text="{Binding Tool.Detail, Mode=OneWay}" MaxHeight="240"/>
                     </Border>
@@ -347,14 +347,14 @@
                         </WrapPanel>
                     </StackPanel>
                     <TextBlock x:Name="OutcomeText" Text="{Binding Outcome}" Visibility="Collapsed" Margin="0,10,0,0" FontSize="12"
-                               Foreground="{StaticResource Text.Secondary}"/>
+                               Foreground="{DynamicResource Text.Secondary}"/>
                 </StackPanel>
             </Border>
             <DataTemplate.Triggers>
                 <DataTrigger Binding="{Binding IsPending}" Value="False">
                     <Setter TargetName="Choices" Property="Visibility" Value="Collapsed"/>
                     <Setter TargetName="OutcomeText" Property="Visibility" Value="Visible"/>
-                    <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource Border.Subtle}"/>
+                    <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource Border.Subtle}"/>
                 </DataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>
@@ -367,7 +367,7 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Margin="0,0,0,12">
-                                    <TextBlock Text="{Binding Header}" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource Accent.Hover}"
+                                    <TextBlock Text="{Binding Header}" FontSize="10.5" FontWeight="SemiBold" Foreground="{DynamicResource Accent.Hover}"
                                                Visibility="{Binding Header, Converter={StaticResource StringNotEmptyToVisibility}}"/>
                                     <TextBlock Text="{Binding Question}" FontSize="13" TextWrapping="Wrap" Margin="0,2,0,8"/>
                                     <ItemsControl ItemsSource="{Binding Options}" Focusable="False">
@@ -399,14 +399,14 @@
                         <Button Content="Skip" Style="{StaticResource Button.Secondary}" Command="{Binding SkipCommand}"/>
                     </WrapPanel>
                     <TextBlock x:Name="OutcomeText" Text="{Binding Outcome}" Visibility="Collapsed" FontSize="12"
-                               Foreground="{StaticResource Text.Secondary}"/>
+                               Foreground="{DynamicResource Text.Secondary}"/>
                 </StackPanel>
             </Border>
             <DataTemplate.Triggers>
                 <DataTrigger Binding="{Binding IsPending}" Value="False">
                     <Setter TargetName="Choices" Property="Visibility" Value="Collapsed"/>
                     <Setter TargetName="OutcomeText" Property="Visibility" Value="Visible"/>
-                    <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource Border.Subtle}"/>
+                    <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource Border.Subtle}"/>
                 </DataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>
@@ -415,7 +415,7 @@
             <Border x:Name="Card" Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="Claude's plan" FontSize="13" FontWeight="SemiBold"/>
-                    <Border Background="{StaticResource Bg.PanelAlt}" CornerRadius="0" Padding="14,10" Margin="0,8,0,0">
+                    <Border Background="{DynamicResource Bg.PanelAlt}" CornerRadius="0" Padding="14,10" Margin="0,8,0,0">
                         <ctl:MarkdownBlock Markdown="{Binding Plan}"/>
                     </Border>
                     <StackPanel x:Name="Choices" Margin="0,12,0,0">
@@ -431,24 +431,24 @@
                         </WrapPanel>
                     </StackPanel>
                     <TextBlock x:Name="OutcomeText" Text="{Binding Outcome}" Visibility="Collapsed" Margin="0,10,0,0" FontSize="12"
-                               Foreground="{StaticResource Text.Secondary}"/>
+                               Foreground="{DynamicResource Text.Secondary}"/>
                 </StackPanel>
             </Border>
             <DataTemplate.Triggers>
                 <DataTrigger Binding="{Binding IsPending}" Value="False">
                     <Setter TargetName="Choices" Property="Visibility" Value="Collapsed"/>
                     <Setter TargetName="OutcomeText" Property="Visibility" Value="Visible"/>
-                    <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource Border.Subtle}"/>
+                    <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource Border.Subtle}"/>
                 </DataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>
 
         <DataTemplate DataType="{x:Type vm:NoticeChatItem}">
             <Grid Margin="0,6,0,10">
-                <TextBlock x:Name="Plain" Text="{Binding Text}" FontSize="11.5" Foreground="{StaticResource Text.Muted}"
+                <TextBlock x:Name="Plain" Text="{Binding Text}" FontSize="11.5" Foreground="{DynamicResource Text.Muted}"
                            HorizontalAlignment="Center" TextWrapping="Wrap"/>
-                <Border x:Name="Error" Visibility="Collapsed" Background="{StaticResource Danger.Muted}" CornerRadius="0" Padding="12,8">
-                    <TextBox Style="{StaticResource SelectableText}" Text="{Binding Text, Mode=OneWay}" Foreground="{StaticResource Danger}" FontSize="12.5"/>
+                <Border x:Name="Error" Visibility="Collapsed" Background="{DynamicResource Danger.Muted}" CornerRadius="0" Padding="12,8">
+                    <TextBox Style="{StaticResource SelectableText}" Text="{Binding Text, Mode=OneWay}" Foreground="{DynamicResource Danger}" FontSize="12.5"/>
                 </Border>
             </Grid>
             <DataTemplate.Triggers>
@@ -470,7 +470,7 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="0,0,0,1" Padding="22,12">
+            <Border Grid.Row="0" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="0,0,0,1" Padding="22,12">
                 <DockPanel>
                     <Button DockPanel.Dock="Right" Content="&#xE711;" Style="{StaticResource Button.Ghost}" FontSize="11" Margin="2,0,-6,0"
                             VerticalAlignment="Center" ToolTip="Close this pane. The chat keeps going, and the list still has it."
@@ -484,7 +484,7 @@
                             Command="{Binding DataContext.Owner.SplitCommand, ElementName=PaneRoot}"
                             CommandParameter="{Binding DataContext, ElementName=PaneRoot}"/>
                     <TextBlock DockPanel.Dock="Right" Text="{Binding ModelInUse}" FontFamily="{StaticResource Mono}" FontSize="11.5"
-                               Foreground="{StaticResource Text.Muted}" VerticalAlignment="Center" ToolTip="Model in use"/>
+                               Foreground="{DynamicResource Text.Muted}" VerticalAlignment="Center" ToolTip="Model in use"/>
                     <Button x:Name="PromptsButton" DockPanel.Dock="Right" Style="{StaticResource Button.Secondary}" Padding="10,5"
                             Margin="0,0,14,0" VerticalAlignment="Center" Click="PromptsButton_Click"
                             AutomationProperties.Name="Prompts" ToolTip="Every prompt in this chat; pick one to go to it">
@@ -496,7 +496,7 @@
                     <!-- Under the Prompts button, its right edge lined up with the button's (placed by hand, see the code) -->
                     <Popup x:Name="PromptsPopup" PlacementTarget="{Binding ElementName=PromptsButton}" Placement="Custom"
                            AllowsTransparency="True" StaysOpen="False">
-                        <Border Background="{StaticResource Bg.Elevated}" BorderBrush="{StaticResource Border.Strong}" BorderThickness="1"
+                        <Border Background="{DynamicResource Bg.Elevated}" BorderBrush="{DynamicResource Border.Strong}" BorderThickness="1"
                                 CornerRadius="0" Padding="4" Width="460">
                             <DockPanel>
                                 <TextBlock x:Name="PromptsHeading" DockPanel.Dock="Top" Style="{StaticResource Muted}" FontSize="11" Margin="8,4,8,6"/>
@@ -511,7 +511,7 @@
                                                         AutomationProperties.Name="{Binding Label}">
                                                     <DockPanel>
                                                         <TextBlock x:Name="Number" DockPanel.Dock="Left" Text="{Binding Number}" FontFamily="{StaticResource Mono}"
-                                                                   FontSize="11.5" Foreground="{StaticResource Text.Muted}" MinWidth="26" Margin="0,1,6,0"/>
+                                                                   FontSize="11.5" Foreground="{DynamicResource Text.Muted}" MinWidth="26" Margin="0,1,6,0"/>
                                                         <TextBlock x:Name="Preview" Text="{Binding Preview}" FontSize="12.5" TextWrapping="Wrap" MaxHeight="38"
                                                                    TextTrimming="CharacterEllipsis"/>
                                                     </DockPanel>
@@ -519,7 +519,7 @@
                                                 <!-- The prompt the view is on -->
                                                 <DataTemplate.Triggers>
                                                     <DataTrigger Binding="{Binding IsCurrent}" Value="True">
-                                                        <Setter TargetName="Number" Property="Foreground" Value="{StaticResource Accent}"/>
+                                                        <Setter TargetName="Number" Property="Foreground" Value="{DynamicResource Accent}"/>
                                                         <Setter TargetName="Number" Property="FontWeight" Value="Bold"/>
                                                     </DataTrigger>
                                                 </DataTemplate.Triggers>
@@ -530,7 +530,7 @@
                             </DockPanel>
                         </Border>
                     </Popup>
-                    <Path Data="{Binding Agent, Converter={StaticResource AgentMark}}" Fill="{StaticResource Text.Primary}"
+                    <Path Data="{Binding Agent, Converter={StaticResource AgentMark}}" Fill="{DynamicResource Text.Primary}"
                           Width="30" Height="30" Stretch="Uniform" VerticalAlignment="Center"/>
                     <StackPanel Margin="12,0,12,0" VerticalAlignment="Center">
                         <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
@@ -567,13 +567,13 @@
             </ItemsControl>
 
             <!-- The prompt the part of the chat in view answers, once that prompt has scrolled off the top. A click goes back to it. -->
-            <Border x:Name="PinnedPrompt" Grid.Row="1" VerticalAlignment="Top" Visibility="Collapsed" Background="{StaticResource Bg.App}"
-                    BorderBrush="{StaticResource Border.Subtle}" BorderThickness="0,0,0,1" Padding="24,6,24,6">
+            <Border x:Name="PinnedPrompt" Grid.Row="1" VerticalAlignment="Top" Visibility="Collapsed" Background="{DynamicResource Bg.App}"
+                    BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="0,0,0,1" Padding="24,6,24,6">
                 <Button MaxWidth="860" Style="{StaticResource RowButton}" Click="PinnedPrompt_Click"
                         AutomationProperties.Name="Go to this prompt" ToolTip="Go to this prompt">
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Left" Text="&#xE74A;" FontFamily="Segoe MDL2 Assets" FontSize="11"
-                                   Foreground="{StaticResource Text.Secondary}" Margin="0,2,10,0"/>
+                                   Foreground="{DynamicResource Text.Secondary}" Margin="0,2,10,0"/>
                         <TextBlock x:Name="PinnedNumber" DockPanel.Dock="Right" Style="{StaticResource Muted}" Margin="12,1,0,0"/>
                         <TextBlock x:Name="PinnedText" FontSize="12.5" TextWrapping="Wrap" MaxHeight="38" TextTrimming="CharacterEllipsis"/>
                     </DockPanel>
@@ -613,9 +613,9 @@
                     <Run Text="{Binding AgentName, Mode=OneWay}"/>
                     <Run Text="do?"/>
                 </TextBlock>
-                <TextBlock HorizontalAlignment="Center" Margin="0,8,0,0" FontSize="12.5" Foreground="{StaticResource Text.Secondary}">
+                <TextBlock HorizontalAlignment="Center" Margin="0,8,0,0" FontSize="12.5" Foreground="{DynamicResource Text.Secondary}">
                     <Run Text="Working in"/>
-                    <Run Text="{Binding ProjectName, Mode=OneWay}" FontWeight="SemiBold" Foreground="{StaticResource Text.Primary}"/>
+                    <Run Text="{Binding ProjectName, Mode=OneWay}" FontWeight="SemiBold" Foreground="{DynamicResource Text.Primary}"/>
                 </TextBlock>
                 <TextBlock HorizontalAlignment="Center" Margin="24,6,24,0" Style="{StaticResource Muted}" FontSize="12" TextAlignment="Center"
                            Text="Pick the model, effort, permissions and folder below. Paste or drop images and files to attach them."/>
@@ -624,20 +624,20 @@
             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="24,0,24,8"
                         Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}">
                 <ProgressBar IsIndeterminate="True" Width="60" Height="3" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                <TextBlock Text="{Binding WorkingText}" FontSize="12" Foreground="{StaticResource Text.Secondary}"/>
+                <TextBlock Text="{Binding WorkingText}" FontSize="12" Foreground="{DynamicResource Text.Secondary}"/>
             </StackPanel>
 
             <!-- ===== Composer ===== -->
-            <Border x:Name="Composer" Grid.Row="3" MaxWidth="900" Margin="24,0,24,18" Background="{StaticResource Bg.Panel}"
-                    BorderBrush="{StaticResource Border.Strong}" BorderThickness="1" CornerRadius="0" Padding="12,10"
+            <Border x:Name="Composer" Grid.Row="3" MaxWidth="900" Margin="24,0,24,18" Background="{DynamicResource Bg.Panel}"
+                    BorderBrush="{DynamicResource Border.Strong}" BorderThickness="1" CornerRadius="0" Padding="12,10"
                     AllowDrop="True" PreviewDragOver="Composer_DragOver" PreviewDrop="Composer_Drop">
                 <StackPanel>
-                    <Border Background="{StaticResource Danger.Muted}" CornerRadius="0" Padding="12,8" Margin="0,0,0,8"
+                    <Border Background="{DynamicResource Danger.Muted}" CornerRadius="0" Padding="12,8" Margin="0,0,0,8"
                             Visibility="{Binding IsAgentMissing, Converter={StaticResource BoolToVisibility}}">
                         <DockPanel>
                             <Button DockPanel.Dock="Right" Content="Install" Style="{StaticResource Button.Secondary}" Margin="10,0,0,0"
                                     Tag="{Binding InstallUrl}" ToolTip="{Binding InstallUrl}" Click="OpenLink_Click"/>
-                            <TextBlock Text="{Binding MissingText}" TextWrapping="Wrap" FontSize="12.5" Foreground="{StaticResource Danger}"
+                            <TextBlock Text="{Binding MissingText}" TextWrapping="Wrap" FontSize="12.5" Foreground="{DynamicResource Danger}"
                                        VerticalAlignment="Center"/>
                         </DockPanel>
                     </Border>
@@ -650,13 +650,13 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource Bg.PanelAlt}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
+                                <Border Background="{DynamicResource Bg.PanelAlt}" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1"
                                         CornerRadius="0" Padding="4,4,2,4" Margin="0,0,6,8" ToolTip="{Binding Path}">
                                     <StackPanel Orientation="Horizontal">
                                         <Image x:Name="Thumb" Source="{Binding Path, Converter={StaticResource Thumbnail}}" Height="32" MaxWidth="56"
                                                Stretch="Uniform" Margin="0,0,6,0" Visibility="Collapsed"/>
                                         <TextBlock x:Name="FileGlyph" Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="12"
-                                                   Foreground="{StaticResource Text.Secondary}" VerticalAlignment="Center" Margin="6,0,6,0"/>
+                                                   Foreground="{DynamicResource Text.Secondary}" VerticalAlignment="Center" Margin="6,0,6,0"/>
                                         <TextBlock Text="{Binding Name}" FontSize="12" MaxWidth="180" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                                         <Button Content="&#xE711;" Style="{StaticResource Button.Ghost}" FontSize="9" Padding="6" Margin="4,0,0,0"
                                                 ToolTip="Remove" AutomationProperties.Name="Remove attachment" CommandParameter="{Binding}"
@@ -677,14 +677,14 @@
                         <TextBox x:Name="Prompt" Style="{StaticResource ComposerBox}" MinHeight="44" MaxHeight="220"
                                  Text="{Binding Draft, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Prompt"
                                  PreviewKeyDown="Prompt_PreviewKeyDown" TextChanged="Prompt_TextChanged"/>
-                        <TextBlock Text="{Binding Placeholder}" IsHitTestVisible="False" Foreground="{StaticResource Text.Muted}" FontSize="13.5"
+                        <TextBlock Text="{Binding Placeholder}" IsHitTestVisible="False" Foreground="{DynamicResource Text.Muted}" FontSize="13.5"
                                    Margin="4,4,4,0" VerticalAlignment="Top" TextTrimming="CharacterEllipsis"
                                    Visibility="{Binding Draft, Converter={StaticResource StringNotEmptyToVisibility}, ConverterParameter=Invert}"/>
                     </Grid>
 
                     <Popup x:Name="MentionPopup" PlacementTarget="{Binding ElementName=Prompt}" Placement="Custom" AllowsTransparency="True"
                            StaysOpen="False" Focusable="False">
-                        <Border Background="{StaticResource Bg.Elevated}" BorderBrush="{StaticResource Border.Strong}" BorderThickness="1"
+                        <Border Background="{DynamicResource Bg.Elevated}" BorderBrush="{DynamicResource Border.Strong}" BorderThickness="1"
                                 CornerRadius="0" Padding="4" Width="480" Margin="0,0,0,6">
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Top" Text="Files in this folder · Enter or Tab to add" Style="{StaticResource Muted}"
@@ -714,14 +714,14 @@
                                         </Style.Triggers>
                                     </Style>
                                 </Button.Style>
-                                <TextBlock Text="&#xE724;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource Text.OnAccent}"/>
+                                <TextBlock Text="&#xE724;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource Text.OnAccent}"/>
                             </Button>
                             <Button Style="{StaticResource Button.Danger}" Margin="0" Padding="12,7" Command="{Binding StopCommand}"
                                     AutomationProperties.Name="Stop" Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE71A;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource Danger}"
+                                    <TextBlock Text="&#xE71A;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{DynamicResource Danger}"
                                                VerticalAlignment="Center" Margin="0,0,7,0"/>
-                                    <TextBlock Text="Stop" Foreground="{StaticResource Danger}"/>
+                                    <TextBlock Text="Stop" Foreground="{DynamicResource Danger}"/>
                                 </StackPanel>
                             </Button>
                         </StackPanel>
@@ -756,7 +756,7 @@
         </Grid>
 
         <!-- With chats side by side, a line over the one that New chat and the list open chats in -->
-        <Rectangle Height="2" VerticalAlignment="Top" Fill="{StaticResource Accent}" IsHitTestVisible="False">
+        <Rectangle Height="2" VerticalAlignment="Top" Fill="{DynamicResource Accent}" IsHitTestVisible="False">
             <Rectangle.Style>
                 <Style TargetType="Rectangle">
                     <Setter Property="Visibility" Value="Collapsed"/>

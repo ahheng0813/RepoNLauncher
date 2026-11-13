@@ -14,21 +14,21 @@
         <conv:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibility"/>
 
         <Style x:Key="Note" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
             <Setter Property="FontSize" Value="11.5"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
 
         <Style x:Key="FlyoutHeading" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
 
         <Style x:Key="Flyout" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource Bg.Elevated}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource Border.Strong}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Elevated}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Strong}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="0"/>
             <Setter Property="Padding" Value="14,12"/>
@@ -38,7 +38,7 @@
         <!-- One choice in a flyout: a check glyph, then the text -->
         <Style x:Key="ChoiceButton" TargetType="Button">
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="{StaticResource Text.Primary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -48,7 +48,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Bg.Hover}"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
@@ -63,14 +63,14 @@
             <Setter Property="Text" Value="&#xE73E;"/>
             <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
             <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
         <!-- A recording in progress: red dot, what and how long, and its stop button -->
         <Style x:Key="RecordingPill" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource Danger.Muted}"/>
-            <Setter Property="BorderBrush" Value="#5A2E35"/>
+            <Setter Property="Background" Value="{DynamicResource Danger.Muted}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Danger.BorderSubtle}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="0"/>
             <Setter Property="Padding" Value="10,2,2,2"/>
@@ -78,7 +78,7 @@
         </Style>
 
         <Style x:Key="Placeholder" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
             <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="IsHitTestVisible" Value="False"/>
             <!-- Where a text box's own text starts: its padding counts twice, round the box and round its text -->
@@ -90,18 +90,18 @@
         <!-- Zoom in and out, over the map -->
         <Style x:Key="MapButton" TargetType="Button">
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="{StaticResource Text.Primary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Width="26" Height="26" Background="{StaticResource Bg.Elevated}"
-                                BorderBrush="{StaticResource Border.Strong}" BorderThickness="1" CornerRadius="0">
+                        <Border x:Name="Bd" Width="26" Height="26" Background="{DynamicResource Bg.Elevated}"
+                                BorderBrush="{DynamicResource Border.Strong}" BorderThickness="1" CornerRadius="0">
                             <TextBlock Text="{TemplateBinding Content}" FontFamily="Segoe MDL2 Assets" FontSize="11"
                                        Foreground="{TemplateBinding Foreground}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Bg.Hover}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -111,7 +111,7 @@
 
         <Style x:Key="TextLink" TargetType="Button">
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="{StaticResource Cyan}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Cyan}"/>
             <Setter Property="FontSize" Value="11.5"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -145,7 +145,7 @@
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsRecordingScreen}" Value="True">
                                 <Setter Property="Content" Value="&#xE71A;"/>
-                                <Setter Property="Foreground" Value="{StaticResource Danger}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Danger}"/>
                                 <Setter Property="AutomationProperties.Name" Value="Stop recording and save it"/>
                                 <Setter Property="ToolTip" Value="Stop recording and save it"/>
                             </DataTrigger>
@@ -163,7 +163,7 @@
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsRecordingVoice}" Value="True">
                                 <Setter Property="Content" Value="&#xE71A;"/>
-                                <Setter Property="Foreground" Value="{StaticResource Danger}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Danger}"/>
                                 <Setter Property="AutomationProperties.Name" Value="Stop recording voice and save it"/>
                                 <Setter Property="ToolTip" Value="Stop recording voice and save it"/>
                             </DataTrigger>
@@ -180,10 +180,10 @@
                         <Setter Property="ToolTip" Value="Show the phone's back or front camera instead of its screen (Android 12 or later)"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding Source}" Value="{x:Static models:MirrorSource.BackCamera}">
-                                <Setter Property="Foreground" Value="{StaticResource Accent.Hover}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Accent.Hover}"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding Source}" Value="{x:Static models:MirrorSource.FrontCamera}">
-                                <Setter Property="Foreground" Value="{StaticResource Accent.Hover}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Accent.Hover}"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -198,7 +198,7 @@
                         <Setter Property="ToolTip" Value="Location: give the phone a virtual location, picked on a map, or this PC's"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding Location.HasVirtualPhoneLocation}" Value="True">
-                                <Setter Property="Foreground" Value="{StaticResource Accent.Hover}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Accent.Hover}"/>
                                 <Setter Property="ToolTip" Value="Location: the phone has a virtual location now"/>
                             </DataTrigger>
                         </Style.Triggers>
@@ -224,7 +224,7 @@
                     Command="{Binding PressKeyCommand}" CommandParameter="{x:Static models:DeviceKey.Power}"
                     AutomationProperties.Name="Screen on or off"
                     ToolTip="Screen on/off: presses the phone's power button"/>
-            <Border Width="1" Height="14" Background="{StaticResource Border.Strong}" Margin="4,0" VerticalAlignment="Center">
+            <Border Width="1" Height="14" Background="{DynamicResource Border.Strong}" Margin="4,0" VerticalAlignment="Center">
                 <Border.Style>
                     <!-- Dims with the buttons while there's no device -->
                     <Style TargetType="Border">
@@ -253,9 +253,9 @@
             <Border Style="{StaticResource RecordingPill}"
                     Visibility="{Binding IsRecordingScreen, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}">
                 <StackPanel Orientation="Horizontal">
-                    <Rectangle Width="8" Height="8" Fill="{StaticResource Danger}" VerticalAlignment="Center" Margin="0,0,7,0"/>
-                    <TextBlock Text="{Binding ScreenRecordingLabel}" Foreground="{StaticResource Danger}" FontSize="12" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding ScreenRecordingTime}" Foreground="{StaticResource Danger}" FontSize="12" FontFamily="{StaticResource Font.Mono}"
+                    <Rectangle Width="8" Height="8" Fill="{DynamicResource Danger}" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                    <TextBlock Text="{Binding ScreenRecordingLabel}" Foreground="{DynamicResource Danger}" FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding ScreenRecordingTime}" Foreground="{DynamicResource Danger}" FontSize="12" FontFamily="{StaticResource Font.Mono}"
                                VerticalAlignment="Center" Margin="6,0,4,0"/>
                     <Button Content="&#xE71A;" Style="{StaticResource Button.Ghost}" FontSize="11" Padding="6,4"
                             Command="{Binding ToggleScreenRecordingCommand}" ToolTip="Stop recording and save it"
@@ -265,9 +265,9 @@
             <Border Style="{StaticResource RecordingPill}"
                     Visibility="{Binding IsRecordingVoice, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}">
                 <StackPanel Orientation="Horizontal">
-                    <Rectangle Width="8" Height="8" Fill="{StaticResource Danger}" VerticalAlignment="Center" Margin="0,0,7,0"/>
-                    <TextBlock Text="Voice" Foreground="{StaticResource Danger}" FontSize="12" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding VoiceRecordingTime}" Foreground="{StaticResource Danger}" FontSize="12" FontFamily="{StaticResource Font.Mono}"
+                    <Rectangle Width="8" Height="8" Fill="{DynamicResource Danger}" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                    <TextBlock Text="Voice" Foreground="{DynamicResource Danger}" FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding VoiceRecordingTime}" Foreground="{DynamicResource Danger}" FontSize="12" FontFamily="{StaticResource Font.Mono}"
                                VerticalAlignment="Center" Margin="6,0,4,0"/>
                     <Button Content="&#xE71A;" Style="{StaticResource Button.Ghost}" FontSize="11" Padding="6,4"
                             Command="{Binding ToggleVoiceRecordingCommand}" ToolTip="Stop recording voice and save it"
@@ -277,7 +277,7 @@
         </WrapPanel>
 
         <!-- What was saved last -->
-        <Border Background="{StaticResource Bg.PanelAlt}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
+        <Border Background="{DynamicResource Bg.PanelAlt}" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1"
                 CornerRadius="0" Padding="10,4,2,4" Margin="0,6,0,0"
                 Visibility="{Binding LastCapturePath, Converter={StaticResource NullToVisibility}, FallbackValue=Collapsed}">
             <DockPanel>
@@ -287,7 +287,7 @@
                         Command="{Binding ShowLastCaptureInFolderCommand}" ToolTip="Show in its folder" AutomationProperties.Name="Show in its folder"/>
                 <Button DockPanel.Dock="Right" Content="Open" Style="{StaticResource TextLink}" VerticalAlignment="Center" Margin="8,0,4,0"
                         Command="{Binding OpenLastCaptureCommand}" ToolTip="{Binding LastCapturePath}"/>
-                <TextBlock Text="{Binding LastCaptureName}" FontSize="11.5" Foreground="{StaticResource Text.Secondary}"
+                <TextBlock Text="{Binding LastCaptureName}" FontSize="11.5" Foreground="{DynamicResource Text.Secondary}"
                            TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding LastCapturePath}"/>
             </DockPanel>
         </Border>
@@ -361,7 +361,7 @@
                                                    Visibility="{Binding IsChosen, Converter={StaticResource BoolToVisibility}}"/>
                                         <TextBlock TextTrimming="CharacterEllipsis" FontSize="12.5">
                                             <Run Text="{Binding Place.Name, Mode=OneWay}"/>
-                                            <Run Text="{Binding Place.Address, Mode=OneWay}" Foreground="{StaticResource Text.Muted}" FontSize="11.5"/>
+                                            <Run Text="{Binding Place.Address, Mode=OneWay}" Foreground="{DynamicResource Text.Muted}" FontSize="11.5"/>
                                         </TextBlock>
                                     </DockPanel>
                                 </Button>
@@ -371,7 +371,7 @@
 
                     <Grid Height="230" Margin="0,8,0,0">
                         <local:TileMap x:Name="Map" Pin="{Binding Pin}" Zoom="{Binding MapZoom}" AutomationProperties.Name="Map"/>
-                        <Border BorderBrush="{StaticResource Border.Strong}" BorderThickness="1" CornerRadius="0" IsHitTestVisible="False"/>
+                        <Border BorderBrush="{DynamicResource Border.Strong}" BorderThickness="1" CornerRadius="0" IsHitTestVisible="False"/>
                         <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,6,6,0">
                             <Button Content="&#xE710;" Style="{StaticResource MapButton}" Click="ZoomIn_Click"
                                     ToolTip="Zoom in" AutomationProperties.Name="Zoom in"/>
@@ -405,7 +405,7 @@
                             HorizontalAlignment="Left" Command="{Binding UseRealLocationCommand}"
                             Visibility="{Binding HasVirtualPhoneLocation, Converter={StaticResource BoolToVisibility}}"/>
 
-                    <TextBlock Text="{Binding Status}" Foreground="{StaticResource Text.Secondary}" FontSize="12" TextWrapping="Wrap"
+                    <TextBlock Text="{Binding Status}" Foreground="{DynamicResource Text.Secondary}" FontSize="12" TextWrapping="Wrap"
                                Margin="0,4,0,0" Visibility="{Binding Status, Converter={StaticResource StringNotEmptyToVisibility}}"/>
 
                     <DockPanel Margin="0,10,0,0">

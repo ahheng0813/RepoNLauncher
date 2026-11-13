@@ -69,7 +69,8 @@ public partial class PhoneFilesWindow : Window
         ShowView();
         ShowPreviewPane();
 
-        SourceInitialized += (_, _) => NativeMethods.UseImmersiveDarkMode(new WindowInteropHelper(this).Handle);
+        SourceInitialized += (_, _) => NativeMethods.UseThemedTitleBar(new WindowInteropHelper(this).Handle);
+        ThemeService.Changed += OnThemeChanged;
         Loaded += (_, _) =>
         {
             FileList.Focus();
@@ -120,9 +121,18 @@ public partial class PhoneFilesWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        ThemeService.Changed -= OnThemeChanged;
         MediaView.Dispose();
         base.OnClosed(e);
     }
+
+    private void OnThemeChanged(object? sender, EventArgs e) => MediaView.DefaultBackgroundColor = PanelColor();
+
+    // Bg.Panel, in the WebView's own kind of color
+    private System.Drawing.Color PanelColor() =>
+        TryFindResource("Bg.Panel") is System.Windows.Media.SolidColorBrush { Color: var c }
+            ? System.Drawing.Color.FromArgb(c.R, c.G, c.B)
+            : System.Drawing.Color.FromArgb(0x0C, 0x0C, 0x0C);
 
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -222,7 +232,7 @@ public partial class PhoneFilesWindow : Window
 
     private async Task StartWebViewAsync()
     {
-        MediaView.DefaultBackgroundColor = System.Drawing.Color.FromArgb(0x0C, 0x0C, 0x0C); // Bg.Panel, so it doesn't flash white
+        MediaView.DefaultBackgroundColor = PanelColor(); // so it doesn't flash another color
         var environment = await CoreWebView2Environment.CreateAsync(userDataFolder: WebViewData);
         await MediaView.EnsureCoreWebView2Async(environment);
         var web = MediaView.CoreWebView2;

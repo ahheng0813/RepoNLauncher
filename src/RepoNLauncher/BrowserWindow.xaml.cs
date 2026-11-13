@@ -15,7 +15,6 @@ using RepoNLauncher.Models;
 using RepoNLauncher.Services;
 using RepoNLauncher.ViewModels;
 using Application = System.Windows.Application;
-using Brush = System.Windows.Media.Brush;
 using ButtonBase = System.Windows.Controls.Primitives.ButtonBase;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
@@ -83,7 +82,7 @@ public partial class BrowserWindow : Window
 
         SourceInitialized += (_, _) =>
         {
-            NativeMethods.UseImmersiveDarkMode(new WindowInteropHelper(this).Handle);
+            NativeMethods.UseThemedTitleBar(new WindowInteropHelper(this).Handle);
             if (_maximizeOnceMade) WindowState = WindowState.Maximized;
         };
         Loaded += (_, _) =>
@@ -613,9 +612,10 @@ public partial class BrowserWindow : Window
             };
         }
 
-        ShieldGlyph.Foreground = (Brush)FindResource(lit ? "Accent" : "Text.Muted");
+        // References, not the brushes, so they follow a change of theme
+        ShieldGlyph.SetResourceReference(ForegroundProperty, lit ? "Accent" : "Text.Muted");
         ShieldCount.Text = blocked > 999 ? "999+" : blocked.ToString();
-        ShieldCount.Foreground = ShieldGlyph.Foreground;
+        ShieldCount.SetResourceReference(ForegroundProperty, lit ? "Accent" : "Text.Muted");
         ShieldCount.Visibility = lit && blocked > 0 ? Visibility.Visible : Visibility.Collapsed;
         ShieldButton.ToolTip = $"Ad blocker: {status}";
         AutomationProperties.SetHelpText(ShieldButton, status);
@@ -746,7 +746,7 @@ public partial class BrowserWindow : Window
         var saved = _sites.FindSaved(url) != null;
         StarButton.IsEnabled = url != null;
         StarButton.Content = saved ? "" : "";
-        if (saved) StarButton.Foreground = (Brush)FindResource("Accent");
+        if (saved) StarButton.SetResourceReference(ForegroundProperty, "Accent");
         else StarButton.ClearValue(ForegroundProperty);
         StarButton.ToolTip = saved ? "Edit this saved site (Ctrl+D)" : "Save this site (Ctrl+D)";
         AutomationProperties.SetName(StarButton, saved ? "Edit this saved site" : "Save this site");

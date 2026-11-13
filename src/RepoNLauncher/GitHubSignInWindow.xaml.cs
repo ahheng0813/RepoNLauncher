@@ -18,7 +18,7 @@ public partial class GitHubSignInWindow : Window
         InitializeComponent();
         _gitHub = gitHub;
 
-        SourceInitialized += (_, _) => NativeMethods.UseImmersiveDarkMode(new WindowInteropHelper(this).Handle);
+        SourceInitialized += (_, _) => NativeMethods.UseThemedTitleBar(new WindowInteropHelper(this).Handle);
         // Closing mid-sign-in stops it, which also closes a Git Credential Manager window left open.
         Closing += (_, _) => _signIn?.Cancel();
     }
@@ -79,7 +79,7 @@ public partial class GitHubSignInWindow : Window
     {
         StatusPanel.Visibility = Visibility.Visible;
         StatusText.Text = text;
-        StatusText.Foreground = (System.Windows.Media.Brush)FindResource(isError ? "Danger" : "Text.Secondary");
+        StatusText.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, isError ? "Danger" : "Text.Secondary");
     }
 
     private void Link_RequestNavigate(object sender, RequestNavigateEventArgs e)

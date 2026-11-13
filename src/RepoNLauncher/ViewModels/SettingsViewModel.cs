@@ -39,13 +39,19 @@ public partial class SettingsViewModel : ObservableObject
     ];
 
     private readonly Action<DateTimeFormatSettings> _saveFormat;
+    private readonly Action<AppTheme> _saveTheme;
     private readonly bool _loading;
 
     public SettingsViewModel(DateTimeFormatSettings format, Action<DateTimeFormatSettings> saveFormat, UpdateViewModel updates,
         GitHubAccountViewModel gitHub, ObservableCollection<OpenWithApp> openWithApps, EmulatorsViewModel emulators,
-        SiteBrowserViewModel siteBrowser)
+        SiteBrowserViewModel siteBrowser, AppTheme theme, Action<AppTheme> saveTheme)
     {
         _saveFormat = saveFormat;
+        _saveTheme = saveTheme;
+        _theme = theme;
+        _isLightTheme = ThemeService.IsLight;
+        // Matching Windows, the palette changes without the setting changing
+        ThemeService.Changed += (_, _) => IsLightTheme = ThemeService.IsLight;
         Updates = updates;
         Emulators = emulators;
         SiteBrowser = siteBrowser;
@@ -172,6 +178,22 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     // --- General ---
+
+    /// <summary>Dark, light, or as Windows says. Every open window takes it straight away, and it's saved.</summary>
+    [ObservableProperty] private AppTheme _theme;
+
+    /// <summary>The light palette is showing, so the header's button offers dark.</summary>
+    [ObservableProperty] private bool _isLightTheme;
+
+    partial void OnThemeChanged(AppTheme value)
+    {
+        ThemeService.Apply(value);
+        _saveTheme(value);
+    }
+
+    /// <summary>The header's button: whichever of dark and light isn't showing, which also stops matching Windows.</summary>
+    [RelayCommand]
+    private void ToggleTheme() => Theme = ThemeService.IsLight ? AppTheme.Dark : AppTheme.Light;
 
     public string SettingsFolder => DashboardConfigService.AppDataDir;
 

@@ -22,7 +22,7 @@ public partial class SettingsWindow : Window
         _dashboard = dashboard;
         Owner = dashboard;
 
-        SourceInitialized += (_, _) => NativeMethods.UseImmersiveDarkMode(new WindowInteropHelper(this).Handle);
+        SourceInitialized += (_, _) => NativeMethods.UseThemedTitleBar(new WindowInteropHelper(this).Handle);
         // The desktop icon may have been deleted, and the clock has moved on, since it was last open.
         Activated += (_, _) =>
         {

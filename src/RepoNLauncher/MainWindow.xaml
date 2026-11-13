@@ -7,7 +7,7 @@
         xmlns:services="clr-namespace:RepoNLauncher.Services"
         Title="Repo'N'Launcher" Height="820" Width="1500"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource Bg.App}"
+        Background="{DynamicResource Bg.App}"
         FontFamily="{StaticResource Font.Mono}">
 
     <Window.Resources>
@@ -15,9 +15,7 @@
         <conv:InverseBooleanConverter x:Key="InverseBoolean"/>
         <conv:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibility"/>
         <conv:NullToVisibilityConverter x:Key="NullToVisibility"/>
-        <conv:ProjectKindToBrushConverter x:Key="KindToBrush"/>
         <conv:StringStartsWithConverter x:Key="StartsWith"/>
-        <conv:FileChangeTypeToBrushConverter x:Key="ChangeTypeToBrush"/>
         <conv:FileChangeTypeToLetterConverter x:Key="ChangeTypeToLetter"/>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
 
@@ -31,16 +29,16 @@
                         <Border x:Name="Bd" Background="Transparent" Margin="0,1">
                             <DockPanel Margin="4,8,8,8">
                                 <TextBlock x:Name="Cursor" DockPanel.Dock="Left" Text="&gt;" FontWeight="Bold" FontSize="13"
-                                           Foreground="{StaticResource Accent}" VerticalAlignment="Top" Margin="0,1,6,0" Opacity="0"/>
+                                           Foreground="{DynamicResource Accent}" VerticalAlignment="Top" Margin="0,1,6,0" Opacity="0"/>
                                 <ContentPresenter ContentSource="Header"/>
                             </DockPanel>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger SourceName="Bd" Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Bg.Hover}"/>
                             </Trigger>
                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Accent.Muted}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Accent.Muted}"/>
                                 <Setter TargetName="Cursor" Property="Opacity" Value="1"/>
                             </DataTrigger>
                         </ControlTemplate.Triggers>
@@ -58,7 +56,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="TreeViewItem">
                         <StackPanel>
-                            <ToggleButton Focusable="False" Cursor="Hand" Margin="7,4,0,2" Foreground="{StaticResource Text.Primary}"
+                            <ToggleButton Focusable="False" Cursor="Hand" Margin="7,4,0,2" Foreground="{DynamicResource Text.Primary}"
                                           IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
                                 <ToggleButton.Template>
                                     <ControlTemplate TargetType="ToggleButton">
@@ -67,7 +65,7 @@
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
+                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Bg.Hover}"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -75,7 +73,7 @@
                                 <ContentPresenter Content="{TemplateBinding Header}" ContentTemplate="{TemplateBinding HeaderTemplate}"/>
                             </ToggleButton>
                             <Grid x:Name="ItemsHost">
-                                <Border Width="1" HorizontalAlignment="Left" Margin="19,0,0,4" Background="{StaticResource Border.Subtle}"/>
+                                <Border Width="1" HorizontalAlignment="Left" Margin="19,0,0,4" Background="{DynamicResource Border.Subtle}"/>
                                 <ItemsPresenter Margin="14,0,0,0"/>
                             </Grid>
                         </StackPanel>
@@ -96,13 +94,27 @@
         <!-- The project's kind as a console tag, [Flutter], in the kind's color -->
         <Style x:Key="KindTag" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
             <Setter Property="Text" Value="{Binding Kind, StringFormat='[{0}]'}"/>
-            <Setter Property="Foreground" Value="{Binding Kind, Converter={StaticResource KindToBrush}}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Kind}" Value="Flutter">
+                    <Setter Property="Foreground" Value="{DynamicResource Kind.Flutter}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="DotNet">
+                    <Setter Property="Foreground" Value="{DynamicResource Kind.DotNet}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="Node">
+                    <Setter Property="Foreground" Value="{DynamicResource Success}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="Python">
+                    <Setter Property="Foreground" Value="{DynamicResource Warning}"/>
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="SectionLabel" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Margin" Value="0,0,10,6"/>
@@ -111,17 +123,17 @@
         <Style x:Key="DiffLine" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="Cascadia Mono, Consolas"/>
             <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="TextWrapping" Value="NoWrap"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Converter={StaticResource StartsWith}, ConverterParameter='+'}" Value="True">
-                    <Setter Property="Foreground" Value="{StaticResource Success}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Success}"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Converter={StaticResource StartsWith}, ConverterParameter='-'}" Value="True">
-                    <Setter Property="Foreground" Value="{StaticResource Danger}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Danger}"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Converter={StaticResource StartsWith}, ConverterParameter='@@'}" Value="True">
-                    <Setter Property="Foreground" Value="{StaticResource Cyan}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Cyan}"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -159,10 +171,10 @@
         <!-- One tool in the AI usage bar: mark, name, plan, then the session and week limits as small meters -->
         <DataTemplate x:Key="UsageBarTool" DataType="{x:Type vm:AiToolCardViewModel}">
             <StackPanel Orientation="Horizontal">
-                <Path Data="{Binding Name, Converter={StaticResource AgentMark}}" Fill="{StaticResource Text.Primary}"
+                <Path Data="{Binding Name, Converter={StaticResource AgentMark}}" Fill="{DynamicResource Text.Primary}"
                       Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12.5" Margin="8,0,0,0" VerticalAlignment="Center"/>
-                <TextBlock Text="{Binding Plan}" Foreground="{StaticResource Text.Muted}" FontSize="12" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Plan}" Foreground="{DynamicResource Text.Muted}" FontSize="12" Margin="6,0,0,0" VerticalAlignment="Center"/>
                 <ItemsControl ItemsSource="{Binding BarLimits}" VerticalAlignment="Center" Focusable="False">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -173,12 +185,12 @@
                         <DataTemplate>
                             <StackPanel x:Name="Limit" Orientation="Horizontal" Margin="14,0,0,0" Background="Transparent"
                                         ToolTip="{Binding ToolTip}">
-                                <TextBlock Text="{Binding ShortLabel}" Foreground="{StaticResource Text.Secondary}" FontSize="12"
+                                <TextBlock Text="{Binding ShortLabel}" Foreground="{DynamicResource Text.Secondary}" FontSize="12"
                                            VerticalAlignment="Center"/>
                                 <!-- A boxed bar, [####    ] -->
                                 <Border Width="66" Height="10" Margin="8,1,8,0" VerticalAlignment="Center"
-                                        BorderBrush="{StaticResource Border.Control}" BorderThickness="1" Padding="1">
-                                    <Border x:Name="Fill" Background="{StaticResource Accent}" RenderTransformOrigin="0,0.5">
+                                        BorderBrush="{DynamicResource Border.Control}" BorderThickness="1" Padding="1">
+                                    <Border x:Name="Fill" Background="{DynamicResource Accent}" RenderTransformOrigin="0,0.5">
                                         <Border.RenderTransform>
                                             <ScaleTransform ScaleX="{Binding Fraction}"/>
                                         </Border.RenderTransform>
@@ -188,10 +200,10 @@
                             </StackPanel>
                             <DataTemplate.Triggers>
                                 <DataTrigger Binding="{Binding Level}" Value="High">
-                                    <Setter TargetName="Fill" Property="Background" Value="{StaticResource Warning}"/>
+                                    <Setter TargetName="Fill" Property="Background" Value="{DynamicResource Warning}"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding Level}" Value="Full">
-                                    <Setter TargetName="Fill" Property="Background" Value="{StaticResource Danger}"/>
+                                    <Setter TargetName="Fill" Property="Background" Value="{DynamicResource Danger}"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding IsOutdated}" Value="True">
                                     <Setter TargetName="Limit" Property="Opacity" Value="0.5"/>
@@ -200,7 +212,7 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <TextBlock Text="{Binding BarNote}" Foreground="{StaticResource Text.Muted}" FontSize="12" Margin="12,0,0,0"
+                <TextBlock Text="{Binding BarNote}" Foreground="{DynamicResource Text.Muted}" FontSize="12" Margin="12,0,0,0"
                            VerticalAlignment="Center"
                            Visibility="{Binding BarNote, Converter={StaticResource StringNotEmptyToVisibility}}"/>
             </StackPanel>
@@ -210,6 +222,35 @@
         <Style x:Key="ChangeTypeBadge" TargetType="Border">
             <Setter Property="Width" Value="14"/>
             <Setter Property="Height" Value="18"/>
+        </Style>
+
+        <Style x:Key="ChangeTypeLetter" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="Text" Value="{Binding Type, Converter={StaticResource ChangeTypeToLetter}}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Type}" Value="Modified">
+                    <Setter Property="Foreground" Value="{DynamicResource Warning}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Type}" Value="Added">
+                    <Setter Property="Foreground" Value="{DynamicResource Success}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Type}" Value="Deleted">
+                    <Setter Property="Foreground" Value="{DynamicResource Danger}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Type}" Value="Conflicted">
+                    <Setter Property="Foreground" Value="{DynamicResource Danger}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Type}" Value="Renamed">
+                    <Setter Property="Foreground" Value="{DynamicResource Cyan}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Type}" Value="Copied">
+                    <Setter Property="Foreground" Value="{DynamicResource Cyan}"/>
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
     </Window.Resources>
 
@@ -221,7 +262,7 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="{StaticResource Bg.Elevated}" BorderBrush="{StaticResource Border.Subtle}"
+        <Border Grid.Row="0" Background="{DynamicResource Bg.Elevated}" BorderBrush="{DynamicResource Border.Subtle}"
                 BorderThickness="0,0,0,1">
             <Grid>
                 <Grid.RowDefinitions>
@@ -232,16 +273,16 @@
                     <!-- The app's name as a console prompt, C:\Repo'N'Launcher>_ , its cursor blinking (MainWindow.StartPromptCursor) -->
                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
                         <TextBlock FontSize="16" VerticalAlignment="Center"
-                            ><Run Text="C:\" Foreground="{StaticResource Text.Muted}"
-                            /><Run Text="Repo'N'Launcher" FontWeight="Bold" Foreground="{StaticResource Accent}"
-                            /><Run Text="&gt;" Foreground="{StaticResource Text.Muted}"/></TextBlock>
-                        <TextBlock x:Name="PromptCursor" Text="_" FontSize="16" FontWeight="Bold" Foreground="{StaticResource Accent}"
+                            ><Run Text="C:\" Foreground="{DynamicResource Text.Muted}"
+                            /><Run Text="Repo'N'Launcher" FontWeight="Bold" Foreground="{DynamicResource Accent}"
+                            /><Run Text="&gt;" Foreground="{DynamicResource Text.Muted}"/></TextBlock>
+                        <TextBlock x:Name="PromptCursor" Text="_" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource Accent}"
                                    VerticalAlignment="Center"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
                         <Button Content="Fetch All" Style="{StaticResource Button.Primary}" Command="{Binding FetchAllCommand}"/>
                         <Button Content="Fetch Selected" Style="{StaticResource Button.Secondary}" Command="{Binding FetchSelectedCommand}"/>
-                        <Border Width="1" Background="{StaticResource Border.Subtle}" Margin="2,4,8,4"/>
+                        <Border Width="1" Background="{DynamicResource Border.Subtle}" Margin="2,4,8,4"/>
                         <Button Content="Add Project" Style="{StaticResource Button.Secondary}" Command="{Binding AddProjectFolderCommand}"/>
                         <Button Content="Scan Folder" Style="{StaticResource Button.Secondary}" Command="{Binding ScanFolderCommand}"/>
                         <Button Content="Rescan All" Style="{StaticResource Button.Secondary}" Command="{Binding RescanAllFoldersCommand}"/>
@@ -249,7 +290,7 @@
                                 ToolTip="Find every repo on this PC and see which are yours on GitHub (needs GitHub sign-in)"/>
                         <Button Content="Clone from GitHub" Style="{StaticResource Button.Secondary}" Click="OpenCloneRepos_Click"
                                 ToolTip="List your GitHub repos, see which this PC has, and clone the others (needs GitHub sign-in)"/>
-                        <Border Width="1" Background="{StaticResource Border.Subtle}" Margin="2,4,8,4"/>
+                        <Border Width="1" Background="{DynamicResource Border.Subtle}" Margin="2,4,8,4"/>
                         <Button Content="AI Chat" Style="{StaticResource Button.Secondary}" Click="OpenAiChat_Click"
                                 ToolTip="Chat with Claude Code or Codex in a project, and read your saved chats"/>
                         <!-- The dashboard browser of no project's: browse, or open a saved site, without running anything -->
@@ -268,20 +309,20 @@
                                 <TextBlock Text="Phone Screen"/>
                             </StackPanel>
                         </Button>
-                        <Border Width="1" Background="{StaticResource Border.Subtle}" Margin="8,4,8,4"/>
+                        <Border Width="1" Background="{DynamicResource Border.Subtle}" Margin="8,4,8,4"/>
                         <!-- GitHub account: only Repos on this PC, Clone from GitHub and creating pull requests need it -->
                         <Button Style="{StaticResource Button.Secondary}" Margin="0" Click="SignInToGitHub_Click"
                                 Visibility="{Binding GitHub.Login, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}">
                             <StackPanel Orientation="Horizontal">
-                                <Path Data="{StaticResource GitHubMark}" Fill="{StaticResource Text.Primary}" Width="14" Height="14"
+                                <Path Data="{StaticResource GitHubMark}" Fill="{DynamicResource Text.Primary}" Width="14" Height="14"
                                       Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                 <TextBlock Text="Sign in with GitHub"/>
                             </StackPanel>
                         </Button>
-                        <Border BorderBrush="{StaticResource Border.Control}" BorderThickness="1" Padding="10,0,3,0"
+                        <Border BorderBrush="{DynamicResource Border.Control}" BorderThickness="1" Padding="10,0,3,0"
                                 Visibility="{Binding GitHub.Login, Converter={StaticResource NullToVisibility}}">
                             <StackPanel Orientation="Horizontal">
-                                <Path Data="{StaticResource GitHubMark}" Fill="{StaticResource Text.Primary}" Width="14" Height="14"
+                                <Path Data="{StaticResource GitHubMark}" Fill="{DynamicResource Text.Primary}" Width="14" Height="14"
                                       Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                 <TextBlock Text="{Binding GitHub.Login}" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
                                            ToolTip="Signed in to GitHub"/>
@@ -290,7 +331,7 @@
                                         Command="{Binding GitHub.SignOutCommand}"/>
                             </StackPanel>
                         </Border>
-                        <Border Width="1" Background="{StaticResource Border.Subtle}" Margin="8,4,8,4"/>
+                        <Border Width="1" Background="{DynamicResource Border.Subtle}" Margin="8,4,8,4"/>
                         <!-- Settings: the date and time format, the app's other settings, its version, updates and where it's from -->
                         <Button Style="{StaticResource Button.Secondary}" Margin="0" Padding="9,5" Click="OpenSettings_Click"
                                 ToolTip="Settings (Ctrl+,)" AutomationProperties.Name="Settings">
@@ -300,7 +341,7 @@
                 </DockPanel>
 
                 <!-- AI usage, always in view; View details opens the window with token use and the rest -->
-                <Border Grid.Row="1" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="0,1,0,0" Padding="16,6"
+                <Border Grid.Row="1" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="0,1,0,0" Padding="16,6"
                         DataContext="{Binding AiUsage}">
                     <DockPanel>
                         <Button DockPanel.Dock="Right" Style="{StaticResource Button.Secondary}" Margin="0" Padding="10,4"
@@ -343,7 +384,7 @@
                         </Button>
                         <TextBlock Text="AI USAGE" Style="{StaticResource SectionLabel}" Margin="0,0,18,0" VerticalAlignment="Center"/>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="Reading usage…" Foreground="{StaticResource Text.Muted}" FontSize="12"
+                            <TextBlock Text="Reading usage…" Foreground="{DynamicResource Text.Muted}" FontSize="12"
                                        Visibility="{Binding ClaudeCard, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}"/>
                             <ContentControl Content="{Binding ClaudeCard}" ContentTemplate="{StaticResource UsageBarTool}" Focusable="False"
                                             Margin="0,0,30,0"/>
@@ -380,10 +421,10 @@
 
             <!-- Project list: scanned folders as collapsible sections, nested where a subfolder holds several repos.
                  Framed like a console window, its title sitting on the top line. -->
-            <TextBlock Grid.Column="0" Text=" PROJECTS " Panel.ZIndex="1" Background="{StaticResource Bg.App}"
-                       Foreground="{StaticResource Text.Secondary}" FontSize="11.5" FontWeight="SemiBold"
+            <TextBlock Grid.Column="0" Text=" PROJECTS " Panel.ZIndex="1" Background="{DynamicResource Bg.App}"
+                       Foreground="{DynamicResource Text.Secondary}" FontSize="11.5" FontWeight="SemiBold"
                        HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12,-8,0,0"/>
-            <Border Grid.Column="0" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"
+            <Border Grid.Column="0" Background="{DynamicResource Bg.Panel}" BorderBrush="{DynamicResource Border.Subtle}"
                     BorderThickness="1" Margin="0,0,12,0" Padding="6,12,6,6">
                 <TreeView ItemsSource="{Binding ProjectTree}" Background="Transparent" BorderThickness="0" Padding="0"
                           ItemContainerStyleSelector="{StaticResource ProjectTreeItemStyle}"
@@ -393,17 +434,17 @@
                         <HierarchicalDataTemplate DataType="{x:Type vm:ProjectGroupViewModel}" ItemsSource="{Binding Children}"
                                                   ItemContainerStyleSelector="{StaticResource ProjectTreeItemStyle}">
                             <DockPanel ToolTip="{Binding Path}">
-                                <Border DockPanel.Dock="Right" Background="{StaticResource Bg.PanelAlt}" CornerRadius="0" Padding="7,1"
+                                <Border DockPanel.Dock="Right" Background="{DynamicResource Bg.PanelAlt}" CornerRadius="0" Padding="7,1"
                                         VerticalAlignment="Center" Margin="8,0,0,0">
-                                    <TextBlock Text="{Binding RepoCount}" FontSize="10.5" Foreground="{StaticResource Text.Secondary}"/>
+                                    <TextBlock Text="{Binding RepoCount}" FontSize="10.5" Foreground="{DynamicResource Text.Secondary}"/>
                                 </Border>
                                 <TextBlock x:Name="Chevron" Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="9" Width="12"
-                                           Foreground="{StaticResource Text.Secondary}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                           Foreground="{DynamicResource Text.Secondary}" VerticalAlignment="Center" Margin="0,0,4,0"/>
                                 <!-- Lines up with the repo checkboxes one level in; a click here ticks, not toggles, the section -->
                                 <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,10,0"
                                           ToolTip="Tick every repo in this section for Fetch Selected"/>
                                 <TextBlock x:Name="FolderIcon" Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="14"
-                                           Foreground="{StaticResource Accent}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                           Foreground="{DynamicResource Accent}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis"
                                            VerticalAlignment="Center"/>
                             </DockPanel>
@@ -429,17 +470,17 @@
                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13.5" Margin="0,0,8,0"/>
                                         <TextBlock Style="{StaticResource KindTag}" VerticalAlignment="Center"/>
                                     </WrapPanel>
-                                    <TextBlock Text="{Binding Branch}" FontSize="11" Foreground="{StaticResource Text.Secondary}"
+                                    <TextBlock Text="{Binding Branch}" FontSize="11" Foreground="{DynamicResource Text.Secondary}"
                                                FontFamily="{StaticResource Font.Mono}"/>
-                                    <TextBlock Text="{Binding StatusMessage}" FontSize="10.5" Foreground="{StaticResource Cyan}"
+                                    <TextBlock Text="{Binding StatusMessage}" FontSize="10.5" Foreground="{DynamicResource Cyan}"
                                                TextWrapping="Wrap" Margin="0,3,0,0"
                                                Visibility="{Binding StatusMessage, Converter={StaticResource StringNotEmptyToVisibility}}"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
-                                    <Rectangle Width="8" Height="8" Fill="{StaticResource Warning}" Margin="0,4,6,0"
+                                    <Rectangle Width="8" Height="8" Fill="{DynamicResource Warning}" Margin="0,4,6,0"
                                              ToolTip="Uncommitted changes"
                                              Visibility="{Binding IsDirty, Converter={StaticResource BoolToVisibility}}"/>
-                                    <Rectangle Width="8" Height="8" Fill="{StaticResource Success}" Margin="0,4,6,0"
+                                    <Rectangle Width="8" Height="8" Fill="{DynamicResource Success}" Margin="0,4,6,0"
                                              ToolTip="Running"
                                              Visibility="{Binding IsAnyRunning, Converter={StaticResource BoolToVisibility}}"/>
                                     <Button Content="✕" ToolTip="Remove from dashboard" Style="{StaticResource Button.Icon}"
@@ -453,12 +494,12 @@
             </Border>
 
             <!-- Detail -->
-            <Border Grid.Column="1" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"
+            <Border Grid.Column="1" Background="{DynamicResource Bg.Panel}" BorderBrush="{DynamicResource Border.Subtle}"
                     BorderThickness="1" CornerRadius="0" Padding="20">
                 <Grid>
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
                                 Visibility="{Binding SelectedProject, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}">
-                        <TextBlock Text="Select or add a project to get started." Foreground="{StaticResource Text.Muted}" FontSize="14"
+                        <TextBlock Text="Select or add a project to get started." Foreground="{DynamicResource Text.Muted}" FontSize="14"
                                    HorizontalAlignment="Center"/>
                     </StackPanel>
 
@@ -469,7 +510,7 @@
                         <TabItem Header="Overview">
                             <StackPanel Margin="4,0">
                                 <TextBlock Text="{Binding Name}" FontSize="22" FontWeight="Bold"/>
-                                <TextBlock Text="{Binding Path}" Foreground="{StaticResource Text.Muted}" FontFamily="{StaticResource Font.Mono}"
+                                <TextBlock Text="{Binding Path}" Foreground="{DynamicResource Text.Muted}" FontFamily="{StaticResource Font.Mono}"
                                            FontSize="11.5" Margin="0,4,0,18" TextWrapping="Wrap"/>
 
                                 <Grid Margin="0,0,0,18">
@@ -490,20 +531,20 @@
                                         <ComboBox Width="140" Height="30" ItemsSource="{x:Static vm:ProjectViewModel.AllKinds}"
                                                   SelectedItem="{Binding Kind, Mode=TwoWay}"
                                                   ToolTip="Change this if the project type was detected wrong"/>
-                                        <TextBlock Text="{Binding DetectedKindNote}" Foreground="{StaticResource Text.Muted}" FontSize="11.5"
+                                        <TextBlock Text="{Binding DetectedKindNote}" Foreground="{DynamicResource Text.Muted}" FontSize="11.5"
                                                    VerticalAlignment="Center" Margin="10,0,0,0"/>
                                     </StackPanel>
                                     <!-- The branch checked out now -->
                                     <TextBlock Grid.Row="1" Grid.Column="0" Text="BRANCH" Style="{StaticResource SectionLabel}"
                                                VerticalAlignment="Center" Margin="0,0,10,10"/>
                                     <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,10">
-                                        <Border Background="{StaticResource Accent.Muted}" CornerRadius="0" Padding="10,4" VerticalAlignment="Center"
+                                        <Border Background="{DynamicResource Accent.Muted}" CornerRadius="0" Padding="10,4" VerticalAlignment="Center"
                                                 ToolTip="The branch checked out now">
                                             <TextBlock Text="{Binding Branch}" FontFamily="{StaticResource Font.Mono}" FontWeight="SemiBold" FontSize="13"/>
                                         </Border>
-                                        <TextBlock Text="current" Foreground="{StaticResource Text.Muted}" FontSize="11.5"
+                                        <TextBlock Text="current" Foreground="{DynamicResource Text.Muted}" FontSize="11.5"
                                                    VerticalAlignment="Center" Margin="8,0,0,0"/>
-                                        <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="12" VerticalAlignment="Center" Margin="16,0,0,0"
+                                        <TextBlock Foreground="{DynamicResource Text.Secondary}" FontSize="12" VerticalAlignment="Center" Margin="16,0,0,0"
                                                    Visibility="{Binding IsPublished, Converter={StaticResource BoolToVisibility}}">
                                             <TextBlock.Text>
                                                 <MultiBinding StringFormat="{}ahead {0} · behind {1}">
@@ -518,9 +559,9 @@
                                                 Visibility="{Binding NeedsPush, Converter={StaticResource BoolToVisibility}}"
                                                 ToolTip="Push the commits made here to the remote branch, so GitHub and your other PCs get them">
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="&#xE898;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource Text.OnAccent}" FontSize="12"
+                                                <TextBlock Text="&#xE898;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource Text.OnAccent}" FontSize="12"
                                                            VerticalAlignment="Center" Margin="0,0,7,0"/>
-                                                <TextBlock Text="Push" Foreground="{StaticResource Text.OnAccent}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="Push" Foreground="{DynamicResource Text.OnAccent}" FontWeight="SemiBold"/>
                                             </StackPanel>
                                         </Button>
                                         <!-- Both this branch and the remote one have commits the other doesn't, so pull and push both fail -->
@@ -529,13 +570,13 @@
                                                 Visibility="{Binding NeedsRebase, Converter={StaticResource BoolToVisibility}}"
                                                 ToolTip="Pull the remote's new commits and put the ones made here on top of them, so the branch can be pushed">
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="&#xE8EE;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource Text.OnAccent}" FontSize="12"
+                                                <TextBlock Text="&#xE8EE;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource Text.OnAccent}" FontSize="12"
                                                            VerticalAlignment="Center" Margin="0,0,7,0"/>
-                                                <TextBlock Text="Rebase" Foreground="{StaticResource Text.OnAccent}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="Rebase" Foreground="{DynamicResource Text.OnAccent}" FontWeight="SemiBold"/>
                                             </StackPanel>
                                         </Button>
                                         <!-- A branch made here that the remote doesn't have yet -->
-                                        <TextBlock Text="{Binding NotPublishedText}" Foreground="{StaticResource Warning}" FontSize="12"
+                                        <TextBlock Text="{Binding NotPublishedText}" Foreground="{DynamicResource Warning}" FontSize="12"
                                                    VerticalAlignment="Center" Margin="16,0,10,0"
                                                    Visibility="{Binding NeedsPublish, Converter={StaticResource BoolToVisibility}}"/>
                                         <Button Style="{StaticResource Button.Primary}" Margin="0" Padding="12,5"
@@ -543,9 +584,9 @@
                                                 Visibility="{Binding NeedsPublish, Converter={StaticResource BoolToVisibility}}"
                                                 ToolTip="Push this branch to the remote, and pull from and push to it from now on">
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="&#xE898;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource Text.OnAccent}" FontSize="12"
+                                                <TextBlock Text="&#xE898;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource Text.OnAccent}" FontSize="12"
                                                            VerticalAlignment="Center" Margin="0,0,7,0"/>
-                                                <TextBlock Text="Publish branch" Foreground="{StaticResource Text.OnAccent}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="Publish branch" Foreground="{DynamicResource Text.OnAccent}" FontWeight="SemiBold"/>
                                             </StackPanel>
                                         </Button>
                                     </StackPanel>
@@ -559,7 +600,7 @@
                                                 <DataTemplate>
                                                     <TextBlock TextTrimming="CharacterEllipsis">
                                                         <Run Text="{Binding Name, Mode=OneWay}" FontFamily="{StaticResource Font.Mono}"/>
-                                                        <Run Text="{Binding Note, Mode=OneWay}" Foreground="{StaticResource Text.Muted}" FontSize="11"/>
+                                                        <Run Text="{Binding Note, Mode=OneWay}" Foreground="{DynamicResource Text.Muted}" FontSize="11"/>
                                                     </TextBlock>
                                                 </DataTemplate>
                                             </ComboBox.ItemTemplate>
@@ -575,10 +616,10 @@
                                                VerticalAlignment="Top" Margin="0,2,10,10"/>
                                     <StackPanel Grid.Row="3" Grid.Column="1" Margin="0,0,0,10">
                                         <TextBlock FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8">
-                                            <Run Text="Default:" Foreground="{StaticResource Text.Secondary}"/>
+                                            <Run Text="Default:" Foreground="{DynamicResource Text.Secondary}"/>
                                             <Run Text="{Binding DefaultMergeName, Mode=OneWay}" FontFamily="{StaticResource Font.Mono}" FontWeight="SemiBold"/>
-                                            <Run Text="·" Foreground="{StaticResource Text.Muted}"/>
-                                            <Run Text="{Binding MergeFromHint, Mode=OneWay}" Foreground="{StaticResource Text.Muted}"/>
+                                            <Run Text="·" Foreground="{DynamicResource Text.Muted}"/>
+                                            <Run Text="{Binding MergeFromHint, Mode=OneWay}" Foreground="{DynamicResource Text.Muted}"/>
                                         </TextBlock>
                                         <StackPanel Orientation="Horizontal">
                                             <ComboBox Width="260" Height="30" ItemsSource="{Binding MergeSources}"
@@ -590,12 +631,12 @@
                                                     Command="{Binding MergeNowCommand}"
                                                     ToolTip="Merge the picked branch into this one just this once; the default stays as it is"/>
                                         </StackPanel>
-                                        <TextBlock Foreground="{StaticResource Warning}" FontSize="11.5" TextWrapping="Wrap" Margin="0,6,0,0"
+                                        <TextBlock Foreground="{DynamicResource Warning}" FontSize="11.5" TextWrapping="Wrap" Margin="0,6,0,0"
                                                    Text="Not saved. Update default to have Fetch Latest use it every time, or Merge now to merge it just once."
                                                    Visibility="{Binding IsMergePickUnsaved, Converter={StaticResource BoolToVisibility}}"/>
                                     </StackPanel>
                                     <TextBlock Grid.Row="4" Grid.Column="0" Text="STATUS" Style="{StaticResource SectionLabel}"/>
-                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding StatusMessage}" Foreground="{StaticResource Cyan}"
+                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding StatusMessage}" Foreground="{DynamicResource Cyan}"
                                                Margin="0,0,0,10" TextWrapping="Wrap"/>
                                 </Grid>
 
@@ -605,7 +646,7 @@
                                             AutomationProperties.Name="Create Pull Request"
                                             ToolTip="Open a pull request on GitHub from this branch">
                                         <StackPanel Orientation="Horizontal">
-                                            <Path Data="{StaticResource GitHubMark}" Fill="{StaticResource Text.Primary}" Width="13" Height="13"
+                                            <Path Data="{StaticResource GitHubMark}" Fill="{DynamicResource Text.Primary}" Width="13" Height="13"
                                                   Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                             <TextBlock Text="Create Pull Request"/>
                                         </StackPanel>
@@ -636,7 +677,7 @@
                                         <Button Command="{Binding OpenInGitHubCommand}" AutomationProperties.Name="GitHub"
                                                 ToolTip="{Binding GitHubToolTip}" ToolTipService.ShowOnDisabled="True">
                                             <StackPanel Orientation="Horizontal">
-                                                <Path Data="{StaticResource GitHubMark}" Fill="{StaticResource Text.Primary}" Width="13" Height="13"
+                                                <Path Data="{StaticResource GitHubMark}" Fill="{DynamicResource Text.Primary}" Width="13" Height="13"
                                                       Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                                 <TextBlock Text="GitHub"/>
                                             </StackPanel>
@@ -665,7 +706,7 @@
                         <!-- Changes -->
                         <TabItem Header="Changes">
                             <DockPanel Margin="4,0">
-                                <Border DockPanel.Dock="Top" Background="{StaticResource Danger.Muted}" BorderBrush="{StaticResource Danger}"
+                                <Border DockPanel.Dock="Top" Background="{DynamicResource Danger.Muted}" BorderBrush="{DynamicResource Danger}"
                                         BorderThickness="1" CornerRadius="0" Padding="14,10" Margin="0,0,0,12"
                                         Visibility="{Binding HasMergeConflict, Converter={StaticResource BoolToVisibility}}">
                                     <DockPanel>
@@ -674,22 +715,22 @@
                                             <Button Content="Abort Merge" Style="{StaticResource Button.Danger}" Command="{Binding AbortMergeCommand}"/>
                                         </StackPanel>
                                         <TextBlock Text="⚠ Merge in progress — resolve the conflicted file(s) below, then continue or abort."
-                                                   Foreground="{StaticResource Danger}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,12,0"/>
+                                                   Foreground="{DynamicResource Danger}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,12,0"/>
                                     </DockPanel>
                                 </Border>
 
                                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
                                     <Button Content="Refresh" Style="{StaticResource Button.Secondary}" Command="{Binding LoadChangesCommand}"/>
                                     <Button Content="Discard All" Style="{StaticResource Button.Danger}" Command="{Binding DiscardAllCommand}"/>
-                                    <Border Width="1" Background="{StaticResource Border.Subtle}" Margin="4,4,12,4"/>
+                                    <Border Width="1" Background="{DynamicResource Border.Subtle}" Margin="4,4,12,4"/>
                                     <TextBlock Text="Stash message" Style="{StaticResource SectionLabel}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                     <TextBox Width="220" VerticalContentAlignment="Center" Margin="0,0,8,0"
                                              Text="{Binding StashMessage, UpdateSourceTrigger=PropertyChanged}"/>
                                     <Button Content="Stash Changes" Style="{StaticResource Button.Secondary}" Command="{Binding StashCommand}"/>
                                 </StackPanel>
 
-                                <Border DockPanel.Dock="Bottom" Margin="0,12,0,0" Padding="10,8" Background="{StaticResource Bg.PanelAlt}"
-                                        CornerRadius="0" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
+                                <Border DockPanel.Dock="Bottom" Margin="0,12,0,0" Padding="10,8" Background="{DynamicResource Bg.PanelAlt}"
+                                        CornerRadius="0" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1">
                                     <DockPanel>
                                         <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"
                                                    Text="{Binding Stashes.Count, StringFormat='STASHES ({0})'}"/>
@@ -702,10 +743,10 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Background="{StaticResource Bg.Hover}" CornerRadius="0" Padding="10,6" Margin="0,0,8,8">
+                                                    <Border Background="{DynamicResource Bg.Hover}" CornerRadius="0" Padding="10,6" Margin="0,0,8,8">
                                                         <StackPanel Orientation="Horizontal">
                                                             <TextBlock Text="{Binding Reference}" FontWeight="SemiBold" FontFamily="{StaticResource Font.Mono}" Margin="0,0,8,0"/>
-                                                            <TextBlock Text="{Binding Message}" Foreground="{StaticResource Text.Secondary}"
+                                                            <TextBlock Text="{Binding Message}" Foreground="{DynamicResource Text.Secondary}"
                                                                        MaxWidth="240" TextTrimming="CharacterEllipsis" Margin="0,0,10,0"/>
                                                             <Button Content="Apply" Style="{StaticResource Button.Icon}" Margin="0,0,4,0"
                                                                     Command="{Binding DataContext.StashApplyCommand, ElementName=ProjectTabControl}"
@@ -729,24 +770,24 @@
                                     </Grid.ColumnDefinitions>
 
                                     <DockPanel Grid.Column="0" Margin="0,0,12,0">
-                                    <Border DockPanel.Dock="Bottom" Margin="0,10,0,0" Padding="10" Background="{StaticResource Bg.PanelAlt}"
-                                            CornerRadius="0" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
+                                    <Border DockPanel.Dock="Bottom" Margin="0,10,0,0" Padding="10" Background="{DynamicResource Bg.PanelAlt}"
+                                            CornerRadius="0" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1">
                                         <StackPanel>
                                             <TextBlock Text="COMMIT MESSAGE" Style="{StaticResource SectionLabel}"/>
                                             <TextBox Height="64" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
                                                      Text="{Binding CommitMessage, UpdateSourceTrigger=PropertyChanged}"/>
                                             <Button Content="Commit All Changes" Style="{StaticResource Button.Primary}"
                                                     Margin="0,8,0,0" HorizontalAlignment="Stretch" Command="{Binding CommitCommand}"/>
-                                            <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource Cyan}" FontSize="11"
+                                            <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource Cyan}" FontSize="11"
                                                        TextWrapping="Wrap" Margin="0,8,0,0"
                                                        Visibility="{Binding StatusMessage, Converter={StaticResource StringNotEmptyToVisibility}}"/>
                                         </StackPanel>
                                     </Border>
 
-                                    <Border Background="{StaticResource Bg.PanelAlt}" CornerRadius="0"
-                                            BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
+                                    <Border Background="{DynamicResource Bg.PanelAlt}" CornerRadius="0"
+                                            BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1">
                                       <Grid>
-                                        <TextBlock Text="Working tree clean — no changes." Foreground="{StaticResource Text.Muted}"
+                                        <TextBlock Text="Working tree clean — no changes." Foreground="{DynamicResource Text.Muted}"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
                                                    Visibility="{Binding IsWorkingTreeClean, Converter={StaticResource BoolToVisibility}}"/>
                                         <ListBox ItemsSource="{Binding ChangedFiles}" SelectedItem="{Binding SelectedChangedFile}"
@@ -760,9 +801,7 @@
                                                             <ColumnDefinition Width="Auto"/>
                                                         </Grid.ColumnDefinitions>
                                                         <Border Grid.Column="0" Style="{StaticResource ChangeTypeBadge}" Margin="0,0,8,0">
-                                                            <TextBlock Text="{Binding Type, Converter={StaticResource ChangeTypeToLetter}}"
-                                                                       FontSize="12" FontWeight="Bold" Foreground="{Binding Type, Converter={StaticResource ChangeTypeToBrush}}"
-                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            <TextBlock Style="{StaticResource ChangeTypeLetter}"/>
                                                         </Border>
                                                         <TextBlock Grid.Column="1" Text="{Binding DisplayPath}" FontSize="12"
                                                                    TextWrapping="Wrap" VerticalAlignment="Center"/>
@@ -786,7 +825,7 @@
 
                                         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10"
                                                     Visibility="{Binding IsSelectedFileConflicted, Converter={StaticResource BoolToVisibility}}">
-                                            <TextBlock Text="CONFLICT" Foreground="{StaticResource Danger}" FontWeight="Bold" FontSize="12"
+                                            <TextBlock Text="CONFLICT" Foreground="{DynamicResource Danger}" FontWeight="Bold" FontSize="12"
                                                        VerticalAlignment="Center" Margin="0,0,12,0"/>
                                             <Button Content="Use Ours" Style="{StaticResource Button.Secondary}"
                                                     Command="{Binding ResolveOursCommand}" CommandParameter="{Binding SelectedChangedFile}"/>
@@ -798,10 +837,10 @@
                                                     Command="{Binding MarkResolvedCommand}" CommandParameter="{Binding SelectedChangedFile}"/>
                                         </StackPanel>
 
-                                        <Border Grid.Row="1" Background="{StaticResource Bg.Console}" CornerRadius="0"
-                                                BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
+                                        <Border Grid.Row="1" Background="{DynamicResource Bg.Console}" CornerRadius="0"
+                                                BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1">
                                           <Grid>
-                                            <TextBlock Text="Select a file to view its changes." Foreground="{StaticResource Text.Muted}"
+                                            <TextBlock Text="Select a file to view its changes." Foreground="{DynamicResource Text.Muted}"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
                                                        Visibility="{Binding SelectedChangedFile, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}"/>
                                             <ListBox ItemsSource="{Binding DiffLines}" Style="{StaticResource DiffList}"/>
@@ -833,7 +872,7 @@
                                                 <KeyBinding Key="Enter" Modifiers="Shift" Command="{Binding PreviousCommitMatchCommand}"/>
                                             </TextBox.InputBindings>
                                         </TextBox>
-                                        <TextBlock Text="Search messages, authors, files and changed code" Foreground="{StaticResource Text.Muted}"
+                                        <TextBlock Text="Search messages, authors, files and changed code" Foreground="{DynamicResource Text.Muted}"
                                                    FontSize="12.5" VerticalAlignment="Center" Margin="11,0,0,0" IsHitTestVisible="False"
                                                    Visibility="{Binding CommitSearch, Converter={StaticResource StringNotEmptyToVisibility}, ConverterParameter=Invert}"/>
                                     </Grid>
@@ -844,9 +883,9 @@
                                             Command="{Binding NextCommitMatchCommand}" AutomationProperties.Name="Next match"
                                             ToolTip="Next match (Enter or F3)"/>
                                     <StackPanel Orientation="Horizontal" Margin="10,0,0,0" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding CommitSearchNote}" Foreground="{StaticResource Text.Muted}" FontSize="12.5"/>
+                                        <TextBlock Text="{Binding CommitSearchNote}" Foreground="{DynamicResource Text.Muted}" FontSize="12.5"/>
                                         <TextBlock Text="{Binding CommitMatchNote, StringFormat='  ·  Match {0}'}" FontSize="12.5"
-                                                   Foreground="{StaticResource Text.Secondary}"
+                                                   Foreground="{DynamicResource Text.Secondary}"
                                                    Visibility="{Binding CommitMatchNote, Converter={StaticResource StringNotEmptyToVisibility}}"/>
                                     </StackPanel>
                                 </DockPanel>
@@ -867,7 +906,7 @@
                                                 <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
                                                     <Style.Triggers>
                                                         <Trigger Property="IsSelected" Value="True">
-                                                            <Setter Property="Background" Value="{StaticResource Accent.Muted}"/>
+                                                            <Setter Property="Background" Value="{DynamicResource Accent.Muted}"/>
                                                         </Trigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -882,12 +921,12 @@
                                             </ListView.View>
                                         </ListView>
                                         <Border VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,10" Padding="12,6"
-                                                Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Strong}" BorderThickness="1"
+                                                Background="{DynamicResource Bg.Panel}" BorderBrush="{DynamicResource Border.Strong}" BorderThickness="1"
                                                 IsHitTestVisible="False"
                                                 Visibility="{Binding IsLoadingMoreCommits, Converter={StaticResource BoolToVisibility}}">
                                             <StackPanel Orientation="Horizontal">
                                                 <ProgressBar IsIndeterminate="True" Width="60" Height="3" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                                <TextBlock Text="Loading older commits…" FontSize="12" Foreground="{StaticResource Text.Secondary}"/>
+                                                <TextBlock Text="Loading older commits…" FontSize="12" Foreground="{DynamicResource Text.Secondary}"/>
                                             </StackPanel>
                                         </Border>
                                     </Grid>
@@ -895,26 +934,26 @@
                                     <GridSplitter Grid.Row="1" HorizontalAlignment="Stretch" Background="Transparent"
                                                   ResizeBehavior="PreviousAndNext" ResizeDirection="Rows" Focusable="False"/>
 
-                                    <TextBlock Grid.Row="2" Text="Select a commit to see what it changed." Foreground="{StaticResource Text.Muted}"
+                                    <TextBlock Grid.Row="2" Text="Select a commit to see what it changed." Foreground="{DynamicResource Text.Muted}"
                                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                                Visibility="{Binding SelectedCommit, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}"/>
 
                                     <DockPanel Grid.Row="2" Visibility="{Binding SelectedCommit, Converter={StaticResource NullToVisibility}}">
-                                        <Border DockPanel.Dock="Top" Margin="0,0,0,12" Padding="12,10" Background="{StaticResource Bg.PanelAlt}"
-                                                CornerRadius="0" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
+                                        <Border DockPanel.Dock="Top" Margin="0,0,0,12" Padding="12,10" Background="{DynamicResource Bg.PanelAlt}"
+                                                CornerRadius="0" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1">
                                             <StackPanel DataContext="{Binding SelectedCommit}">
                                                 <TextBlock Text="{Binding Message}" FontWeight="SemiBold" FontSize="13.5" TextWrapping="Wrap"/>
                                                 <ScrollViewer MaxHeight="52" Margin="0,6,0,0" VerticalScrollBarVisibility="Auto"
                                                               HorizontalScrollBarVisibility="Disabled"
                                                               Visibility="{Binding Body, Converter={StaticResource StringNotEmptyToVisibility}}">
-                                                    <TextBlock Text="{Binding Body}" Foreground="{StaticResource Text.Secondary}" FontSize="12"
+                                                    <TextBlock Text="{Binding Body}" Foreground="{DynamicResource Text.Secondary}" FontSize="12"
                                                                TextWrapping="Wrap"/>
                                                 </ScrollViewer>
                                                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                                                     <TextBlock Text="{Binding Hash}" FontFamily="{StaticResource Font.Mono}" FontSize="12"
-                                                               Foreground="{StaticResource Text.Muted}"/>
-                                                    <TextBlock Text="{Binding Author}" FontSize="12" Foreground="{StaticResource Text.Secondary}" Margin="16,0,0,0"/>
-                                                    <TextBlock Text="{conv:DateTimeText Date}" FontSize="12" Foreground="{StaticResource Text.Muted}" Margin="16,0,0,0"/>
+                                                               Foreground="{DynamicResource Text.Muted}"/>
+                                                    <TextBlock Text="{Binding Author}" FontSize="12" Foreground="{DynamicResource Text.Secondary}" Margin="16,0,0,0"/>
+                                                    <TextBlock Text="{conv:DateTimeText Date}" FontSize="12" Foreground="{DynamicResource Text.Muted}" Margin="16,0,0,0"/>
                                                 </StackPanel>
                                             </StackPanel>
                                         </Border>
@@ -925,8 +964,8 @@
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
 
-                                            <Border Grid.Column="0" Margin="0,0,12,0" Padding="4" Background="{StaticResource Bg.PanelAlt}"
-                                                    CornerRadius="0" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
+                                            <Border Grid.Column="0" Margin="0,0,12,0" Padding="4" Background="{DynamicResource Bg.PanelAlt}"
+                                                    CornerRadius="0" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1">
                                                 <DockPanel>
                                                     <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionLabel}" Margin="6,6,0,4"
                                                                Text="{Binding CommitFiles.Count, StringFormat='FILES CHANGED ({0})'}"/>
@@ -943,20 +982,18 @@
                                                                         <ColumnDefinition Width="Auto"/>
                                                                     </Grid.ColumnDefinitions>
                                                                     <Border Grid.Column="0" Style="{StaticResource ChangeTypeBadge}" Margin="0,0,8,0">
-                                                                        <TextBlock Text="{Binding Type, Converter={StaticResource ChangeTypeToLetter}}"
-                                                                                   FontSize="12" FontWeight="Bold" Foreground="{Binding Type, Converter={StaticResource ChangeTypeToBrush}}"
-                                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                        <TextBlock Style="{StaticResource ChangeTypeLetter}"/>
                                                                     </Border>
                                                                     <TextBlock x:Name="FilePath" Grid.Column="1" Text="{Binding DisplayPath}" FontSize="12"
                                                                                TextWrapping="Wrap" VerticalAlignment="Center"/>
                                                                     <TextBlock Grid.Column="2" Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="11"
-                                                                               Foreground="{StaticResource Warning}" VerticalAlignment="Center" Margin="8,0,2,0"
+                                                                               Foreground="{DynamicResource Warning}" VerticalAlignment="Center" Margin="8,0,2,0"
                                                                                ToolTip="Has the searched text"
                                                                                Visibility="{Binding IsSearchMatch, Converter={StaticResource BoolToVisibility}}"/>
                                                                 </Grid>
                                                                 <DataTemplate.Triggers>
                                                                     <DataTrigger Binding="{Binding IsSearchMatch}" Value="True">
-                                                                        <Setter TargetName="FilePath" Property="Foreground" Value="{StaticResource Warning}"/>
+                                                                        <Setter TargetName="FilePath" Property="Foreground" Value="{DynamicResource Warning}"/>
                                                                         <Setter TargetName="FilePath" Property="FontWeight" Value="SemiBold"/>
                                                                     </DataTrigger>
                                                                 </DataTemplate.Triggers>
@@ -966,8 +1003,8 @@
                                                 </DockPanel>
                                             </Border>
 
-                                            <Border Grid.Column="1" Background="{StaticResource Bg.Console}" CornerRadius="0"
-                                                    BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
+                                            <Border Grid.Column="1" Background="{DynamicResource Bg.Console}" CornerRadius="0"
+                                                    BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1">
                                                 <ListBox ItemsSource="{Binding CommitDiffLines}" Style="{StaticResource DiffList}"
                                                          controls:ScrollToItem.Item="{Binding CurrentCommitMatch}" controls:ScrollToItem.Center="True">
                                                     <ListBox.ItemTemplate>
@@ -980,8 +1017,8 @@
                                                             </Border>
                                                             <DataTemplate.Triggers>
                                                                 <DataTrigger Binding="{Binding IsCurrent}" Value="True">
-                                                                    <Setter TargetName="Line" Property="Background" Value="{StaticResource Accent.Muted}"/>
-                                                                    <Setter TargetName="Line" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                                                                    <Setter TargetName="Line" Property="Background" Value="{DynamicResource Accent.Muted}"/>
+                                                                    <Setter TargetName="Line" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                                                                 </DataTrigger>
                                                             </DataTemplate.Triggers>
                                                         </DataTemplate>
@@ -1012,7 +1049,7 @@
                                     <Grid>
                                         <TextBox x:Name="StartCommandBox" FontFamily="{StaticResource Font.Mono}"
                                                  Text="{Binding StartCommand, UpdateSourceTrigger=PropertyChanged}"/>
-                                        <TextBlock Text="{Binding StartCommandHint}" Foreground="{StaticResource Text.Muted}" FontSize="12.5"
+                                        <TextBlock Text="{Binding StartCommandHint}" Foreground="{DynamicResource Text.Muted}" FontSize="12.5"
                                                    VerticalAlignment="Center" Margin="11,0,0,0" IsHitTestVisible="False"
                                                    Visibility="{Binding Text, ElementName=StartCommandBox, Converter={StaticResource StringNotEmptyToVisibility}, ConverterParameter=Invert}"/>
                                     </Grid>
@@ -1133,7 +1170,7 @@
                                 <!-- Where the site the app serves opens (the same for every project), and whether a run opens it by itself -->
                                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
                                     <TextBlock Text="SITE" Style="{StaticResource SectionLabel}" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                    <TextBlock Text="Open in" Foreground="{StaticResource Text.Secondary}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Open in" Foreground="{DynamicResource Text.Secondary}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                     <ComboBox Width="360" Height="32" AutomationProperties.Name="Open the site in"
                                               DataContext="{Binding DataContext.SiteBrowser, RelativeSource={RelativeSource AncestorType=Window}}"
                                               ItemsSource="{Binding Targets}" SelectedItem="{Binding SelectedTarget}"
@@ -1178,8 +1215,8 @@
                           Visibility="{Binding PhoneScreen.IsPanelVisible, Converter={StaticResource BoolToVisibility}}"/>
 
             <!-- Phone screen: an Android device mirrored by scrcpy, independent of the selected project -->
-            <Border Grid.Column="3" DataContext="{Binding PhoneScreen}" Background="{StaticResource Bg.Panel}"
-                    BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1" CornerRadius="0" Padding="12"
+            <Border Grid.Column="3" DataContext="{Binding PhoneScreen}" Background="{DynamicResource Bg.Panel}"
+                    BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1" CornerRadius="0" Padding="12"
                     Visibility="{Binding IsPanelVisible, Converter={StaticResource BoolToVisibility}}">
                 <DockPanel>
                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
@@ -1234,7 +1271,7 @@
                                 <DataTemplate>
                                     <TextBlock TextTrimming="CharacterEllipsis">
                                         <Run Text="{Binding Model, Mode=OneWay}"/>
-                                        <Run Text="{Binding Note, Mode=OneWay}" Foreground="{StaticResource Text.Muted}" FontSize="11"/>
+                                        <Run Text="{Binding Note, Mode=OneWay}" Foreground="{DynamicResource Text.Muted}" FontSize="11"/>
                                     </TextBlock>
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
@@ -1280,21 +1317,21 @@
                         </controls:DeviceTools.Style>
                     </controls:DeviceTools>
 
-                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Foreground="{StaticResource Text.Secondary}"
+                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Foreground="{DynamicResource Text.Secondary}"
                                FontSize="11" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="44" Margin="0,8,0,0"/>
 
                     <Grid>
                         <!-- Nothing showing here: why, and what to do. Padding keeps the square scrcpy window inside the
                              rounded corners, like a bezel. -->
-                        <Border Background="Black" CornerRadius="0" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1" Padding="3"
+                        <Border Background="{DynamicResource Bg.Console}" CornerRadius="0" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1" Padding="3"
                                 Visibility="{Binding IsDockEmpty, Converter={StaticResource BoolToVisibility}}">
                             <Grid>
                                 <StackPanel VerticalAlignment="Center" Margin="12"
                                             Visibility="{Binding ShowInstallPrompt, Converter={StaticResource BoolToVisibility}}">
-                                    <TextBlock Text="&#xE8EA;" FontFamily="Segoe MDL2 Assets" FontSize="34" Foreground="{StaticResource Text.Muted}"
+                                    <TextBlock Text="&#xE8EA;" FontFamily="Segoe MDL2 Assets" FontSize="34" Foreground="{DynamicResource Text.Muted}"
                                                HorizontalAlignment="Center" Margin="0,0,0,12"/>
                                     <TextBlock Text="Mirroring needs scrcpy" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,6"/>
-                                    <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="11.5" TextWrapping="Wrap" TextAlignment="Center"
+                                    <TextBlock Foreground="{DynamicResource Text.Secondary}" FontSize="11.5" TextWrapping="Wrap" TextAlignment="Center"
                                                Margin="0,0,0,14"
                                                Text="A free, open-source tool that streams an Android phone's screen and sound to this PC. One-time download (about 11 MB) from github.com/Genymobile/scrcpy."/>
                                     <Button Content="Install scrcpy" Style="{StaticResource Button.Primary}" HorizontalAlignment="Center" Margin="0"
@@ -1303,9 +1340,9 @@
 
                                 <StackPanel VerticalAlignment="Center" Margin="12"
                                             Visibility="{Binding ShowPoppedOutNote, Converter={StaticResource BoolToVisibility}}">
-                                    <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="30" Foreground="{StaticResource Text.Muted}"
+                                    <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="30" Foreground="{DynamicResource Text.Muted}"
                                                HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                                    <TextBlock Text="{Binding PoppedOutNote}" Foreground="{StaticResource Text.Secondary}"
+                                    <TextBlock Text="{Binding PoppedOutNote}" Foreground="{DynamicResource Text.Secondary}"
                                                HorizontalAlignment="Center" Margin="0,0,0,14"/>
                                     <Button Content="Dock back here" Style="{StaticResource Button.Secondary}" HorizontalAlignment="Center" Margin="0"
                                             Command="{Binding DockAllCommand}"/>
@@ -1313,9 +1350,9 @@
 
                                 <StackPanel VerticalAlignment="Center" Margin="12"
                                             Visibility="{Binding ShowIdleNote, Converter={StaticResource BoolToVisibility}}">
-                                    <TextBlock Text="&#xE8EA;" FontFamily="Segoe MDL2 Assets" FontSize="34" Foreground="{StaticResource Text.Muted}"
+                                    <TextBlock Text="&#xE8EA;" FontFamily="Segoe MDL2 Assets" FontSize="34" Foreground="{DynamicResource Text.Muted}"
                                                HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                                    <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="11.5" TextWrapping="Wrap" TextAlignment="Center"
+                                    <TextBlock Foreground="{DynamicResource Text.Secondary}" FontSize="11.5" TextWrapping="Wrap" TextAlignment="Center"
                                                Text="Pick a device and press Show. Pick another and press Show to see both side by side. An emulator that isn't running starts first. Running a Flutter app on an Android device shows its screen here automatically."/>
                                 </StackPanel>
                             </Grid>
@@ -1361,10 +1398,10 @@
                                                        TextTrimming="CharacterEllipsis" VerticalAlignment="Center">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-                                                        <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                <Setter Property="Foreground" Value="{StaticResource Accent.Hover}"/>
+                                                                <Setter Property="Foreground" Value="{DynamicResource Accent.Hover}"/>
                                                                 <Setter Property="FontWeight" Value="SemiBold"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
@@ -1373,24 +1410,24 @@
                                             </TextBlock>
                                         </DockPanel>
 
-                                        <Border Background="Black" CornerRadius="0" BorderThickness="1" Padding="3">
+                                        <Border Background="{DynamicResource Bg.Console}" CornerRadius="0" BorderThickness="1" Padding="3">
                                             <Border.Style>
                                                 <Style TargetType="Border">
-                                                    <Setter Property="BorderBrush" Value="{StaticResource Border.Subtle}"/>
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource Border.Subtle}"/>
                                                     <Style.Triggers>
                                                         <MultiDataTrigger>
                                                             <MultiDataTrigger.Conditions>
                                                                 <Condition Binding="{Binding IsSelected}" Value="True"/>
                                                                 <Condition Binding="{Binding DataContext.HasSeveralDockedScreens, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Value="True"/>
                                                             </MultiDataTrigger.Conditions>
-                                                            <Setter Property="BorderBrush" Value="{StaticResource Accent}"/>
+                                                            <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
                                                         </MultiDataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </Border.Style>
                                             <Grid>
                                                 <!-- Until its screen arrives: connecting, or saving a recording before starting again -->
-                                                <TextBlock Text="{Binding Status}" Foreground="{StaticResource Text.Secondary}" FontSize="11.5" Margin="8"
+                                                <TextBlock Text="{Binding Status}" Foreground="{DynamicResource Text.Secondary}" FontSize="11.5" Margin="8"
                                                            TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 <controls:ScreenHost ScreenHandle="{Binding DockedScreenHandle}" ScreenClicked="DockedScreen_ScreenClicked"
                                                                      Unloaded="DockedScreen_Unloaded"
@@ -1407,12 +1444,30 @@
         </Grid>
 
         <!-- Status bar -->
-        <Border Grid.Row="2" Background="{StaticResource Bg.Elevated}" BorderBrush="{StaticResource Border.Subtle}"
+        <Border Grid.Row="2" Background="{DynamicResource Bg.Elevated}" BorderBrush="{DynamicResource Border.Subtle}"
                 BorderThickness="0,1,0,0" Padding="20,8">
             <DockPanel>
+                <!-- Dark or light, in the corner: a sun while dark, a moon while light. Settings, General also has Match Windows. -->
+                <Button DockPanel.Dock="Right" FontSize="12" Padding="6,1" Margin="6,0,0,0" VerticalAlignment="Center"
+                        Command="{Binding Settings.ToggleThemeCommand}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
+                            <Setter Property="Content" Value="&#xE706;"/>
+                            <Setter Property="ToolTip" Value="Switch to the light theme"/>
+                            <Setter Property="AutomationProperties.Name" Value="Switch to the light theme"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Settings.IsLightTheme}" Value="True">
+                                    <Setter Property="Content" Value="&#xE708;"/>
+                                    <Setter Property="ToolTip" Value="Switch to the dark theme"/>
+                                    <Setter Property="AutomationProperties.Name" Value="Switch to the dark theme"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
                 <!-- Version and updates: the installed app downloads a newer release in the background, then offers a restart -->
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" DataContext="{Binding Updates}" Margin="16,0,0,0">
-                    <TextBlock Text="{Binding Status}" Foreground="{StaticResource Text.Muted}" FontSize="11.5" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Status}" Foreground="{DynamicResource Text.Muted}" FontSize="11.5" VerticalAlignment="Center"/>
                     <Button Content="Check for updates" Style="{StaticResource Button.Secondary}" FontSize="11.5" Padding="8,2" Margin="10,0,0,0"
                             Command="{Binding CheckCommand}"
                             Visibility="{Binding CanUpdate, Converter={StaticResource BoolToVisibility}}"/>
@@ -1428,7 +1483,7 @@
                 </StackPanel>
                 <ProgressBar DockPanel.Dock="Right" IsIndeterminate="True" Width="110"
                              Visibility="{Binding IsFetchingAll, Converter={StaticResource BoolToVisibility}}"/>
-                <TextBlock Text="{Binding GlobalStatus}" Foreground="{StaticResource Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding GlobalStatus}" Foreground="{DynamicResource Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
             </DockPanel>
         </Border>
     </Grid>

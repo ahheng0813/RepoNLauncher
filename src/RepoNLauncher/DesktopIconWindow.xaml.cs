@@ -9,7 +9,7 @@ public partial class DesktopIconWindow : Window
     public DesktopIconWindow()
     {
         InitializeComponent();
-        SourceInitialized += (_, _) => NativeMethods.UseImmersiveDarkMode(new WindowInteropHelper(this).Handle);
+        SourceInitialized += (_, _) => NativeMethods.UseThemedTitleBar(new WindowInteropHelper(this).Handle);
     }
 
     public bool CreateIcon => DialogResult == true && CreateIconBox.IsChecked == true;

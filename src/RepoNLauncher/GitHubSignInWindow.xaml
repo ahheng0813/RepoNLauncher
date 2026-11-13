@@ -3,26 +3,26 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Sign in to GitHub - Repo'N'Launcher" Width="520" SizeToContent="Height" ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
-        Background="{StaticResource Bg.App}"
+        Background="{DynamicResource Bg.App}"
         FontFamily="{StaticResource Font.Mono}">
 
     <StackPanel Margin="24,22,24,20">
         <StackPanel Orientation="Horizontal">
-            <Path Data="{StaticResource GitHubMark}" Fill="{StaticResource Text.Primary}" Width="22" Height="22" Stretch="Uniform"
+            <Path Data="{StaticResource GitHubMark}" Fill="{DynamicResource Text.Primary}" Width="22" Height="22" Stretch="Uniform"
                   VerticalAlignment="Center" Margin="0,0,10,0"/>
             <TextBlock Text="Sign in to GitHub" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center"/>
         </StackPanel>
-        <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="12.5" TextWrapping="Wrap" Margin="0,8,0,18"
+        <TextBlock Foreground="{DynamicResource Text.Secondary}" FontSize="12.5" TextWrapping="Wrap" Margin="0,8,0,18"
                    Text="Repos on this PC uses your GitHub account to check who owns each repo, and Create Pull Request to open pull requests. Everything else in Repo'N'Launcher works without signing in."/>
 
         <Button x:Name="GitSignInButton" Style="{StaticResource Button.Primary}" Margin="0" Padding="14,9" Click="SignInWithGit_Click">
             <StackPanel Orientation="Horizontal">
-                <Path Data="{StaticResource GitHubMark}" Fill="{StaticResource Text.OnAccent}" Width="15" Height="15" Stretch="Uniform"
+                <Path Data="{StaticResource GitHubMark}" Fill="{DynamicResource Text.OnAccent}" Width="15" Height="15" Stretch="Uniform"
                       VerticalAlignment="Center" Margin="0,0,9,0"/>
-                <TextBlock Text="Sign in with browser" Foreground="{StaticResource Text.OnAccent}" FontWeight="SemiBold"/>
+                <TextBlock Text="Sign in with browser" Foreground="{DynamicResource Text.OnAccent}" FontWeight="SemiBold"/>
             </StackPanel>
         </Button>
-        <TextBlock Foreground="{StaticResource Text.Muted}" FontSize="11.5" TextWrapping="Wrap" Margin="0,7,0,0"
+        <TextBlock Foreground="{DynamicResource Text.Muted}" FontSize="11.5" TextWrapping="Wrap" Margin="0,7,0,0"
                    Text="Uses Git's GitHub sign-in (Git Credential Manager). If Git is already signed in to GitHub this finishes right away; otherwise GitHub opens in your browser."/>
 
         <Grid Margin="0,20,0,14">
@@ -31,9 +31,9 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <Border Grid.Column="0" Height="1" Background="{StaticResource Border.Subtle}" VerticalAlignment="Center"/>
-            <TextBlock Grid.Column="1" Text="or use a token" Foreground="{StaticResource Text.Muted}" FontSize="11.5" Margin="12,0"/>
-            <Border Grid.Column="2" Height="1" Background="{StaticResource Border.Subtle}" VerticalAlignment="Center"/>
+            <Border Grid.Column="0" Height="1" Background="{DynamicResource Border.Subtle}" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" Text="or use a token" Foreground="{DynamicResource Text.Muted}" FontSize="11.5" Margin="12,0"/>
+            <Border Grid.Column="2" Height="1" Background="{DynamicResource Border.Subtle}" VerticalAlignment="Center"/>
         </Grid>
 
         <DockPanel>
@@ -41,12 +41,12 @@
                     Margin="8,0,0,0" Click="SignInWithToken_Click"/>
             <PasswordBox x:Name="TokenBox" ToolTip="Personal access token" KeyDown="TokenBox_KeyDown"/>
         </DockPanel>
-        <TextBlock Foreground="{StaticResource Text.Muted}" FontSize="11.5" TextWrapping="Wrap" Margin="0,7,0,0">
+        <TextBlock Foreground="{DynamicResource Text.Muted}" FontSize="11.5" TextWrapping="Wrap" Margin="0,7,0,0">
             <Run Text="A personal access token with the"/>
             <Run Text="repo" FontFamily="{StaticResource Font.Mono}"/>
             <Run Text="scope, so your private repos count too."/>
             <Hyperlink NavigateUri="https://github.com/settings/tokens/new?scopes=repo&amp;description=Repo%27N%27Launcher"
-                       RequestNavigate="Link_RequestNavigate" Foreground="{StaticResource Cyan}">Create one on GitHub</Hyperlink>
+                       RequestNavigate="Link_RequestNavigate" Foreground="{DynamicResource Cyan}">Create one on GitHub</Hyperlink>
         </TextBlock>
 
         <DockPanel x:Name="StatusPanel" Margin="0,18,0,0" Visibility="Collapsed">

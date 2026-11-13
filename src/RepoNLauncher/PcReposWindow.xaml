@@ -6,7 +6,7 @@
         xmlns:vm="clr-namespace:RepoNLauncher.ViewModels"
         Title="Repos on this PC - Repo'N'Launcher" Width="1000" Height="700" MinWidth="720" MinHeight="420"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource Bg.App}"
+        Background="{DynamicResource Bg.App}"
         FontFamily="{StaticResource Font.Mono}">
 
     <Window.Resources>
@@ -18,7 +18,7 @@
         <!-- One segment of the All / Mine / Others switch. Its text follows the button's Foreground. -->
         <Style x:Key="FilterTab" TargetType="RadioButton">
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
@@ -27,11 +27,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Bg.Hover}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Accent.Muted}"/>
-                                <Setter Property="Foreground" Value="{StaticResource Text.Primary}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Accent.Muted}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -47,7 +47,7 @@
 
         <Style x:Key="FilterTabCount" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
             <Setter Property="FontSize" Value="11.5"/>
-            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
             <Setter Property="Margin" Value="7,0,0,0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
@@ -67,46 +67,46 @@
                     <StackPanel Grid.Column="1" ToolTip="{Binding Path}">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13.5"/>
-                            <Border Background="{StaticResource Bg.PanelAlt}" CornerRadius="0" Padding="6,1" Margin="8,0,0,0"
+                            <Border Background="{DynamicResource Bg.PanelAlt}" CornerRadius="0" Padding="6,1" Margin="8,0,0,0"
                                     VerticalAlignment="Center"
                                     Visibility="{Binding IsOnDashboard, Converter={StaticResource BoolToVisibility}}">
-                                <TextBlock Text="On dashboard" FontSize="10.5" Foreground="{StaticResource Text.Secondary}"/>
+                                <TextBlock Text="On dashboard" FontSize="10.5" Foreground="{DynamicResource Text.Secondary}"/>
                             </Border>
                         </StackPanel>
-                        <TextBlock Text="{Binding Path}" FontFamily="{StaticResource Font.Mono}" FontSize="11" Foreground="{StaticResource Text.Muted}"
+                        <TextBlock Text="{Binding Path}" FontFamily="{StaticResource Font.Mono}" FontSize="11" Foreground="{DynamicResource Text.Muted}"
                                    TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0">
-                        <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource Text.Muted}"
+                        <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{DynamicResource Text.Muted}"
                                    VerticalAlignment="Center" Margin="0,0,6,0" ToolTip="Private repo"
                                    Visibility="{Binding IsPrivate, Converter={StaticResource BoolToVisibility}}"/>
                         <TextBlock Text="{Binding GitHubName}" FontFamily="{StaticResource Font.Mono}" FontSize="11.5"
-                                   Foreground="{StaticResource Text.Secondary}" VerticalAlignment="Center"/>
+                                   Foreground="{DynamicResource Text.Secondary}" VerticalAlignment="Center"/>
                     </StackPanel>
                     <Border Grid.Column="3" x:Name="Chip" CornerRadius="0" Padding="10,2" MinWidth="64" VerticalAlignment="Center"
-                            Background="{StaticResource Bg.PanelAlt}">
+                            Background="{DynamicResource Bg.PanelAlt}">
                         <TextBlock x:Name="ChipText" Text="{Binding OwnershipLabel}" FontSize="11" FontWeight="SemiBold"
-                                   Foreground="{StaticResource Text.Muted}" HorizontalAlignment="Center"/>
+                                   Foreground="{DynamicResource Text.Muted}" HorizontalAlignment="Center"/>
                     </Border>
                 </Grid>
             </Border>
             <DataTemplate.Triggers>
                 <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
-                    <Setter TargetName="Row" Property="Background" Value="{StaticResource Bg.Hover}"/>
+                    <Setter TargetName="Row" Property="Background" Value="{DynamicResource Bg.Hover}"/>
                 </Trigger>
                 <DataTrigger Binding="{Binding Ownership}" Value="Mine">
-                    <Setter TargetName="Chip" Property="Background" Value="{StaticResource Accent.Muted}"/>
-                    <Setter TargetName="ChipText" Property="Foreground" Value="{StaticResource Accent.Hover}"/>
+                    <Setter TargetName="Chip" Property="Background" Value="{DynamicResource Accent.Muted}"/>
+                    <Setter TargetName="ChipText" Property="Foreground" Value="{DynamicResource Accent.Hover}"/>
                     <Setter TargetName="Chip" Property="ToolTip" Value="Owned by your GitHub account"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Ownership}" Value="Others">
-                    <Setter TargetName="Chip" Property="Background" Value="#14313A"/>
-                    <Setter TargetName="ChipText" Property="Foreground" Value="{StaticResource Cyan}"/>
+                    <Setter TargetName="Chip" Property="Background" Value="{DynamicResource Cyan.Muted}"/>
+                    <Setter TargetName="ChipText" Property="Foreground" Value="{DynamicResource Cyan}"/>
                     <Setter TargetName="Chip" Property="ToolTip" Value="Owned by another GitHub account or organization (the name before the slash)"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Ownership}" Value="NoAccess">
-                    <Setter TargetName="Chip" Property="Background" Value="#3A3020"/>
-                    <Setter TargetName="ChipText" Property="Foreground" Value="{StaticResource Warning}"/>
+                    <Setter TargetName="Chip" Property="Background" Value="{DynamicResource Warning.Muted}"/>
+                    <Setter TargetName="ChipText" Property="Foreground" Value="{DynamicResource Warning}"/>
                     <Setter TargetName="Chip" Property="ToolTip" Value="GitHub doesn't show this repo to your account: it's someone else's private repo, or it was deleted"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Ownership}" Value="NotOnGitHub">
@@ -121,21 +121,21 @@
             <controls:PinOnTopButton DockPanel.Dock="Right" Margin="12,0,0,0" VerticalAlignment="Top"/>
             <StackPanel>
                 <TextBlock Text="Repos on this PC" FontSize="17" FontWeight="SemiBold"/>
-                <TextBlock Foreground="{StaticResource Text.Secondary}" FontSize="12.5" TextWrapping="Wrap" Margin="0,6,0,0"
+                <TextBlock Foreground="{DynamicResource Text.Secondary}" FontSize="12.5" TextWrapping="Wrap" Margin="0,6,0,0"
                            Text="Every git repo on this PC's drives, and who owns it on GitHub. Windows, Program Files, AppData, hidden and dot-folders, and dependency folders such as node_modules are skipped."/>
             </StackPanel>
         </DockPanel>
 
         <!-- Shown when signed out: the scan needs GitHub to tell whose repos are whose -->
-        <Border DockPanel.Dock="Top" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"
+        <Border DockPanel.Dock="Top" Background="{DynamicResource Bg.Panel}" BorderBrush="{DynamicResource Border.Subtle}"
                 BorderThickness="1" CornerRadius="0" Padding="14,10" Margin="0,0,0,12"
                 Visibility="{Binding Account.Login, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}">
             <DockPanel>
                 <Button DockPanel.Dock="Right" Style="{StaticResource Button.Primary}" Margin="0" Click="SignIn_Click">
                     <StackPanel Orientation="Horizontal">
-                        <Path Data="{StaticResource GitHubMark}" Fill="{StaticResource Text.OnAccent}" Width="14" Height="14" Stretch="Uniform"
+                        <Path Data="{StaticResource GitHubMark}" Fill="{DynamicResource Text.OnAccent}" Width="14" Height="14" Stretch="Uniform"
                               VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock Text="Sign in with GitHub" Foreground="{StaticResource Text.OnAccent}" FontWeight="SemiBold"/>
+                        <TextBlock Text="Sign in with GitHub" Foreground="{DynamicResource Text.OnAccent}" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Button>
                 <TextBlock Text="Sign in to GitHub to check who owns each repo." VerticalAlignment="Center"/>
@@ -148,12 +148,12 @@
                     Visibility="{Binding IsScanning, Converter={StaticResource BoolToVisibility}}"/>
             <ProgressBar DockPanel.Dock="Left" Width="70" IsIndeterminate="True" VerticalAlignment="Center" Margin="4,0,10,0"
                          Visibility="{Binding IsScanning, Converter={StaticResource BoolToVisibility}}"/>
-            <TextBlock x:Name="StatusText" Text="{Binding Status}" Foreground="{StaticResource Text.Secondary}" FontSize="12.5"
+            <TextBlock x:Name="StatusText" Text="{Binding Status}" Foreground="{DynamicResource Text.Secondary}" FontSize="12.5"
                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="4,0,0,0" ToolTip="{Binding Status}"/>
         </DockPanel>
 
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
-            <Border DockPanel.Dock="Left" Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}"
+            <Border DockPanel.Dock="Left" Background="{DynamicResource Bg.Panel}" BorderBrush="{DynamicResource Border.Subtle}"
                     BorderThickness="1" CornerRadius="0">
                 <StackPanel Orientation="Horizontal">
                     <RadioButton x:Name="AllFilter" Style="{StaticResource FilterTab}" ToolTip="Every repo found"
@@ -185,7 +185,7 @@
         </DockPanel>
 
         <DockPanel DockPanel.Dock="Bottom" Margin="0,14,0,0">
-            <TextBlock Text="{Binding CheckedCount, StringFormat='{}{0} selected'}" Foreground="{StaticResource Text.Secondary}"
+            <TextBlock Text="{Binding CheckedCount, StringFormat='{}{0} selected'}" Foreground="{DynamicResource Text.Secondary}"
                        FontSize="12.5" VerticalAlignment="Center"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="Close" Style="{StaticResource Button.Secondary}" IsCancel="True" Click="Close_Click"/>
@@ -194,10 +194,10 @@
             </StackPanel>
         </DockPanel>
 
-        <Border Background="{StaticResource Bg.Panel}" BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
+        <Border Background="{DynamicResource Bg.Panel}" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1"
                 CornerRadius="0" Padding="6">
             <Grid>
-                <TextBlock Text="No repos to show." Foreground="{StaticResource Text.Muted}"
+                <TextBlock Text="No repos to show." Foreground="{DynamicResource Text.Muted}"
                            HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">

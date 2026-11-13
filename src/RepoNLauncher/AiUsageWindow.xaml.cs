@@ -16,7 +16,7 @@ public partial class AiUsageWindow : Window
         InitializeComponent();
         DataContext = viewModel;
 
-        SourceInitialized += (_, _) => NativeMethods.UseImmersiveDarkMode(new WindowInteropHelper(this).Handle);
+        SourceInitialized += (_, _) => NativeMethods.UseThemedTitleBar(new WindowInteropHelper(this).Handle);
         Loaded += (_, _) => _ = viewModel.RefreshAsync(checkLimits: true);
     }
 

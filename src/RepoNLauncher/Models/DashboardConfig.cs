@@ -45,4 +45,7 @@ public class DashboardConfig
 
     /// <summary>How dates and times are shown: Settings, Date &amp; time.</summary>
     public DateTimeFormatSettings DateTimeFormat { get; set; } = new();
+
+    /// <summary>Dark, light, or as Windows' app mode says: Settings, General.</summary>
+    public RepoNLauncher.Services.AppTheme Theme { get; set; } = RepoNLauncher.Services.AppTheme.Dark;
 }

@@ -1,0 +1,47 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- The dark palette: Command Prompt's "Campbell" colors on black. Palette.Light.xaml has the same keys, and
+         Services\ThemeService.cs swaps one for the other, so everything refers to these with DynamicResource.
+         Accent is the inverse-video block (a primary button, the open tab); #16C60C, say, gives the green "color 0A" console. -->
+
+    <SolidColorBrush x:Key="Bg.App" Color="#0C0C0C"/>
+    <SolidColorBrush x:Key="Bg.Panel" Color="#0C0C0C"/>
+    <SolidColorBrush x:Key="Bg.PanelAlt" Color="#141414"/>
+    <SolidColorBrush x:Key="Bg.Elevated" Color="#0C0C0C"/>
+    <SolidColorBrush x:Key="Bg.Hover" Color="#262626"/>
+    <!-- The deepest background: text boxes, consoles, the phone screen's frame -->
+    <SolidColorBrush x:Key="Bg.Console" Color="#000000"/>
+    <SolidColorBrush x:Key="Border.Subtle" Color="#3A3A3A"/>
+    <SolidColorBrush x:Key="Border.Control" Color="#5C5C5C"/>
+    <SolidColorBrush x:Key="Border.Strong" Color="#767676"/>
+    <!-- The line between a list's rows (commits, environment) -->
+    <SolidColorBrush x:Key="Border.Row" Color="#1C1C1C"/>
+    <SolidColorBrush x:Key="Scroll.Thumb" Color="#4A4A4A"/>
+    <SolidColorBrush x:Key="Text.Primary" Color="#CCCCCC"/>
+    <SolidColorBrush x:Key="Text.Secondary" Color="#A0A0A0"/>
+    <SolidColorBrush x:Key="Text.Muted" Color="#767676"/>
+    <!-- Text on the Accent block: a primary button, the selected tab -->
+    <SolidColorBrush x:Key="Text.OnAccent" Color="#0C0C0C"/>
+    <SolidColorBrush x:Key="Accent" Color="#F2F2F2"/>
+    <SolidColorBrush x:Key="Accent.Hover" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="Accent.Pressed" Color="#A0A0A0"/>
+    <SolidColorBrush x:Key="Accent.Muted" Color="#2E2E2E"/>
+    <SolidColorBrush x:Key="Cyan" Color="#61D6D6"/>
+    <SolidColorBrush x:Key="Cyan.Muted" Color="#14313A"/>
+    <SolidColorBrush x:Key="Success" Color="#16C60C"/>
+    <SolidColorBrush x:Key="Warning" Color="#F9F1A5"/>
+    <SolidColorBrush x:Key="Warning.Muted" Color="#3A3020"/>
+    <SolidColorBrush x:Key="Danger" Color="#E74856"/>
+    <SolidColorBrush x:Key="Danger.Hover" Color="#FF6B77"/>
+    <SolidColorBrush x:Key="Danger.Muted" Color="#2C1114"/>
+    <SolidColorBrush x:Key="Danger.Border" Color="#8E1A26"/>
+    <SolidColorBrush x:Key="Danger.BorderSubtle" Color="#5A2E35"/>
+    <!-- Selected text in a run's console: see-through, so the text keeps its own color -->
+    <SolidColorBrush x:Key="Console.Selection" Color="#60CCCCCC"/>
+
+    <!-- A project's kind, in the project list's [Flutter] tags; Node, Python and the rest use Success, Warning and Text.Muted -->
+    <SolidColorBrush x:Key="Kind.Flutter" Color="#3A96DD"/>
+    <SolidColorBrush x:Key="Kind.DotNet" Color="#D670D6"/>
+
+</ResourceDictionary>

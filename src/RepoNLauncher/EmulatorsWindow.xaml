@@ -4,7 +4,7 @@
         xmlns:controls="clr-namespace:RepoNLauncher.Controls"
         Title="Android emulators - Repo'N'Launcher" Width="620" Height="660" MinWidth="500" MinHeight="480"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource Bg.App}"
+        Background="{DynamicResource Bg.App}"
         FontFamily="{StaticResource Font.Mono}">
 
     <DockPanel Margin="24,20,24,18">
