@@ -54,6 +54,8 @@ public partial class MainWindow : Window
             vm.PhoneScreen.PropertyChanged += OnPhoneScreenPropertyChanged;
             vm.SiteBrowser.WindowRequested += request => BrowserWindow.Open(vm.SiteBrowser, request);
             vm.SiteBrowser.ScreenPicked += BrowserWindow.MoveAllTo;
+            vm.SiteBrowser.SettingsRequested += () => OpenSettings(SettingsPage.Browser);
+            vm.SiteBrowser.ClearData = () => BrowserWindow.ClearBrowsingDataAsync(this);
             // A project taken off the dashboard takes its console window with it.
             vm.Projects.CollectionChanged += (_, _) => RunConsoleWindow.CloseRemoved(vm.Projects);
 

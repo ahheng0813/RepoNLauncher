@@ -5,7 +5,7 @@ using RepoNLauncher.ViewModels;
 namespace RepoNLauncher;
 
 /// <summary>The Settings tabs, in their order.</summary>
-public enum SettingsPage { DateAndTime, General, Emulators, Updates, About }
+public enum SettingsPage { DateAndTime, General, Browser, Emulators, Updates, About }
 
 /// <summary>
 /// The app's settings, its version and updates, and where it comes from. Changes apply as they're made, so there's

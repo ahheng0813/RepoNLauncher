@@ -59,9 +59,58 @@ public partial class SiteBrowserViewModel : ObservableObject
     /// <summary>Raised when another screen is picked, so the browser windows open now move to it.</summary>
     public event Action<string?>? ScreenPicked;
 
-    public SiteBrowserViewModel(string? screen, bool inDefaultBrowser, IEnumerable<SavedSite> savedSites,
-        Action<string?, bool> save, Action<IReadOnlyList<SavedSite>> saveSites)
+    /// <summary>Settings: browser windows opened from now on keep nothing on this PC (InPrivate).</summary>
+    [ObservableProperty] private bool _isIncognito;
+
+    private readonly Action<bool> _saveIncognito;
+
+    partial void OnIsIncognitoChanged(bool value) => _saveIncognito(value);
+
+    /// <summary>Settings: where what's typed in the address is searched for, when it isn't an address.</summary>
+    [ObservableProperty] private SearchEngine _searchEngine;
+
+    public IReadOnlyList<SearchEngine> SearchEngines { get; } = Enum.GetValues<SearchEngine>();
+
+    /// <summary>Saves the search engine; set by the dashboard, which keeps the settings.</summary>
+    public Action<SearchEngine>? SaveSearchEngine { get; init; }
+
+    partial void OnSearchEngineChanged(SearchEngine value) => SaveSearchEngine?.Invoke(value);
+
+    /// <summary>The ad blocker every browser window uses.</summary>
+    public required AdBlockerViewModel AdBlocker { get; init; }
+
+    /// <summary>Raised to open Settings at the browser's page, from a browser window's ad blocker.</summary>
+    public event Action? SettingsRequested;
+
+    public void OpenSettings() => SettingsRequested?.Invoke();
+
+    /// <summary>Clears what the browser has kept on this PC; the dashboard sets it, as it takes a window to do.</summary>
+    public Func<Task>? ClearData { get; set; }
+
+    /// <summary>How clearing the browsing data went.</summary>
+    [ObservableProperty] private string? _clearStatus;
+
+    [RelayCommand]
+    private async Task ClearBrowsingDataAsync()
     {
+        if (ClearData == null) return;
+        ClearStatus = "Clearing…";
+        try
+        {
+            await ClearData();
+            ClearStatus = $"Cleared at {DateTimeDisplay.Time(DateTime.Now)}.";
+        }
+        catch (Exception e)
+        {
+            ClearStatus = $"It couldn't be cleared: {e.Message}";
+        }
+    }
+
+    public SiteBrowserViewModel(string? screen, bool inDefaultBrowser, IEnumerable<SavedSite> savedSites,
+        Action<string?, bool> save, Action<IReadOnlyList<SavedSite>> saveSites, bool incognito, Action<bool> saveIncognito)
+    {
+        _isIncognito = incognito;
+        _saveIncognito = saveIncognito;
         _screen = screen;
         _inDefaultBrowser = inDefaultBrowser;
         _save = save;

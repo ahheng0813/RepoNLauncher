@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:RepoNLauncher.Controls"
         xmlns:services="clr-namespace:RepoNLauncher.Services"
+        xmlns:conv="clr-namespace:RepoNLauncher.Converters"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         Title="Repo'N'Launcher" Height="800" Width="1200"
         WindowStartupLocation="Manual"
@@ -42,6 +43,35 @@
             <MenuItem Header="Edit…" Click="SiteMenuEdit_Click"/>
             <MenuItem Header="Remove" Click="SiteMenuRemove_Click"/>
         </ContextMenu>
+
+        <conv:EnumEqualsConverter x:Key="EnumEquals"/>
+
+        <!-- The ad blocker's shield: the shield, with how many it blocked on the page beside it -->
+        <Style x:Key="ShieldButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="Transparent" Padding="7,5">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ChoiceNote" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,2,0,0"/>
+        </Style>
 
         <Style x:Key="FieldLabel" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
             <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
@@ -87,6 +117,23 @@
                                 ToolTip="Full screen (F11)" AutomationProperties.Name="Full screen" Click="FullScreen_Click"/>
                     </StackPanel>
 
+                    <!-- The ad blocker: lit while it blocks on the page, with how many it has blocked; opens its options -->
+                    <Button x:Name="ShieldButton" DockPanel.Dock="Right" Style="{StaticResource ShieldButton}" Margin="0,0,2,0"
+                            AutomationProperties.Name="Ad blocker" Click="Shield_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="ShieldGlyph" Text="&#xEA18;" FontFamily="Segoe MDL2 Assets" FontSize="13"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock x:Name="ShieldCount" FontSize="11" Margin="5,0,0,0" VerticalAlignment="Center"
+                                       Visibility="Collapsed"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Incognito: this window keeps nothing on this PC -->
+                    <TextBlock x:Name="IncognitoBadge" DockPanel.Dock="Right" Text="&#xED1A;" FontFamily="Segoe MDL2 Assets" FontSize="13"
+                               Foreground="{StaticResource Text.Secondary}" VerticalAlignment="Center" Margin="4,0,8,0"
+                               Visibility="Collapsed" ToolTip="Incognito: this window keeps no history, cookies or sign-ins on this PC"
+                               AutomationProperties.Name="Incognito"/>
+
                     <!-- Saves the page (or edits it, once saved): lit while the page shown is a saved site -->
                     <Button x:Name="StarButton" DockPanel.Dock="Right" Content="&#xE734;" Style="{StaticResource Button.Ghost}"
                             Margin="0,0,6,0" IsEnabled="False" ToolTip="Save this site (Ctrl+D)"
@@ -94,7 +141,7 @@
 
                     <!-- The page's address; type another and press Enter to go there -->
                     <TextBox x:Name="Address" Margin="8,0,4,0" FontFamily="{StaticResource Font.Mono}" VerticalContentAlignment="Center"
-                             AutomationProperties.Name="Address" KeyDown="Address_KeyDown"
+                             AutomationProperties.Name="Address or search" KeyDown="Address_KeyDown"
                              GotKeyboardFocus="Address_GotKeyboardFocus"/>
                 </DockPanel>
 
@@ -144,7 +191,7 @@
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24" MaxWidth="760">
                 <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="34" Foreground="{StaticResource Text.Muted}"
                            HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                <TextBlock Text="Type an address above, such as localhost:3000, and press Enter."
+                <TextBlock Text="Type an address above, such as localhost:3000, or what to search for, and press Enter."
                            Foreground="{StaticResource Text.Secondary}" TextWrapping="Wrap" TextAlignment="Center"/>
                 <TextBlock Text="On a page, ☆ (Ctrl+D) saves it, to open it again from here or the bar under the address."
                            Foreground="{StaticResource Text.Muted}" FontSize="12" TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0"/>
@@ -207,6 +254,54 @@
                                 ToolTip="Take this site off the saved sites"/>
                         <Button Content="Done" Style="{StaticResource Button.Primary}" Margin="0" Click="DoneSite_Click"/>
                     </StackPanel>
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- The ad blocker's options, under the shield: on or off, how strong, and pausing it on the page's site -->
+        <Popup x:Name="ShieldPopup" Placement="Custom" AllowsTransparency="True" StaysOpen="False"
+               PlacementTarget="{Binding ElementName=ShieldButton}">
+            <Border Background="{StaticResource Bg.Elevated}" BorderBrush="{StaticResource Border.Strong}"
+                    BorderThickness="1" Padding="14,12" Width="380" DataContext="{Binding AdBlocker}">
+                <StackPanel>
+                    <TextBlock Text="AD BLOCKER" Foreground="{StaticResource Text.Secondary}" FontWeight="SemiBold" FontSize="12"
+                               Margin="0,0,0,10"/>
+                    <CheckBox Content="Block ads" IsChecked="{Binding IsEnabled}" Click="ShieldOption_Click"/>
+                    <TextBlock x:Name="ShieldStatus" Foreground="{StaticResource Text.Secondary}" FontSize="12" TextWrapping="Wrap"
+                               Margin="0,8,0,0"/>
+
+                    <StackPanel Margin="0,12,0,0" IsEnabled="{Binding IsEnabled}">
+                        <TextBlock Text="Strength" Style="{StaticResource FieldLabel}"/>
+                        <RadioButton GroupName="ShieldLevel" Click="ShieldOption_Click" Margin="0,2,0,6"
+                                     IsChecked="{Binding Level, Converter={StaticResource EnumEquals}, ConverterParameter=Light}" AutomationProperties.Name="Light">
+                            <StackPanel>
+                                <TextBlock Text="Light"/>
+                                <TextBlock Style="{StaticResource ChoiceNote}" Text="Ad servers only. Pages keep their layout, with gaps where ads were."/>
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton GroupName="ShieldLevel" Click="ShieldOption_Click" Margin="0,0,0,6"
+                                     IsChecked="{Binding Level, Converter={StaticResource EnumEquals}, ConverterParameter=Balanced}" AutomationProperties.Name="Balanced">
+                            <StackPanel>
+                                <TextBlock Text="Balanced"/>
+                                <TextBlock Style="{StaticResource ChoiceNote}" Text="Ads and trackers, with the spaces left for ads hidden."/>
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton GroupName="ShieldLevel" Click="ShieldOption_Click"
+                                     IsChecked="{Binding Level, Converter={StaticResource EnumEquals}, ConverterParameter=Strict}" AutomationProperties.Name="Strict">
+                            <StackPanel>
+                                <TextBlock Text="Strict"/>
+                                <TextBlock Style="{StaticResource ChoiceNote}"
+                                           Text="Also cookie banners, social widgets, pop-ups opened without a click, and more servers. Can break some sites."/>
+                            </StackPanel>
+                        </RadioButton>
+                    </StackPanel>
+
+                    <DockPanel Margin="0,14,0,0">
+                        <Button x:Name="PauseButton" DockPanel.Dock="Left" Style="{StaticResource Button.Secondary}" Margin="0"
+                                Click="Pause_Click"/>
+                        <Button Content="Settings…" Style="{StaticResource Button.Secondary}" Margin="0" HorizontalAlignment="Right"
+                                Click="ShieldSettings_Click"/>
+                    </DockPanel>
                 </StackPanel>
             </Border>
         </Popup>

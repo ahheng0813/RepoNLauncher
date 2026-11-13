@@ -23,6 +23,20 @@ public class DashboardConfig
     /// <summary>The sites saved in the dashboard browser, in the order its bar shows them.</summary>
     public List<SavedSite> SavedSites { get; set; } = new();
 
+    /// <summary>
+    /// The dashboard browser keeps nothing on this PC (InPrivate): history, cookies, sign-ins, site storage and the cache
+    /// are forgotten once every browser window is closed. Off, they're kept, so sites stay signed in.
+    /// </summary>
+    public bool BrowserIncognito { get; set; }
+
+    /// <summary>Where the dashboard browser searches for what's typed in its address that isn't an address.</summary>
+    public RepoNLauncher.Services.SearchEngine BrowserSearchEngine { get; set; } = RepoNLauncher.Services.SearchEngine.Google;
+
+    /// <summary>The dashboard browser blocks ads, as strongly as <see cref="AdBlockLevel"/> says.</summary>
+    public bool AdBlockEnabled { get; set; } = true;
+
+    public RepoNLauncher.Services.AdBlockLevel AdBlockLevel { get; set; } = RepoNLauncher.Services.AdBlockLevel.Balanced;
+
     /// <summary>The folder Clone from GitHub last cloned into; null until it has.</summary>
     public string? CloneFolder { get; set; }
 

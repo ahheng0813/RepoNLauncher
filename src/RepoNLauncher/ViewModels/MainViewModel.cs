@@ -112,7 +112,25 @@ public partial class MainViewModel : ObservableObject
         DateTimeDisplay.Apply(_config.DateTimeFormat);
         _config.SavedSites ??= new List<SavedSite>();
         SiteBrowser = new SiteBrowserViewModel(_config.SiteScreen, _config.OpenSitesInDefaultBrowser, _config.SavedSites,
-            SaveSiteTarget, SaveSavedSites);
+            SaveSiteTarget, SaveSavedSites, _config.BrowserIncognito, incognito =>
+            {
+                _config.BrowserIncognito = incognito;
+                PersistConfig();
+            })
+        {
+            SearchEngine = Enum.IsDefined(_config.BrowserSearchEngine) ? _config.BrowserSearchEngine : SearchEngine.Google,
+            SaveSearchEngine = engine =>
+            {
+                _config.BrowserSearchEngine = engine;
+                PersistConfig();
+            },
+            AdBlocker = new AdBlockerViewModel(_config.AdBlockEnabled, _config.AdBlockLevel, (enabled, level) =>
+            {
+                _config.AdBlockEnabled = enabled;
+                _config.AdBlockLevel = level;
+                PersistConfig();
+            }),
+        };
         Settings = new SettingsViewModel(_config.DateTimeFormat, SaveDateTimeFormat, Updates, GitHub, OpenWithApps, Emulators, SiteBrowser);
         CloneRepos = new CloneReposViewModel(GitHub, git, IsOnDashboard, paths => AddProjectsFrom("Clone from GitHub", paths),
             () => _config.Projects.Select(p => p.Path), DefaultCloneFolder(), SaveCloneFolder);

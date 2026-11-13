@@ -12,6 +12,8 @@
         <conv:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibility"/>
         <conv:NullToVisibilityConverter x:Key="NullToVisibility"/>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+        <conv:InverseBooleanConverter x:Key="InverseBoolean"/>
+        <conv:EnumEqualsConverter x:Key="EnumEquals"/>
 
         <Style x:Key="SectionLabel" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
             <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
@@ -220,19 +222,6 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Where a project's site opens: the same choice as the Run tab's Open in -->
-                        <Border Style="{StaticResource Group}" DataContext="{Binding SiteBrowser}">
-                            <StackPanel>
-                                <TextBlock Text="SITES" Style="{StaticResource SectionLabel}"/>
-                                <TextBlock Text="Open a project's local site (http://localhost:…) in" Foreground="{StaticResource Text.Secondary}"
-                                           TextWrapping="Wrap" Margin="0,0,0,8"/>
-                                <ComboBox Height="32" ItemsSource="{Binding Targets}" SelectedItem="{Binding SelectedTarget}"
-                                          DropDownOpened="SiteTargets_DropDownOpened" AutomationProperties.Name="Open sites in"/>
-                                <TextBlock Style="{StaticResource Note}" Margin="0,8,0,0"
-                                           Text="The dashboard browser is a window of the dashboard's own. The default browser is the one Windows opens links in (Windows' Settings &gt; Apps &gt; Default apps). It's the same as Open in, in a project's Run tab; right-click a site's address there to open it the other way, just that once."/>
-                            </StackPanel>
-                        </Border>
-
                         <Border Style="{StaticResource Group}">
                             <StackPanel>
                                 <TextBlock Text="OPEN-IN APPS" Style="{StaticResource SectionLabel}"/>
@@ -294,6 +283,149 @@
                                     <TextBlock Foreground="{StaticResource Text.Secondary}" VerticalAlignment="Center" TextWrapping="Wrap"
                                                Text="Removes the app and everything it keeps on this PC. Your projects' own folders stay as they are."/>
                                 </DockPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- The dashboard browser: where sites open, what it keeps, and its ad blocker -->
+            <TabItem Header="Browser">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="0,0,6,0" DataContext="{Binding SiteBrowser}">
+                        <!-- Where a project's site opens: the same choice as the Run tab's Open in -->
+                        <Border Style="{StaticResource Group}">
+                            <StackPanel>
+                                <TextBlock Text="SITES" Style="{StaticResource SectionLabel}"/>
+                                <TextBlock Text="Open a project's local site (http://localhost:…) in" Foreground="{StaticResource Text.Secondary}"
+                                           TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                <ComboBox Height="32" ItemsSource="{Binding Targets}" SelectedItem="{Binding SelectedTarget}"
+                                          DropDownOpened="SiteTargets_DropDownOpened" AutomationProperties.Name="Open sites in"/>
+                                <TextBlock Style="{StaticResource Note}" Margin="0,8,0,0"
+                                           Text="The dashboard browser is a window of the dashboard's own. The default browser is the one Windows opens links in (Windows' Settings &gt; Apps &gt; Default apps). It's the same as Open in, in a project's Run tab; right-click a site's address there to open it the other way, just that once."/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource Group}">
+                            <StackPanel>
+                                <TextBlock Text="SEARCH" Style="{StaticResource SectionLabel}"/>
+                                <DockPanel>
+                                    <ComboBox DockPanel.Dock="Right" Height="32" Width="170" ItemsSource="{Binding SearchEngines}"
+                                              SelectedItem="{Binding SearchEngine}" AutomationProperties.Name="Search with"/>
+                                    <TextBlock Text="Search what's typed in the address with" Foreground="{StaticResource Text.Secondary}"
+                                               VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,12,0"/>
+                                </DockPanel>
+                                <TextBlock Style="{StaticResource Note}" Margin="0,8,0,0"
+                                           Text="What looks like an address goes there: localhost:3000, 192.168.1.5, example.com, or anything starting https://. Everything else, such as react hooks or next.js, is searched for."/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource Group}">
+                            <StackPanel>
+                                <TextBlock Text="BROWSING DATA" Style="{StaticResource SectionLabel}"/>
+                                <RadioButton GroupName="BrowsingData" Margin="0,0,0,8"
+                                             IsChecked="{Binding IsIncognito, Converter={StaticResource InverseBoolean}}" AutomationProperties.Name="Remember">
+                                    <StackPanel>
+                                        <TextBlock Text="Remember"/>
+                                        <TextBlock Style="{StaticResource Note}" Margin="0,2,0,0"
+                                                   Text="History, cookies and sign-ins, form entries, site storage and the cache are kept on this PC, so sites stay signed in."/>
+                                    </StackPanel>
+                                </RadioButton>
+                                <RadioButton GroupName="BrowsingData" IsChecked="{Binding IsIncognito}" AutomationProperties.Name="Incognito">
+                                    <StackPanel>
+                                        <TextBlock Text="Incognito"/>
+                                        <TextBlock Style="{StaticResource Note}" Margin="0,2,0,0"
+                                                   Text="Nothing is kept on this PC: all of it is forgotten once every browser window is closed."/>
+                                    </StackPanel>
+                                </RadioButton>
+                                <TextBlock Style="{StaticResource Note}" Margin="0,10,0,0"
+                                           Text="It applies to browser windows opened from now on; open ones keep theirs until they're closed."/>
+                                <DockPanel Margin="0,12,0,0">
+                                    <Button DockPanel.Dock="Right" Content="Clear browsing data" Style="{StaticResource Button.Secondary}"
+                                            Margin="8,0,0,0" VerticalAlignment="Top" Command="{Binding ClearBrowsingDataCommand}"/>
+                                    <StackPanel>
+                                        <TextBlock Foreground="{StaticResource Text.Secondary}" TextWrapping="Wrap"
+                                                   Text="Clears everything it has kept so far, which signs you out of sites."/>
+                                        <TextBlock Text="{Binding ClearStatus}" Style="{StaticResource Note}" Margin="0,4,0,0"
+                                                   Visibility="{Binding ClearStatus, Converter={StaticResource StringNotEmptyToVisibility}}"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource Group}" DataContext="{Binding AdBlocker}">
+                            <StackPanel>
+                                <TextBlock Text="AD BLOCKER" Style="{StaticResource SectionLabel}"/>
+                                <CheckBox Content="Block ads in the dashboard browser" IsChecked="{Binding IsEnabled}"/>
+
+                                <StackPanel Margin="0,12,0,0" IsEnabled="{Binding IsEnabled}">
+                                    <TextBlock Text="Strength" Foreground="{StaticResource Text.Secondary}" FontSize="12" Margin="0,0,0,6"/>
+                                    <RadioButton GroupName="AdBlockLevel" Margin="0,0,0,8"
+                                                 IsChecked="{Binding Level, Converter={StaticResource EnumEquals}, ConverterParameter=Light}" AutomationProperties.Name="Light">
+                                        <StackPanel>
+                                            <TextBlock Text="Light"/>
+                                            <TextBlock Style="{StaticResource Note}" Margin="0,2,0,0"
+                                                       Text="Ad servers only (EasyList's). Pages keep their layout, with gaps where ads were."/>
+                                        </StackPanel>
+                                    </RadioButton>
+                                    <RadioButton GroupName="AdBlockLevel" Margin="0,0,0,8"
+                                                 IsChecked="{Binding Level, Converter={StaticResource EnumEquals}, ConverterParameter=Balanced}" AutomationProperties.Name="Balanced">
+                                        <StackPanel>
+                                            <TextBlock Text="Balanced"/>
+                                            <TextBlock Style="{StaticResource Note}" Margin="0,2,0,0"
+                                                       Text="Ads and trackers (EasyList and EasyPrivacy), with the spaces left for ads hidden."/>
+                                        </StackPanel>
+                                    </RadioButton>
+                                    <RadioButton GroupName="AdBlockLevel"
+                                                 IsChecked="{Binding Level, Converter={StaticResource EnumEquals}, ConverterParameter=Strict}" AutomationProperties.Name="Strict">
+                                        <StackPanel>
+                                            <TextBlock Text="Strict"/>
+                                            <TextBlock Style="{StaticResource Note}" Margin="0,2,0,0"
+                                                       Text="Also cookie banners and social widgets (Fanboy's Annoyance list), more ad and tracker servers (Peter Lowe's list), and pop-ups a page opens without a click. Can break some sites."/>
+                                        </StackPanel>
+                                    </RadioButton>
+                                </StackPanel>
+
+                                <TextBlock Style="{StaticResource Note}" Margin="0,12,0,0"
+                                           Text="Sites on this PC or its network, such as localhost:3000, aren't filtered: they're your own projects. To let a site show its ads until the app closes, press the shield beside a browser window's address and Pause on it."/>
+
+                                <!-- The sites it's paused on, until the app closes -->
+                                <StackPanel Margin="0,12,0,0">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding PausedSites.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                    <TextBlock Text="Paused until the app closes on" Foreground="{StaticResource Text.Secondary}" FontSize="12"
+                                               Margin="0,0,0,6"/>
+                                    <ItemsControl ItemsSource="{Binding PausedSites}" Focusable="False">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <DockPanel Margin="0,0,0,4">
+                                                    <Button DockPanel.Dock="Right" Content="Resume" Style="{StaticResource Button.Secondary}" Margin="8,0,0,0"
+                                                            Command="{Binding DataContext.ResumeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                            CommandParameter="{Binding}"/>
+                                                    <TextBlock Text="{Binding}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                </DockPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+
+                                <DockPanel Margin="0,14,0,0">
+                                    <Button DockPanel.Dock="Right" Content="Update now" Style="{StaticResource Button.Secondary}"
+                                            Margin="8,0,0,0" VerticalAlignment="Top" Command="{Binding UpdateListsCommand}"/>
+                                    <StackPanel>
+                                        <TextBlock Text="Filter lists" Foreground="{StaticResource Text.Secondary}" FontSize="12"/>
+                                        <TextBlock Text="{Binding ListsStatus}" Style="{StaticResource Note}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </DockPanel>
+                                <TextBlock Style="{StaticResource Note}" Margin="0,8,0,0"
+                                           Text="Downloaded from easylist.to and pgl.yoyo.org, and again once they're 4 days old."/>
                             </StackPanel>
                         </Border>
                     </StackPanel>

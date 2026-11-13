@@ -2,6 +2,7 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
@@ -67,14 +68,40 @@ public partial class BrowserWindow : Window
     // Where the popup lines up with what it opened under: its right edge (the star, at the window's right) or its left.
     private bool _popupAlignRight;
 
+    // Settings' Incognito as the window opened: it keeps nothing on this PC. Its browser can't change that once made.
+    private readonly bool _incognito;
+
+    private readonly AdBlockerViewModel _adBlock;
+
+    // The page shown (or being gone to): its host, whether the ad blocker blocks on it, and how many it has blocked there.
+    private string _pageHost = string.Empty;
+    private bool _filterPage;
+    private int _blocked;
+
+    // Requests are only handed to the window to check while the ad blocker is on.
+    private bool _checkingRequests;
+
+    // Hiding the page's ads: the CSS a script added for each new page puts on it, that script once it's added, and whether
+    // the page started loading before it was, so it's run on the page once that has loaded.
+    private string? _hideCss;
+    private string? _hideScriptId;
+    private bool _hideLate;
+    private Task _hiding = Task.CompletedTask;
+
+    // Names what the hiding script leaves on the page, so pages can't tell it by name (it's new each run).
+    private static readonly string HideKey = "_" + Guid.NewGuid().ToString("N")[..10];
+
     private BrowserWindow(SiteBrowserViewModel sites, string? projectName, string? url)
     {
         InitializeComponent();
         _sites = sites;
+        _adBlock = sites.AdBlocker;
+        _incognito = sites.IsIncognito;
         DataContext = sites;
         _label = projectName ?? "Browser";
         _url = url ?? string.Empty;
-        Title = $"{_label} - Repo'N'Launcher";
+        Title = WindowTitle(null);
+        IncognitoBadge.Visibility = _incognito ? Visibility.Visible : Visibility.Collapsed;
         Address.Text = _url;
         if (url != null)
         {
@@ -87,17 +114,13 @@ public partial class BrowserWindow : Window
             Web.Visibility = Visibility.Hidden;
         }
         _sites.SavedSites.CollectionChanged += OnSavedSitesChanged;
+        _adBlock.Changed += OnAdBlockChanged;
 
         // Placed by hand: Bottom placement follows the pen-tablet "right-handed" setting, which flips popups to the left.
         // The callback works in device pixels.
-        SitePopup.CustomPopupPlacementCallback = (popupSize, targetSize, _) =>
-        {
-            var dpi = VisualTreeHelper.GetDpi(this);
-            return [new CustomPopupPlacement(
-                new Point(_popupAlignRight ? targetSize.Width - popupSize.Width : 0, targetSize.Height + 4 * dpi.DpiScaleY),
-                PopupPrimaryAxis.Horizontal)];
-        };
-        Web.CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = WebViewData };
+        SitePopup.CustomPopupPlacementCallback = (popupSize, targetSize, _) => PlaceUnder(popupSize, targetSize, _popupAlignRight);
+        ShieldPopup.CustomPopupPlacementCallback = (popupSize, targetSize, _) => PlaceUnder(popupSize, targetSize, alignRight: true);
+        UpdateShield();
         _retry.Tick += (_, _) =>
         {
             _retry.Stop();
@@ -194,11 +217,51 @@ public partial class BrowserWindow : Window
         }
     }
 
+    private CustomPopupPlacement[] PlaceUnder(System.Windows.Size popupSize, System.Windows.Size targetSize, bool alignRight)
+    {
+        var dpi = VisualTreeHelper.GetDpi(this);
+        return [new CustomPopupPlacement(
+            new Point(alignRight ? targetSize.Width - popupSize.Width : 0, targetSize.Height + 4 * dpi.DpiScaleY),
+            PopupPrimaryAxis.Horizontal)];
+    }
+
+    private string WindowTitle(string? pageTitle)
+    {
+        var label = _incognito ? $"{_label} (Incognito)" : _label;
+        return string.IsNullOrWhiteSpace(pageTitle) ? $"{label} - Repo'N'Launcher" : $"{pageTitle} - {label} - Repo'N'Launcher";
+    }
+
+    // Every browser window's environment is made the same way, as Edge needs for windows sharing a data folder.
+    private static Task<CoreWebView2Environment> CreateEnvironmentAsync() => CoreWebView2Environment.CreateAsync(null, WebViewData);
+
+    /// <summary>
+    /// Clears what the dashboard browser has kept on this PC: history, cookies and sign-ins, form entries, site storage
+    /// and the cache. A hidden browser in <paramref name="host"/> does it, so it works with no browser window open.
+    /// </summary>
+    public static async Task ClearBrowsingDataAsync(Window host)
+    {
+        var environment = await CreateEnvironmentAsync();
+        var controller = await environment.CreateCoreWebView2ControllerAsync(new WindowInteropHelper(host).Handle);
+        try
+        {
+            controller.IsVisible = false;
+            await controller.CoreWebView2.Profile.ClearBrowsingDataAsync();
+        }
+        finally
+        {
+            controller.Close();
+        }
+    }
+
     private async Task StartAsync()
     {
         try
         {
-            await Web.EnsureCoreWebView2Async();
+            // Incognito keeps the window's browsing data in memory, so none of it reaches the data folder.
+            var environment = await CreateEnvironmentAsync();
+            var options = environment.CreateCoreWebView2ControllerOptions();
+            options.IsInPrivateModeEnabled = _incognito;
+            await Web.EnsureCoreWebView2Async(environment, options);
         }
         catch (Exception e) when (e is WebView2RuntimeNotFoundException or ExternalException or IOException or UnauthorizedAccessException
                                       or ArgumentException or InvalidOperationException)
@@ -218,9 +281,7 @@ public partial class BrowserWindow : Window
 
         if (_closed) return;
         var web = Web.CoreWebView2;
-        web.DocumentTitleChanged += (_, _) => Title = string.IsNullOrWhiteSpace(web.DocumentTitle)
-            ? $"{_label} - Repo'N'Launcher"
-            : $"{web.DocumentTitle} - {_label} - Repo'N'Launcher";
+        web.DocumentTitleChanged += (_, _) => Title = WindowTitle(web.DocumentTitle);
         web.SourceChanged += (_, _) =>
         {
             if (!Address.IsKeyboardFocusWithin) Address.Text = web.Source;
@@ -231,8 +292,16 @@ public partial class BrowserWindow : Window
             BackButton.IsEnabled = web.CanGoBack;
             ForwardButton.IsEnabled = web.CanGoForward;
         };
-        web.NavigationStarting += (_, _) => SetLoading(true);
+        web.NavigationStarting += OnNavigationStarting;
         web.NavigationCompleted += OnNavigationCompleted;
+        web.WebResourceRequested += OnWebResourceRequested;
+        web.NewWindowRequested += OnNewWindowRequested;
+        web.ContentLoading += (_, _) => _hideLate = _hideCss != null && _hideScriptId == null;
+        web.DOMContentLoaded += (_, _) =>
+        {
+            if (_hideLate && _hideCss != null) _ = RunQuietlyAsync(web.ExecuteScriptAsync(HideScript(_hideCss)));
+            _hideLate = false;
+        };
         // The page's own full screen, such as a video's, takes the window's with it.
         web.ContainsFullScreenElementChanged += (_, _) => SetFullScreen(web.ContainsFullScreenElement);
         // A dev server's HTTPS certificate is its own, which Edge doesn't trust unless it was set up to (ASP.NET's dev-certs,
@@ -243,8 +312,226 @@ public partial class BrowserWindow : Window
                 e.Action = CoreWebView2ServerCertificateErrorAction.AlwaysAllow;
         };
 
+        // The ad blocker's rules, read once for every window (on another thread, while this one's browser started), so
+        // the first page is filtered too.
+        await _adBlock.WhenReadyAsync();
+        if (_closed) return;
+        UpdateRequestChecking();
+
         // The run's site it was opened with, or an address typed or picked while it was starting.
         if (_url.Length > 0 && !TryNavigate(_url)) ShowStartPage();
+    }
+
+    // ---- Ad blocker ----
+
+    private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
+    {
+        SetLoading(true);
+        // A redirect is still the page asked for, so what was blocked on the way counts towards it.
+        if (!e.IsRedirected) _blocked = 0;
+        _pageHost = Uri.TryCreate(e.Uri, UriKind.Absolute, out var uri) ? uri.Host.ToLowerInvariant() : string.Empty;
+        UpdatePage();
+    }
+
+    // The page's site changed, or the ad blocker did: whether it blocks on the page, what it hides there, and the shield.
+    private void UpdatePage()
+    {
+        _filterPage = _adBlock.Filters(_pageHost);
+        _hiding = UpdateHidingAsync();
+        UpdateShield();
+    }
+
+    private void OnAdBlockChanged()
+    {
+        if (_closed) return;
+        UpdateRequestChecking();
+        UpdatePage();
+    }
+
+    private void UpdateRequestChecking()
+    {
+        var web = Web.CoreWebView2;
+        if (web == null || _adBlock.IsEnabled == _checkingRequests) return;
+        _checkingRequests = _adBlock.IsEnabled;
+        if (_checkingRequests) web.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
+        else web.RemoveWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
+    }
+
+    private void OnWebResourceRequested(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
+    {
+        if (!_filterPage) return;
+        var url = e.Request.Uri;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https" or "ws" or "wss")) return;
+
+        var host = uri.Host.ToLowerInvariant();
+        var context = e.ResourceContext;
+        // The page itself: an address typed or picked shows, even an ad server's.
+        if (context == CoreWebView2WebResourceContext.Document && host == _pageHost) return;
+        if (!_adBlock.Engine.ShouldBlock(url, host, _pageHost, TypeOf(context))) return;
+
+        e.Response = Web.CoreWebView2.Environment.CreateWebResourceResponse(null, 403, "Blocked by the ad blocker", string.Empty);
+        _blocked++;
+        UpdateShield();
+    }
+
+    private static AdRequestType TypeOf(CoreWebView2WebResourceContext context) => context switch
+    {
+        CoreWebView2WebResourceContext.Document => AdRequestType.Subdocument,
+        CoreWebView2WebResourceContext.Script => AdRequestType.Script,
+        CoreWebView2WebResourceContext.Image => AdRequestType.Image,
+        CoreWebView2WebResourceContext.Stylesheet => AdRequestType.Stylesheet,
+        CoreWebView2WebResourceContext.Media => AdRequestType.Media,
+        CoreWebView2WebResourceContext.Font => AdRequestType.Font,
+        CoreWebView2WebResourceContext.XmlHttpRequest or CoreWebView2WebResourceContext.Fetch
+            or CoreWebView2WebResourceContext.EventSource => AdRequestType.XmlHttpRequest,
+        CoreWebView2WebResourceContext.Websocket => AdRequestType.WebSocket,
+        CoreWebView2WebResourceContext.Ping or CoreWebView2WebResourceContext.CspViolationReport => AdRequestType.Ping,
+        _ => AdRequestType.Other,
+    };
+
+    // Pop-ups the lists know as ads, and on Strict any the page opens without a click.
+    private void OnNewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)
+    {
+        if (!_filterPage) return;
+        var unasked = _adBlock.Level == AdBlockLevel.Strict && !e.IsUserInitiated;
+        var listed = Uri.TryCreate(e.Uri, UriKind.Absolute, out var uri)
+                     && _adBlock.Engine.ShouldBlockPopup(e.Uri, uri.Host.ToLowerInvariant(), _pageHost);
+        if (!unasked && !listed) return;
+
+        e.Handled = true;
+        _blocked++;
+        UpdateShield();
+    }
+
+    // The CSS for the page's site goes in a script run as each page starts, before its own scripts; it's added again
+    // only when the CSS changes, as the site does. Added after the page has started, it's run once that has loaded.
+    private async Task UpdateHidingAsync()
+    {
+        var web = Web.CoreWebView2;
+        if (web == null) return;
+        var css = _filterPage ? _adBlock.Engine.HidingCss(_pageHost) : null;
+        if (css == _hideCss) return;
+
+        _hideCss = css;
+        if (_hideScriptId != null)
+        {
+            web.RemoveScriptToExecuteOnDocumentCreated(_hideScriptId);
+            _hideScriptId = null;
+        }
+        if (css == null) return;
+
+        string id;
+        try
+        {
+            id = await web.AddScriptToExecuteOnDocumentCreatedAsync(HideScript(css));
+        }
+        catch (Exception e) when (e is InvalidOperationException or ObjectDisposedException or COMException)
+        {
+            return; // closed meanwhile
+        }
+        if (_closed) return;
+        // Another site's CSS was asked for meanwhile: that one's script stands.
+        if (_hideCss != css || _hideScriptId != null) web.RemoveScriptToExecuteOnDocumentCreated(id);
+        else _hideScriptId = id;
+    }
+
+    // Adopted rather than put in a <style>, so a page whose security policy forbids inline styles still gets it, and its
+    // own scripts don't come across it in the page. Only the page itself: an ad in a frame is blocked at its server.
+    private static string HideScript(string css) => $$"""
+        (() => {
+          if (window.top !== window || window['{{HideKey}}']) return;
+          const sheet = new CSSStyleSheet();
+          sheet.replaceSync({{JsonSerializer.Serialize(css)}});
+          Object.defineProperty(window, '{{HideKey}}', { value: true });
+          const adopt = () => {
+            if (!document.adoptedStyleSheets.includes(sheet)) document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+          };
+          adopt();
+          document.addEventListener('DOMContentLoaded', adopt);
+          window.addEventListener('load', adopt);
+        })();
+        """;
+
+    private static async Task RunQuietlyAsync(Task task)
+    {
+        try
+        {
+            await task;
+        }
+        catch (Exception e) when (e is InvalidOperationException or ObjectDisposedException or COMException)
+        {
+            // The window closed, or the page went on to another.
+        }
+    }
+
+    // Lit while it blocks on the page, with how many it has; muted while it's off, paused, or leaving the site alone.
+    private void UpdateShield()
+    {
+        var site = AdBlockerViewModel.SiteOf(_pageHost);
+        var showsPage = _pageHost.Length > 0 && StartPage.Visibility != Visibility.Visible;
+        string status;
+        var lit = false;
+        if (!_adBlock.IsEnabled) status = "Off: pages show their ads.";
+        else if (!showsPage) status = "On.";
+        else if (AdBlockerViewModel.IsLocal(_pageHost)) status = "Not on this PC's own sites, such as your projects' local ones.";
+        else if (_adBlock.IsPaused(_pageHost)) status = $"Paused on {site} until the app closes.";
+        else if (_adBlock.Engine.AllowsPage(_pageHost)) status = $"Not on {site}: the filter lists leave it alone, as blocking breaks it.";
+        else
+        {
+            lit = true;
+            status = _blocked switch
+            {
+                0 => "Nothing blocked on this page.",
+                1 => "1 blocked on this page.",
+                _ => $"{_blocked:N0} blocked on this page.",
+            };
+        }
+
+        ShieldGlyph.Foreground = (Brush)FindResource(lit ? "Accent" : "Text.Muted");
+        ShieldCount.Text = _blocked > 999 ? "999+" : _blocked.ToString();
+        ShieldCount.Foreground = ShieldGlyph.Foreground;
+        ShieldCount.Visibility = lit && _blocked > 0 ? Visibility.Visible : Visibility.Collapsed;
+        ShieldButton.ToolTip = $"Ad blocker: {status}";
+        AutomationProperties.SetHelpText(ShieldButton, status);
+
+        ShieldStatus.Text = status;
+        var canPause = _adBlock.IsEnabled && showsPage && !AdBlockerViewModel.IsLocal(_pageHost) && !_adBlock.Engine.AllowsPage(_pageHost);
+        PauseButton.Visibility = canPause ? Visibility.Visible : Visibility.Collapsed;
+        PauseButton.Content = _adBlock.IsPaused(_pageHost) ? $"Resume on {site}" : $"Pause on {site}";
+        PauseButton.ToolTip = _adBlock.IsPaused(_pageHost)
+            ? "Block ads on this site again"
+            : "Let this site show its ads until the app closes, in every browser window";
+    }
+
+    private void Shield_Click(object sender, RoutedEventArgs e)
+    {
+        if (Toolbar.Visibility != Visibility.Visible) RevealToolbar();
+        UpdateShield();
+        ShieldPopup.IsOpen = !ShieldPopup.IsOpen;
+    }
+
+    // Turned on or off, or made stronger or weaker, here: the page is shown again as it now blocks.
+    private async void ShieldOption_Click(object sender, RoutedEventArgs e) => await ReloadForAdBlockAsync();
+
+    private async void Pause_Click(object sender, RoutedEventArgs e)
+    {
+        _adBlock.SetPaused(_pageHost, !_adBlock.IsPaused(_pageHost));
+        await ReloadForAdBlockAsync();
+    }
+
+    private async Task ReloadForAdBlockAsync()
+    {
+        // The rules a new strength reads may still be on their way; the page waits for them, and the hiding script it gets.
+        await _adBlock.WhenReadyAsync();
+        await _hiding;
+        if (_closed || CurrentPage() == null) return;
+        Web.CoreWebView2?.Reload();
+    }
+
+    private void ShieldSettings_Click(object sender, RoutedEventArgs e)
+    {
+        ShieldPopup.IsOpen = false;
+        _sites.OpenSettings();
     }
 
     /// <summary>Shows the run's site, waiting a while for its server to answer.</summary>
@@ -306,6 +593,7 @@ public partial class BrowserWindow : Window
         Web.Visibility = Visibility.Hidden;
         StartPage.Visibility = Visibility.Visible;
         UpdateStar();
+        UpdateShield();
     }
 
     private void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
@@ -328,6 +616,7 @@ public partial class BrowserWindow : Window
         Web.Visibility = Visibility.Visible;
         SetLoading(false);
         UpdateStar();
+        UpdateShield();
     }
 
     private void ShowNote(string text)
@@ -395,7 +684,8 @@ public partial class BrowserWindow : Window
 
     private void FullScreen_Click(object sender, RoutedEventArgs e) => SetFullScreen(!_isFullScreen);
 
-    // Typed without a scheme, such as localhost:3000, it's taken as http.
+    // An address goes there (without a scheme, such as localhost:3000, http for this PC's sites and https for others');
+    // anything else is searched for, as Settings says.
     private void Address_KeyDown(object sender, KeyEventArgs e)
     {
         var web = Web.CoreWebView2;
@@ -410,8 +700,7 @@ public partial class BrowserWindow : Window
         {
             var text = Address.Text.Trim();
             if (text.Length == 0) return;
-            if (!text.Contains("://")) text = "http://" + text;
-            if (Browse(text))
+            if (Browse(AddressInput.Resolve(text, _sites.SearchEngine)))
             {
                 if (web != null) Web.Focus();
             }
@@ -608,7 +897,8 @@ public partial class BrowserWindow : Window
             SetFullScreen(!_isFullScreen);
             e.Handled = true;
         }
-        else if (key == Key.Escape && _isFullScreen && !SitePopup.IsOpen && Web.CoreWebView2?.ContainsFullScreenElement != true)
+        else if (key == Key.Escape && _isFullScreen && !SitePopup.IsOpen && !ShieldPopup.IsOpen
+                 && Web.CoreWebView2?.ContainsFullScreenElement != true)
         {
             SetFullScreen(false);
             e.Handled = true;
@@ -661,7 +951,7 @@ public partial class BrowserWindow : Window
 
     private void Toolbar_MouseLeave(object sender, MouseEventArgs e)
     {
-        if (!_isFullScreen || Address.IsKeyboardFocusWithin || SitePopup.IsOpen) return;
+        if (!_isFullScreen || Address.IsKeyboardFocusWithin || SitePopup.IsOpen || ShieldPopup.IsOpen) return;
         Toolbar.Visibility = Visibility.Collapsed;
         RevealStrip.Visibility = Visibility.Visible;
     }
@@ -671,6 +961,7 @@ public partial class BrowserWindow : Window
         _closed = true;
         _retry.Stop();
         _sites.SavedSites.CollectionChanged -= OnSavedSitesChanged;
+        _adBlock.Changed -= OnAdBlockChanged;
         Web.Dispose();
         base.OnClosed(e);
     }
