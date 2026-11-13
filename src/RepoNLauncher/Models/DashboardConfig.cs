@@ -20,6 +20,9 @@ public class DashboardConfig
     /// <summary>Sites open in the PC's default browser instead of the dashboard's browser window.</summary>
     public bool OpenSitesInDefaultBrowser { get; set; }
 
+    /// <summary>The sites saved in the dashboard browser, in the order its bar shows them.</summary>
+    public List<SavedSite> SavedSites { get; set; } = new();
+
     /// <summary>The folder Clone from GitHub last cloned into; null until it has.</summary>
     public string? CloneFolder { get; set; }
 

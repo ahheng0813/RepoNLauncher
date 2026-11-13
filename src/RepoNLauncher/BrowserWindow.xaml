@@ -2,12 +2,53 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:RepoNLauncher.Controls"
+        xmlns:services="clr-namespace:RepoNLauncher.Services"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         Title="Repo'N'Launcher" Height="800" Width="1200"
         WindowStartupLocation="Manual"
         Background="{StaticResource Bg.App}"
         FontFamily="{StaticResource Font.Mono}"
         PreviewKeyDown="Window_PreviewKeyDown">
+
+    <!-- DataContext: the SiteBrowserViewModel, for the saved sites every browser window shows -->
+    <Window.Resources>
+        <!-- A saved site in the bar under the address: its name, the address in its tooltip -->
+        <Style x:Key="SiteChip" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{StaticResource Text.Primary}"/>
+            <Setter Property="Margin" Value="0,0,2,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="Transparent" Padding="8,4">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Bg.Hover}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Accent.Muted}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- A saved site's menu, in the bar and on the start page; its DataContext is the site -->
+        <ContextMenu x:Key="SiteMenu">
+            <MenuItem Header="{x:Static services:DefaultBrowser.OpenLabel}" Click="SiteMenuOpenInDefaultBrowser_Click"/>
+            <MenuItem Header="Edit…" Click="SiteMenuEdit_Click"/>
+            <MenuItem Header="Remove" Click="SiteMenuRemove_Click"/>
+        </ContextMenu>
+
+        <Style x:Key="FieldLabel" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="Foreground" Value="{StaticResource Text.Secondary}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+    </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
@@ -21,35 +62,73 @@
 
         <Border x:Name="Toolbar" Grid.Row="0" Background="{StaticResource Bg.Elevated}" BorderBrush="{StaticResource Border.Subtle}"
                 BorderThickness="0,0,0,1" Padding="8,6" MouseLeave="Toolbar_MouseLeave">
-            <DockPanel>
-                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
-                    <Button x:Name="BackButton" Content="&#xE72B;" Style="{StaticResource Button.Ghost}" IsEnabled="False"
-                            ToolTip="Back (Alt+Left)" AutomationProperties.Name="Back" Click="Back_Click"/>
-                    <Button x:Name="ForwardButton" Content="&#xE72A;" Style="{StaticResource Button.Ghost}" IsEnabled="False"
-                            ToolTip="Forward (Alt+Right)" AutomationProperties.Name="Forward" Click="Forward_Click"/>
-                    <Button x:Name="ReloadButton" Content="&#xE72C;" Style="{StaticResource Button.Ghost}"
-                            ToolTip="Reload (F5)" AutomationProperties.Name="Reload" Click="Reload_Click"/>
-                </StackPanel>
+            <StackPanel>
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                        <Button x:Name="BackButton" Content="&#xE72B;" Style="{StaticResource Button.Ghost}" IsEnabled="False"
+                                ToolTip="Back (Alt+Left)" AutomationProperties.Name="Back" Click="Back_Click"/>
+                        <Button x:Name="ForwardButton" Content="&#xE72A;" Style="{StaticResource Button.Ghost}" IsEnabled="False"
+                                ToolTip="Forward (Alt+Right)" AutomationProperties.Name="Forward" Click="Forward_Click"/>
+                        <Button x:Name="ReloadButton" Content="&#xE72C;" Style="{StaticResource Button.Ghost}"
+                                ToolTip="Reload (F5)" AutomationProperties.Name="Reload" Click="Reload_Click"/>
+                    </StackPanel>
 
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                    <Button Content="&#xE774;" Style="{StaticResource Button.Ghost}" Margin="0,0,2,0"
-                            ToolTip="Open this page in your default browser" AutomationProperties.Name="Open in default browser"
-                            Click="OpenInDefaultBrowser_Click"/>
-                    <Button Content="&#xEC7A;" Style="{StaticResource Button.Ghost}" Margin="0,0,2,0"
-                            ToolTip="Developer tools (F12)" AutomationProperties.Name="Developer tools" Click="DevTools_Click"/>
-                    <Button x:Name="NextScreenButton" Content="&#xE7F4;" Style="{StaticResource Button.Ghost}" Margin="0,0,2,0"
-                            ToolTip="Move to the next screen" AutomationProperties.Name="Move to the next screen"
-                            Click="NextScreen_Click"/>
-                    <controls:PinOnTopButton Margin="0,0,2,0"/>
-                    <Button Content="&#xE740;" Style="{StaticResource Button.Ghost}"
-                            ToolTip="Full screen (F11)" AutomationProperties.Name="Full screen" Click="FullScreen_Click"/>
-                </StackPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <Button Content="&#xE774;" Style="{StaticResource Button.Ghost}" Margin="0,0,2,0"
+                                ToolTip="Open this page in your default browser" AutomationProperties.Name="Open in default browser"
+                                Click="OpenInDefaultBrowser_Click"/>
+                        <Button Content="&#xEC7A;" Style="{StaticResource Button.Ghost}" Margin="0,0,2,0"
+                                ToolTip="Developer tools (F12)" AutomationProperties.Name="Developer tools" Click="DevTools_Click"/>
+                        <Button x:Name="NextScreenButton" Content="&#xE7F4;" Style="{StaticResource Button.Ghost}" Margin="0,0,2,0"
+                                ToolTip="Move to the next screen" AutomationProperties.Name="Move to the next screen"
+                                Click="NextScreen_Click"/>
+                        <controls:PinOnTopButton Margin="0,0,2,0"/>
+                        <Button Content="&#xE740;" Style="{StaticResource Button.Ghost}"
+                                ToolTip="Full screen (F11)" AutomationProperties.Name="Full screen" Click="FullScreen_Click"/>
+                    </StackPanel>
 
-                <!-- The page's address; type another and press Enter to go there -->
-                <TextBox x:Name="Address" Margin="8,0" FontFamily="{StaticResource Font.Mono}" VerticalContentAlignment="Center"
-                         AutomationProperties.Name="Address" KeyDown="Address_KeyDown"
-                         GotKeyboardFocus="Address_GotKeyboardFocus"/>
-            </DockPanel>
+                    <!-- Saves the page (or edits it, once saved): lit while the page shown is a saved site -->
+                    <Button x:Name="StarButton" DockPanel.Dock="Right" Content="&#xE734;" Style="{StaticResource Button.Ghost}"
+                            Margin="0,0,6,0" IsEnabled="False" ToolTip="Save this site (Ctrl+D)"
+                            AutomationProperties.Name="Save this site" Click="Star_Click"/>
+
+                    <!-- The page's address; type another and press Enter to go there -->
+                    <TextBox x:Name="Address" Margin="8,0,4,0" FontFamily="{StaticResource Font.Mono}" VerticalContentAlignment="Center"
+                             AutomationProperties.Name="Address" KeyDown="Address_KeyDown"
+                             GotKeyboardFocus="Address_GotKeyboardFocus"/>
+                </DockPanel>
+
+                <!-- The saved sites, one click each; right-click one to open it in the default browser, edit or remove it -->
+                <ItemsControl ItemsSource="{Binding SavedSites}" Margin="0,6,0,0" Focusable="False">
+                    <ItemsControl.Style>
+                        <Style TargetType="ItemsControl">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SavedSites.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ItemsControl.Style>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Style="{StaticResource SiteChip}" Click="SavedSite_Click" ToolTip="{Binding Url}"
+                                    ContextMenu="{StaticResource SiteMenu}" AutomationProperties.Name="{Binding Name}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="11"
+                                               Foreground="{StaticResource Text.Muted}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <TextBlock Text="{Binding Name}" FontSize="12" MaxWidth="200" TextTrimming="CharacterEllipsis"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
         </Border>
 
         <!-- Shown instead of the page while the app's server doesn't answer yet -->
@@ -60,6 +139,76 @@
             <TextBlock x:Name="WaitingText" Foreground="{StaticResource Text.Secondary}" TextWrapping="Wrap" TextAlignment="Center"/>
         </StackPanel>
 
+        <!-- Opened without a site (from the dashboard's header, or before the project has run): where to go -->
+        <ScrollViewer x:Name="StartPage" Grid.Row="1" VerticalScrollBarVisibility="Auto" Visibility="Collapsed" Focusable="False">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24" MaxWidth="760">
+                <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="34" Foreground="{StaticResource Text.Muted}"
+                           HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                <TextBlock Text="Type an address above, such as localhost:3000, and press Enter."
+                           Foreground="{StaticResource Text.Secondary}" TextWrapping="Wrap" TextAlignment="Center"/>
+                <TextBlock Text="On a page, ☆ (Ctrl+D) saves it, to open it again from here or the bar under the address."
+                           Foreground="{StaticResource Text.Muted}" FontSize="12" TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0"/>
+
+                <StackPanel Margin="0,28,0,0">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SavedSites.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <TextBlock Text="SAVED SITES" Foreground="{StaticResource Text.Secondary}" FontWeight="SemiBold" FontSize="12"
+                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                    <ItemsControl ItemsSource="{Binding SavedSites}" HorizontalAlignment="Center" Focusable="False">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel HorizontalAlignment="Center"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Style="{StaticResource Button.Secondary}" Margin="0,0,8,8" Padding="12,8"
+                                        Click="SavedSite_Click" ContextMenu="{StaticResource SiteMenu}"
+                                        ToolTip="{Binding Url}" AutomationProperties.Name="{Binding Name}">
+                                    <StackPanel Width="210">
+                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Url}" Foreground="{StaticResource Text.Muted}" FontSize="11"
+                                                   TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
         <wv2:WebView2 x:Name="Web" Grid.Row="1"/>
+
+        <!-- Saving a site, or editing a saved one: its name and address. A window of its own, so it shows over the page. -->
+        <Popup x:Name="SitePopup" Placement="Custom" AllowsTransparency="True" StaysOpen="False"
+               Opened="SitePopup_Opened" Closed="SitePopup_Closed">
+            <Border Background="{StaticResource Bg.Elevated}" BorderBrush="{StaticResource Border.Strong}"
+                    BorderThickness="1" Padding="14,12" Width="360">
+                <StackPanel>
+                    <TextBlock x:Name="SitePopupHeading" Text="SAVED SITE" Foreground="{StaticResource Text.Secondary}"
+                               FontWeight="SemiBold" FontSize="12" Margin="0,0,0,10"/>
+                    <TextBlock Text="Name" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="SiteName" AutomationProperties.Name="Saved site's name" KeyDown="SiteEditor_KeyDown"/>
+                    <TextBlock Text="Address" Style="{StaticResource FieldLabel}" Margin="0,10,0,4"/>
+                    <TextBox x:Name="SiteAddress" FontFamily="{StaticResource Font.Mono}" AutomationProperties.Name="Saved site's address"
+                             KeyDown="SiteEditor_KeyDown"/>
+                    <TextBlock x:Name="SiteAddressError" Foreground="{StaticResource Danger}" FontSize="11.5" TextWrapping="Wrap"
+                               Margin="0,4,0,0" Visibility="Collapsed"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+                        <Button Content="Remove" Style="{StaticResource Button.Danger}" Click="RemoveSite_Click"
+                                ToolTip="Take this site off the saved sites"/>
+                        <Button Content="Done" Style="{StaticResource Button.Primary}" Margin="0" Click="DoneSite_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Popup>
     </Grid>
 </Window>

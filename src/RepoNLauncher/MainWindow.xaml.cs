@@ -52,7 +52,7 @@ public partial class MainWindow : Window
             if (DataContext is not MainViewModel vm) return;
             vm.PhoneScreen.PopOutChanged += OnPhonePopOutChanged;
             vm.PhoneScreen.PropertyChanged += OnPhoneScreenPropertyChanged;
-            vm.SiteBrowser.WindowRequested += BrowserWindow.Open;
+            vm.SiteBrowser.WindowRequested += request => BrowserWindow.Open(vm.SiteBrowser, request);
             vm.SiteBrowser.ScreenPicked += BrowserWindow.MoveAllTo;
             // A project taken off the dashboard takes its console window with it.
             vm.Projects.CollectionChanged += (_, _) => RunConsoleWindow.CloseRemoved(vm.Projects);

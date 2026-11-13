@@ -252,6 +252,15 @@
                         <Border Width="1" Background="{StaticResource Border.Subtle}" Margin="2,4,8,4"/>
                         <Button Content="AI Chat" Style="{StaticResource Button.Secondary}" Click="OpenAiChat_Click"
                                 ToolTip="Chat with Claude Code or Codex in a project, and read your saved chats"/>
+                        <!-- The dashboard browser of no project's: browse, or open a saved site, without running anything -->
+                        <Button Style="{StaticResource Button.Secondary}" Command="{Binding SiteBrowser.OpenBrowserCommand}"
+                                AutomationProperties.Name="Browser"
+                                ToolTip="Open the dashboard browser without running a project: type an address, or open a saved site">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Browser"/>
+                            </StackPanel>
+                        </Button>
                         <Button Style="{StaticResource Button.Secondary}" Margin="0" ToolTip="Show or hide the phone screen panel"
                                 Command="{Binding PhoneScreen.TogglePanelCommand}">
                             <StackPanel Orientation="Horizontal">
@@ -1120,6 +1129,9 @@
                                     <CheckBox Content="Open it when the app starts serving it" Margin="16,0,0,0" VerticalAlignment="Center"
                                               IsChecked="{Binding OpenSiteOnRun}"
                                               ToolTip="Opens the first address the app prints, such as http://localhost:5173, as soon as it prints it"/>
+                                    <Button Content="Open dashboard browser" Style="{StaticResource Button.Secondary}" Margin="16,0,0,0"
+                                            Command="{Binding OpenBrowserCommand}"
+                                            ToolTip="This project's dashboard browser window, without running it: type an address, or open a saved site"/>
                                 </StackPanel>
 
                                 <!-- The output (select, copy, search, open in its own window) and the line typed to the app -->

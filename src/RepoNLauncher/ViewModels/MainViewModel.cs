@@ -110,7 +110,9 @@ public partial class MainViewModel : ObservableObject
         _config = _configService.Load();
         _config.DateTimeFormat ??= new DateTimeFormatSettings();
         DateTimeDisplay.Apply(_config.DateTimeFormat);
-        SiteBrowser = new SiteBrowserViewModel(_config.SiteScreen, _config.OpenSitesInDefaultBrowser, SaveSiteTarget);
+        _config.SavedSites ??= new List<SavedSite>();
+        SiteBrowser = new SiteBrowserViewModel(_config.SiteScreen, _config.OpenSitesInDefaultBrowser, _config.SavedSites,
+            SaveSiteTarget, SaveSavedSites);
         Settings = new SettingsViewModel(_config.DateTimeFormat, SaveDateTimeFormat, Updates, GitHub, OpenWithApps, Emulators, SiteBrowser);
         CloneRepos = new CloneReposViewModel(GitHub, git, IsOnDashboard, paths => AddProjectsFrom("Clone from GitHub", paths),
             () => _config.Projects.Select(p => p.Path), DefaultCloneFolder(), SaveCloneFolder);
@@ -226,6 +228,7 @@ public partial class MainViewModel : ObservableObject
         project.RunStartedOnDevice += device => _ = PhoneScreen.ShowRunDeviceAsync(device);
         project.SiteOpenRequested += (url, activate, inDefaultBrowser) =>
             SiteBrowser.Open(project.Path, project.Name, url, activate, inDefaultBrowser);
+        project.BrowserRequested += () => SiteBrowser.OpenWindow(project.Path, project.Name);
         project.SettingsChanged += PersistConfig; // the project edits its ProjectInfo, which is part of _config
         project.PropertyChanged += (_, e) =>
         {
@@ -256,6 +259,12 @@ public partial class MainViewModel : ObservableObject
     {
         _config.SiteScreen = screen;
         _config.OpenSitesInDefaultBrowser = inDefaultBrowser;
+        PersistConfig();
+    }
+
+    private void SaveSavedSites(IReadOnlyList<SavedSite> sites)
+    {
+        _config.SavedSites = sites.ToList();
         PersistConfig();
     }
 

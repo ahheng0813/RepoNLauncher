@@ -173,6 +173,9 @@ public partial class ProjectViewModel : ObservableObject
     /// </summary>
     public event Action<string, bool, bool?>? SiteOpenRequested;
 
+    /// <summary>Raised to open the project's dashboard browser window without a site, such as before it has run.</summary>
+    public event Action? BrowserRequested;
+
     /// <summary>Flutter and .NET start from their project files; the other kinds often start from one script.</summary>
     public bool CanChooseStartFile => Kind is not (ProjectKind.Flutter or ProjectKind.DotNet);
 
@@ -1662,6 +1665,10 @@ public partial class ProjectViewModel : ObservableObject
     /// <summary>A URL button's menu: the site in the default browser, whatever Open in says.</summary>
     [RelayCommand]
     private void OpenSiteInDefaultBrowser(string url) => SiteOpenRequested?.Invoke(url, true, true);
+
+    /// <summary>The Run tab's Open dashboard browser: the project's browser window, running or not.</summary>
+    [RelayCommand]
+    private void OpenBrowser() => BrowserRequested?.Invoke();
 
     private static void OpenUrl(string? url)
     {
