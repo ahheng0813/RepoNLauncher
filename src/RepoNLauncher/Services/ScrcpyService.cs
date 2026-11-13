@@ -368,6 +368,12 @@ public class ScrcpyService : IScrcpyService
             // when it's the foreground window, which a window embedded in the dashboard's never is, and without focus
             // it throws away typed text but not key presses.
             info.ArgumentList.Add("--raw-key-events");
+            // By default scrcpy copies the phone's clipboard onto this PC's, as plain text, whenever it changes. An
+            // emulator shares this PC's clipboard with the phone, so each copy here comes straight back and replaces
+            // what was copied: files as a file:/// link, pictures with nothing, line breaks changed. Each of those reads
+            // also has Android 12 or later toast "Shell pasted from your clipboard", over and over. With this off,
+            // MOD+v (Alt+V) still pastes this PC's clipboard on the phone, and MOD+c copies the phone's selection here.
+            info.ArgumentList.Add("--no-clipboard-autosync");
         }
         else
         {
