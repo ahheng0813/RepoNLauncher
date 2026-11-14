@@ -247,6 +247,7 @@ public partial class MainViewModel : ObservableObject
     {
         var project = new ProjectViewModel(info, _git, _flutter, _dotNet, _envParser, _processRunner, _ports, _ides, _emulators);
         project.RunStartedOnDevice += device => _ = PhoneScreen.ShowRunDeviceAsync(device);
+        project.AllProjects = () => Projects;
         project.SiteOpenRequested += (url, activate, inDefaultBrowser) =>
             SiteBrowser.Open(project.Path, project.Name, url, activate, inDefaultBrowser);
         project.BrowserRequested += () => SiteBrowser.OpenWindow(project.Path, project.Name);

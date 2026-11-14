@@ -51,6 +51,9 @@ public class RunningProcessHandle
     /// </summary>
     public void Stop() => ProcessTree.Kill(_process);
 
+    /// <summary>Whether the process with this id is the program or one it started, while those between are running.</summary>
+    public bool Contains(int pid) => ProcessTree.Contains(_process, pid);
+
     /// <summary>Waits for it to end, after <see cref="Stop"/>, at most <paramref name="timeout"/>.</summary>
     public async Task WaitForExitAsync(TimeSpan timeout)
     {
@@ -170,6 +173,8 @@ public class ProcessRunnerService : IProcessRunner
         };
 
         process.Start();
+        // Closing the app, or restarting it to update, ends the run too rather than leave it holding its port.
+        ProcessTree.EndWithApp(process);
         var stdOut = new OutputReader(process.StandardOutput, onOutput);
         var stdErr = new OutputReader(process.StandardError, onOutput);
         reading = Task.WhenAll(stdOut.ReadAsync(), stdErr.ReadAsync());

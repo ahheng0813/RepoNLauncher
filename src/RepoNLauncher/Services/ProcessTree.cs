@@ -16,6 +16,131 @@ public static class ProcessTree
     private const int ProcessTerminate = 0x0001;
     private const int ProcessQueryLimitedInformation = 0x1000;
     private const uint SnapProcesses = 0x2;
+    private const int JobObjectExtendedLimitInformation = 9;
+    private const uint JobObjectLimitKillOnJobClose = 0x2000;
+
+    // The processes given to EndWithApp and everything they start, even once the process that started one has ended.
+    // Windows ends them all when this handle closes, which it does however the app ends: closed, restarted to update,
+    // ended from Task Manager or crashed. Null when Windows wouldn't make one.
+    private static readonly Lazy<SafeFileHandle?> AppJob = new(CreateAppJob);
+
+    /// <summary>
+    /// Ends <paramref name="process"/> and everything it goes on to start when the app ends. Without this a dev server
+    /// outlives the app that ran it: the next run finds its port taken (Next.js: "Another next dev server is already
+    /// running") and no tab is left to stop it from. Call it straight after starting the process, before it can start
+    /// any of its own.
+    /// </summary>
+    public static void EndWithApp(Process process)
+    {
+        if (AppJob.Value is not { } job) return;
+        try { AssignProcessToJobObject(job, process.SafeHandle); }
+        catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException) { }
+    }
+
+    /// <summary>Whether <paramref name="pid"/> was started by a process given to <see cref="EndWithApp"/>, or is one.</summary>
+    public static bool IsStartedByApp(int pid)
+    {
+        if (!AppJob.IsValueCreated || AppJob.Value is not { } job) return false;
+        using var process = OpenProcess(ProcessQueryLimitedInformation, false, pid);
+        return !process.IsInvalid && IsProcessInJob(process, job, out var inJob) && inJob;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="pid"/> is <paramref name="root"/> or a process under it, while every process between them
+    /// is still running.
+    /// </summary>
+    public static bool Contains(Process root, int pid)
+    {
+        int rootId;
+        try
+        {
+            if (root.HasExited) return false;
+            rootId = root.Id;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or NotSupportedException)
+        {
+            return false;
+        }
+
+        var found = false;
+        WalkUp(pid, (id, _) => !(found = id == rootId));
+        return found;
+    }
+
+    /// <summary>
+    /// The command lines of <paramref name="pid"/> and of the processes that started it that are still running, nearest
+    /// first. They name the folder a process runs from more often than not
+    /// (node C:\...\app\node_modules\next\dist\server\lib\start-server.js). Empty once it has ended.
+    /// </summary>
+    public static List<string> CommandLines(int pid)
+    {
+        var lines = new List<string>();
+        WalkUp(pid, (id, process) =>
+        {
+            if (id == Environment.ProcessId) return false; // the app itself, which runs no project
+            if (CommandLineOf(process) is { Length: > 0 } line) lines.Add(line);
+            return lines.Count < 8;
+        });
+        return lines;
+    }
+
+    // Calls visit with pid and each process above it, nearest first, until visit says stop or the line breaks: a parent
+    // that has ended, or whose id now belongs to a process started after the child, which isn't its parent.
+    private static void WalkUp(int pid, Func<int, SafeProcessHandle, bool> visit)
+    {
+        var parents = new Dictionary<int, int>();
+        foreach (var (id, parentId) in Snapshot()) parents[id] = parentId;
+
+        var childStarted = long.MaxValue;
+        for (var (id, depth) = (pid, 0); id > 4 && depth < 32; depth++)
+        {
+            using var process = OpenProcess(ProcessQueryLimitedInformation, false, id);
+            if (process.IsInvalid || !GetProcessTimes(process, out var started, out _, out _, out _) || started > childStarted)
+                return;
+            if (!visit(id, process) || !parents.TryGetValue(id, out var parentId) || parentId == id) return;
+            childStarted = started;
+            id = parentId;
+        }
+    }
+
+    // The command line the process was started with; null when Windows won't say.
+    private static string? CommandLineOf(SafeProcessHandle process)
+    {
+        const int ProcessCommandLineInformation = 60;
+        NtQueryInformationProcess(process, ProcessCommandLineInformation, IntPtr.Zero, 0, out var length);
+        if (length <= 0 || length > 1 << 20) return null;
+
+        var buffer = Marshal.AllocHGlobal(length);
+        try
+        {
+            if (NtQueryInformationProcess(process, ProcessCommandLineInformation, buffer, length, out _) != 0) return null;
+            // A UNICODE_STRING: its length in bytes, its capacity, then (aligned) a pointer to the text, which follows it.
+            var bytes = (ushort)Marshal.ReadInt16(buffer);
+            var text = Marshal.ReadIntPtr(buffer, IntPtr.Size);
+            return text == IntPtr.Zero ? null : Marshal.PtrToStringUni(text, bytes / 2);
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
+        }
+    }
+
+    private static SafeFileHandle? CreateAppJob()
+    {
+        var job = CreateJobObjectW(IntPtr.Zero, null);
+        if (job.IsInvalid)
+        {
+            job.Dispose();
+            return null;
+        }
+
+        var limits = new JobObjectExtendedLimits { Basic = { LimitFlags = JobObjectLimitKillOnJobClose } };
+        if (SetInformationJobObject(job, JobObjectExtendedLimitInformation, ref limits, Marshal.SizeOf<JobObjectExtendedLimits>()))
+            return job;
+
+        job.Dispose();
+        return null;
+    }
 
     /// <summary>
     /// Ends <paramref name="root"/> and everything under it. Children it left behind are found even after it has
@@ -116,6 +241,58 @@ public static class ProcessTree
         public int Flags;
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)] public string ExeFile;
     }
+
+    // JOBOBJECT_EXTENDED_LIMIT_INFORMATION, with its JOBOBJECT_BASIC_LIMIT_INFORMATION and IO_COUNTERS.
+    [StructLayout(LayoutKind.Sequential)]
+    private struct JobObjectBasicLimits
+    {
+        public long PerProcessUserTimeLimit;
+        public long PerJobUserTimeLimit;
+        public uint LimitFlags;
+        public UIntPtr MinimumWorkingSetSize;
+        public UIntPtr MaximumWorkingSetSize;
+        public uint ActiveProcessLimit;
+        public UIntPtr Affinity;
+        public uint PriorityClass;
+        public uint SchedulingClass;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct IoCounters
+    {
+        public ulong ReadOperationCount;
+        public ulong WriteOperationCount;
+        public ulong OtherOperationCount;
+        public ulong ReadTransferCount;
+        public ulong WriteTransferCount;
+        public ulong OtherTransferCount;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct JobObjectExtendedLimits
+    {
+        public JobObjectBasicLimits Basic;
+        public IoCounters IoInfo;
+        public UIntPtr ProcessMemoryLimit;
+        public UIntPtr JobMemoryLimit;
+        public UIntPtr PeakProcessMemoryUsed;
+        public UIntPtr PeakJobMemoryUsed;
+    }
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern SafeFileHandle CreateJobObjectW(IntPtr attributes, string? name);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool SetInformationJobObject(SafeFileHandle job, int infoClass, ref JobObjectExtendedLimits info, int length);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool AssignProcessToJobObject(SafeFileHandle job, SafeProcessHandle process);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool IsProcessInJob(SafeProcessHandle process, SafeFileHandle job, out bool result);
+
+    [DllImport("ntdll.dll")]
+    private static extern int NtQueryInformationProcess(SafeProcessHandle process, int infoClass, IntPtr info, int length, out int returnLength);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern SafeFileHandle CreateToolhelp32Snapshot(uint flags, int processId);

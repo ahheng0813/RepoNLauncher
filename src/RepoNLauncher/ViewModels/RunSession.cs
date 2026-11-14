@@ -46,6 +46,9 @@ public sealed partial class RunSession(DeviceInfo? device, string title) : Obser
     // which belong to that run, not this one's console.
     internal int Generation { get; set; }
 
+    /// <summary>Watches this run's output for the port it wanted being taken; each run asks about that once.</summary>
+    internal PortInUseDetector PortInUse { get; private set; } = new();
+
     // The console's last line is the start of one still being written, such as a prompt waiting for an answer.
     private bool _lastLineIsPartial;
 
@@ -54,6 +57,7 @@ public sealed partial class RunSession(DeviceInfo? device, string title) : Obser
     {
         ConsoleOutput.Clear();
         DetectedUrls.Clear();
+        PortInUse = new();
         _lastLineIsPartial = false;
     }
 

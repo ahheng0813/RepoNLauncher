@@ -11,7 +11,11 @@ public interface IPortService
     /// <summary>Returns the processes currently listening on any of the given TCP ports.</summary>
     List<PortListener> FindListeners(IEnumerable<int> ports);
 
+    /// <summary>Ends the process and everything it started, and waits for it to let go of its ports.</summary>
     bool TryKillProcess(int pid, out string error);
+
+    /// <summary>The program's name (node, dotnet), or null when no process has this id.</summary>
+    string? GetProcessName(int pid);
 }
 
 /// <summary>
@@ -41,7 +45,7 @@ public class PortService : IPortService
             .Concat(ReadListeners(AfInet6, Ipv6RowSize, Ipv6PortOffset, Ipv6PidOffset))
             .Where(l => wanted.Contains(l.Port) && l.Pid > 4) // 0 = idle, 4 = System (http.sys) — neither can be killed
             .Distinct()
-            .Select(l => new PortListener(l.Port, l.Pid, GetProcessName(l.Pid)))
+            .Select(l => new PortListener(l.Port, l.Pid, GetProcessName(l.Pid) ?? "unknown"))
             .OrderBy(l => l.Port)
             .ToList();
     }
@@ -58,9 +62,12 @@ public class PortService : IPortService
         try
         {
             using var process = Process.GetProcessById(pid);
-            process.Kill(entireProcessTree: true);
-            process.WaitForExit(3000); // let the OS release the socket before the new run binds it
-            return true;
+            // Node's dev servers end their own children as they end, which hides those from .NET's own tree walk.
+            ProcessTree.Kill(process);
+            // Let the OS release the socket before the new run binds it.
+            if (process.WaitForExit(3000)) return true;
+            error = "it was still running 3 seconds later";
+            return false;
         }
         catch (ArgumentException)
         {
@@ -73,16 +80,16 @@ public class PortService : IPortService
         }
     }
 
-    private static string GetProcessName(int pid)
+    public string? GetProcessName(int pid)
     {
         try
         {
             using var process = Process.GetProcessById(pid);
             return process.ProcessName;
         }
-        catch (ArgumentException)
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            return "unknown";
+            return null;
         }
     }
 

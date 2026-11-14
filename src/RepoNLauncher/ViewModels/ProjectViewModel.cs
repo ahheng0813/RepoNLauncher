@@ -371,6 +371,9 @@ public partial class ProjectViewModel : ObservableObject
     /// <summary>Raised when a Flutter app is launched on a device, so the dashboard can show that device's screen.</summary>
     public event Action<DeviceInfo>? RunStartedOnDevice;
 
+    /// <summary>Set by the dashboard to its projects, to name the one whose server holds a port this one wants.</summary>
+    internal Func<IEnumerable<ProjectViewModel>> AllProjects { get; set; } = () => [];
+
     public ProjectViewModel(
         ProjectInfo info,
         IGitService git,
@@ -1425,11 +1428,12 @@ public partial class ProjectViewModel : ObservableObject
         Launch(run, command, ports);
     }
 
-    // Runs the command in the run's tab, from an empty console, on the run's device.
-    private void Launch(RunSession run, string command, List<int> ports)
+    // Runs the command in the run's tab, from an empty console, on the run's device. A note, if any, goes above it.
+    private void Launch(RunSession run, string command, List<int> ports, string? note = null)
     {
         var device = run.Device;
         run.Clear();
+        if (note != null) run.AddDashboardLine(note);
         if (!EnsurePortsFree(run, ports)) return;
         run.Command = command;
         run.Ports = ports;
@@ -1446,6 +1450,9 @@ public partial class ProjectViewModel : ObservableObject
                 if (run.Generation != generation) return;
                 run.ShowOutput(line, partial);
                 if (partial) return;
+                // Asked once the line is on screen, without holding up the output after it while the question waits.
+                if (run.PortInUse.Read(AnsiEscape.Replace(line, string.Empty)) is { } conflict)
+                    Application.Current.Dispatcher.InvokeAsync(() => OfferToFreePortAsync(run, generation, conflict));
                 // Flutter prints VM-service and DevTools addresses, which aren't the app; only its web server's
                 // "lib/main.dart is being served at ..." is.
                 var url = Kind switch
@@ -1484,29 +1491,132 @@ public partial class ProjectViewModel : ObservableObject
     // and Kestrel then fails with "address already in use" — offer to force stop it first.
     private bool EnsurePortsFree(RunSession run, List<int> ports)
     {
-        var listeners = _ports.FindListeners(ports);
-        if (listeners.Count == 0) return true;
+        var holders = new List<(int Port, PortHolder Holder)>();
+        foreach (var listener in _ports.FindListeners(ports))
+            if (HolderOf(listener.Pid) is { } holder) holders.Add((listener.Port, holder));
+        if (holders.Count == 0) return true;
 
-        var details = string.Join("\n", listeners.Select(l => $"  • Port {l.Port}: {l.ProcessName} (PID {l.Pid})"));
+        var inUse = holders.Count == 1
+            ? $"Port {holders[0].Port} is being used by {holders[0].Holder.Description}."
+            : "These ports are already in use:\n\n" + string.Join("\n", holders.Select(h => $"  • Port {h.Port}: {h.Holder.Description}"));
         var confirm = MessageBox.Show(
-            $"These ports are already in use:\n\n{details}\n\nForce stop these processes and run?",
+            $"{inUse}\n\nStop {(holders.Count == 1 ? "it" : "them")} and run {Name}?",
             "Port in use", MessageBoxButton.YesNo, MessageBoxImage.Warning);
         if (confirm != MessageBoxResult.Yes)
         {
-            run.AddDashboardLine($"Run cancelled — port {string.Join(", ", listeners.Select(l => l.Port))} in use.");
+            run.AddDashboardLine($"Run cancelled — port {string.Join(", ", holders.Select(h => h.Port))} in use.");
             return false;
         }
 
-        foreach (var listener in listeners.DistinctBy(l => l.Pid))
+        foreach (var (port, holder) in holders.DistinctBy(h => h.Holder.Pid))
         {
-            if (!_ports.TryKillProcess(listener.Pid, out var error))
+            if (!StopHolder(holder, out var error))
             {
-                run.AddDashboardLine($"Could not stop {listener.ProcessName} (PID {listener.Pid}): {error}");
+                run.AddDashboardLine($"Could not stop {holder.Name}: {error}");
                 return false;
             }
-            run.AddDashboardLine($"Stopped {listener.ProcessName} (PID {listener.Pid}) on port {listener.Port}.");
+            run.AddDashboardLine($"Stopped {holder.Name} on port {port}.");
         }
         return true;
+    }
+
+    // The run's output says the port it wanted is taken: by a server started elsewhere (a terminal, another tool), or
+    // by another project's run here. The server then carries on at the next port along (Next, Vite) or stops (Node,
+    // Kestrel, and Next when the other is the same folder's). Names what holds the port and offers to stop it and run
+    // this again, on the port it wanted.
+    private async Task OfferToFreePortAsync(RunSession run, int generation, PortConflict conflict)
+    {
+        var pid = conflict.Pid ?? (conflict.Port is { } wanted ? _ports.FindListeners([wanted]).FirstOrDefault()?.Pid : null);
+        // Ended already, or it's this run's own.
+        if (pid is not { } holderPid || HolderOf(holderPid) is not { } holder || holder.Run == run) return;
+        if (run.Generation != generation || !Runs.Contains(run) || run.Command is not { } command) return;
+
+        var inUse = conflict.Port is { } port
+            ? $"Port {port} is being used by {holder.Description}."
+            : $"{holder.Description} is already running.";
+        if (MessageBox.Show($"{inUse}\n\nStop it and run {Name}?", "Port in use",
+                MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            return;
+        // Run again, or its tab closed, while the question waited.
+        if (run.Generation != generation || !Runs.Contains(run)) return;
+
+        var moved = run.Process;
+        StopRun(run);
+        if (moved != null) await moved.WaitForExitAsync(TimeSpan.FromSeconds(5));
+        if (!StopHolder(holder, out var error))
+        {
+            run.AddDashboardLine($"Could not stop {holder.Name}: {error}");
+            return;
+        }
+        if (conflict.Port is { } freed)
+            for (var i = 0; i < 15 && _ports.FindListeners([freed]).Count > 0; i++) await Task.Delay(200);
+        if (run.Generation != generation || !Runs.Contains(run)) return;
+
+        Launch(run, command, run.Ports, conflict.Port is { } p ? $"Stopped {holder.Name} on port {p}." : $"Stopped {holder.Name}.");
+    }
+
+    // What holds a port: one of the dashboard's runs (Run set), or a process started some other way, named after the
+    // project whose folder its command line names, if any.
+    private sealed record PortHolder(int Pid, string Name, string Where, RunSession? Run)
+    {
+        public string Description => $"{Name}, {Where}";
+    }
+
+    private PortHolder? HolderOf(int pid)
+    {
+        if (_ports.GetProcessName(pid) is not { } program) return null;
+
+        foreach (var project in AllProjects())
+            foreach (var other in project.Runs)
+                if (other.IsRunning && other.Process?.Contains(pid) == true)
+                    return new PortHolder(pid, project.Name,
+                        other.Device == null ? "running in Repo'N'Launcher" : $"running in Repo'N'Launcher on {other.Title}", other);
+
+        var commandLines = ProcessTree.CommandLines(pid);
+        var owner = ProjectNamedIn(commandLines);
+        var where = ProcessTree.IsStartedByApp(pid) ? "left running by an earlier run"
+            // The installed copy and a debug build, say, both running the project.
+            : commandLines.Any(line => line.Contains(AppFileName, StringComparison.OrdinalIgnoreCase)) ? "running in another copy of Repo'N'Launcher"
+            : "started outside Repo'N'Launcher";
+        return new PortHolder(pid, owner == null ? $"{program} (PID {pid})" : $"{owner.Name} ({program}, PID {pid})", where, null);
+    }
+
+    private static readonly string AppFileName = System.IO.Path.GetFileName(Environment.ProcessPath) is { Length: > 0 } name
+        ? name
+        : "RepoNLauncher.exe";
+
+    // A run here stops as its Stop button would, so its tab shows it stopped; then whatever still holds the port goes.
+    private bool StopHolder(PortHolder holder, out string error)
+    {
+        if (holder.Run != null) StopRun(holder.Run);
+        return _ports.TryKillProcess(holder.Pid, out error);
+    }
+
+    // The project whose folder the nearest of the command lines names. The deepest such folder: a repo inside another's
+    // folder is the one that runs.
+    private ProjectViewModel? ProjectNamedIn(IEnumerable<string> commandLines)
+    {
+        var projects = AllProjects().ToList();
+        foreach (var line in commandLines)
+        {
+            var text = line.Replace('/', '\\');
+            if (projects.Where(p => NamesFolder(text, p.Path)).MaxBy(p => p.Path.Length) is { } project) return project;
+        }
+        return null;
+    }
+
+    // Whether the text has the folder's path in it, as the folder or a path inside it, not one beginning the same way.
+    private static bool NamesFolder(string text, string folder)
+    {
+        folder = folder.Replace('/', '\\').TrimEnd('\\');
+        if (folder.Length == 0) return false;
+        for (var at = text.IndexOf(folder, StringComparison.OrdinalIgnoreCase); at >= 0;
+             at = text.IndexOf(folder, at + 1, StringComparison.OrdinalIgnoreCase))
+        {
+            var end = at + folder.Length;
+            if (end == text.Length || text[end] is '\\' or '"' or '\'' or ' ') return true;
+        }
+        return false;
     }
 
     // Picking the script fills in the command that runs it (python app.py, node server.js, ...), which can still be edited.
