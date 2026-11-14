@@ -6,8 +6,9 @@ namespace RepoNLauncher.ViewModels;
 /// Arranges the flat project list into collapsible folder sections. Every scanned folder is a top-level section;
 /// inside it, a subfolder holding two or more repos (at any depth, the subfolder itself counting when it's a repo)
 /// gets its own nested section, while a subfolder with a single repo just lists that repo in the parent section.
-/// Projects outside every scanned folder stay at the top level. Each level lists its repos first, the folder's own
-/// repo leading, then its subsections.
+/// Projects outside every scanned folder that share a parent folder with another such project get a top-level section
+/// for that folder too, built the same way; the rest stay at the top level. Each level lists its repos first, the
+/// folder's own repo leading, then its subsections.
 /// </summary>
 public static class ProjectTreeBuilder
 {
@@ -19,14 +20,17 @@ public static class ProjectTreeBuilder
         Func<string, bool> isExpanded,
         Action<ProjectGroupViewModel> expandedChanged)
     {
-        var roots = scanFolders.Select(Normalize).Where(r => r.Length > 0).ToList();
+        var all = projects.Select(p => (Project: p, Path: Normalize(p.Path))).ToList();
+        var scanRoots = scanFolders.Select(Normalize).Where(r => r.Length > 0).ToList();
+        var outsideScans = all.Where(p => !scanRoots.Any(r => IsSameOrUnder(p.Path, r))).ToList();
+        var roots = scanRoots.Concat(SharedParents(outsideScans.Select(p => p.Path))).ToList();
+
         var rootNodes = new Dictionary<string, FolderNode>(StringComparer.OrdinalIgnoreCase);
         var loose = new List<ProjectViewModel>();
 
-        foreach (var project in projects)
+        foreach (var (project, path) in all)
         {
-            var path = Normalize(project.Path);
-            // The outermost scanned folder wins, so a folder that was also scanned on its own still shows up nested in its parent.
+            // The outermost folder wins, so a folder that was also scanned on its own still shows up nested in its parent.
             var root = roots.Where(r => IsSameOrUnder(path, r)).MinBy(r => r.Length);
             if (root == null)
             {
@@ -85,6 +89,17 @@ public static class ProjectTreeBuilder
         }
         return (SortByName(node.Repos).Concat(SortByName(inSubfolders)).ToList(), sections);
     }
+
+    // The parent folders that directly hold two or more of the given repos, such as the folder repos were cloned into
+    // when they were added one by one rather than by scanning it.
+    private static IEnumerable<string> SharedParents(IEnumerable<string> paths) =>
+        paths.Select(ParentFolder)
+            .Where(parent => parent.Length > 0)
+            .GroupBy(parent => parent, StringComparer.OrdinalIgnoreCase)
+            .Where(g => g.Count() >= 2)
+            .Select(g => g.Key);
+
+    private static string ParentFolder(string path) => Normalize(Path.GetDirectoryName(path) ?? "");
 
     private static IEnumerable<ProjectViewModel> SortByName(IEnumerable<ProjectViewModel> projects) =>
         projects.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase);
