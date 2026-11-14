@@ -44,8 +44,8 @@ public abstract class AgentTurn
     public void Stop()
     {
         _stopped = true;
-        try { _process?.Kill(entireProcessTree: true); }
-        catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or NotSupportedException) { }
+        // Claude's own tools can have started servers under it, which outlive a plain tree kill as `npm run dev`'s do.
+        if (_process != null) ProcessTree.Kill(_process);
     }
 
     protected bool Start(ProcessStartInfo info, string? input)

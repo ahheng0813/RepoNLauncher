@@ -80,11 +80,7 @@ public static class AgentCli
         }
     }
 
-    public static void Kill(Process process)
-    {
-        try { process.Kill(entireProcessTree: true); }
-        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception) { }
-    }
+    public static void Kill(Process process) => ProcessTree.Kill(process);
 
     /// <summary>A command line that runs <paramref name="program"/> in a console window, e.g. for signing in.</summary>
     public static string ConsoleCommand(string program, string arguments) => $"{Quote(program)} {arguments}";

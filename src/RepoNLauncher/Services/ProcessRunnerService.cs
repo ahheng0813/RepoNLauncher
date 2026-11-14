@@ -45,17 +45,11 @@ public class RunningProcessHandle
         }
     }
 
-    public void Stop()
-    {
-        try
-        {
-            if (!_process.HasExited)
-            {
-                _process.Kill(entireProcessTree: true);
-            }
-        }
-        catch { /* already exited */ }
-    }
+    /// <summary>
+    /// Ends the program and everything it started, such as the dev server under `npm run dev`; also when the shell
+    /// has already ended but left that running.
+    /// </summary>
+    public void Stop() => ProcessTree.Kill(_process);
 
     /// <summary>Waits for it to end, after <see cref="Stop"/>, at most <paramref name="timeout"/>.</summary>
     public async Task WaitForExitAsync(TimeSpan timeout)
