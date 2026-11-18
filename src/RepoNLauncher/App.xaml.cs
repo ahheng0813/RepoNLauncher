@@ -9,6 +9,7 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        WindowFit.Register();
 
         var processRunner = new ProcessRunnerService();
         var git = new GitService(processRunner);

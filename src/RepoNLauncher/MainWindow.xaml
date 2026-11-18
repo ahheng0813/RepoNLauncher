@@ -279,10 +279,13 @@
                         <TextBlock x:Name="PromptCursor" Text="_" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource Accent}"
                                    VerticalAlignment="Center"/>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
+                    <!-- On a screen too narrow for one row, the buttons carry on onto a second rather than the first ones
+                         being pushed out of sight -->
+                    <controls:WrapToolbar DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                          LineAlignment="Right" Margin="16,0,0,0">
                         <Button Content="Fetch All" Style="{StaticResource Button.Primary}" Command="{Binding FetchAllCommand}"/>
                         <Button Content="Fetch Selected" Style="{StaticResource Button.Secondary}" Command="{Binding FetchSelectedCommand}"/>
-                        <Border Width="1" Background="{DynamicResource Border.Subtle}" Margin="2,4,8,4"/>
+                        <Border controls:WrapToolbar.IsSeparator="True" Width="1" Background="{DynamicResource Border.Subtle}" Margin="2,4,8,4"/>
                         <Button Content="Add Project" Style="{StaticResource Button.Secondary}" Command="{Binding AddProjectFolderCommand}"/>
                         <Button Content="Scan Folder" Style="{StaticResource Button.Secondary}" Command="{Binding ScanFolderCommand}"/>
                         <Button Content="Rescan All" Style="{StaticResource Button.Secondary}" Command="{Binding RescanAllFoldersCommand}"/>
@@ -290,7 +293,7 @@
                                 ToolTip="Find every repo on this PC and see which are yours on GitHub (needs GitHub sign-in)"/>
                         <Button Content="Clone from GitHub" Style="{StaticResource Button.Secondary}" Click="OpenCloneRepos_Click"
                                 ToolTip="List your GitHub repos, see which this PC has, and clone the others (needs GitHub sign-in)"/>
-                        <Border Width="1" Background="{DynamicResource Border.Subtle}" Margin="2,4,8,4"/>
+                        <Border controls:WrapToolbar.IsSeparator="True" Width="1" Background="{DynamicResource Border.Subtle}" Margin="2,4,8,4"/>
                         <Button Content="AI Chat" Style="{StaticResource Button.Secondary}" Click="OpenAiChat_Click"
                                 ToolTip="Chat with Claude Code or Codex in a project, and read your saved chats"/>
                         <!-- The dashboard browser of no project's: browse, or open a saved site, without running anything -->
@@ -309,7 +312,7 @@
                                 <TextBlock Text="Phone Screen"/>
                             </StackPanel>
                         </Button>
-                        <Border Width="1" Background="{DynamicResource Border.Subtle}" Margin="8,4,8,4"/>
+                        <Border controls:WrapToolbar.IsSeparator="True" Width="1" Background="{DynamicResource Border.Subtle}" Margin="8,4,8,4"/>
                         <!-- GitHub account: only Repos on this PC, Clone from GitHub and creating pull requests need it -->
                         <Button Style="{StaticResource Button.Secondary}" Margin="0" Click="SignInToGitHub_Click"
                                 Visibility="{Binding GitHub.Login, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}">
@@ -331,13 +334,13 @@
                                         Command="{Binding GitHub.SignOutCommand}"/>
                             </StackPanel>
                         </Border>
-                        <Border Width="1" Background="{DynamicResource Border.Subtle}" Margin="8,4,8,4"/>
+                        <Border controls:WrapToolbar.IsSeparator="True" Width="1" Background="{DynamicResource Border.Subtle}" Margin="8,4,8,4"/>
                         <!-- Settings: the date and time format, the app's other settings, its version, updates and where it's from -->
                         <Button Style="{StaticResource Button.Secondary}" Margin="0" Padding="9,5" Click="OpenSettings_Click"
                                 ToolTip="Settings (Ctrl+,)" AutomationProperties.Name="Settings">
                             <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="14" VerticalAlignment="Center"/>
                         </Button>
-                    </StackPanel>
+                    </controls:WrapToolbar>
                 </DockPanel>
 
                 <!-- AI usage, always in view; View details opens the window with token use and the rest -->
@@ -383,13 +386,13 @@
                             </TextBlock>
                         </Button>
                         <TextBlock Text="AI USAGE" Style="{StaticResource SectionLabel}" Margin="0,0,18,0" VerticalAlignment="Center"/>
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <controls:WrapToolbar VerticalAlignment="Center" LineSpacing="4">
                             <TextBlock Text="Reading usage…" Foreground="{DynamicResource Text.Muted}" FontSize="12"
                                        Visibility="{Binding ClaudeCard, Converter={StaticResource NullToVisibility}, ConverterParameter=Invert}"/>
                             <ContentControl Content="{Binding ClaudeCard}" ContentTemplate="{StaticResource UsageBarTool}" Focusable="False"
                                             Margin="0,0,30,0"/>
                             <ContentControl Content="{Binding CodexCard}" ContentTemplate="{StaticResource UsageBarTool}" Focusable="False"/>
-                        </StackPanel>
+                        </controls:WrapToolbar>
                     </DockPanel>
                 </Border>
             </Grid>
@@ -398,8 +401,9 @@
         <!-- Body -->
         <Grid Grid.Row="1" Margin="16">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="320"/>
-                <ColumnDefinition x:Name="DetailsColumn" Width="*" MinWidth="460"/>
+                <!-- 320 wide, until a small window would squeeze the details under their least: then this gives way first -->
+                <ColumnDefinition Width="*" MinWidth="200" MaxWidth="320"/>
+                <ColumnDefinition x:Name="DetailsColumn" Width="*" MinWidth="420"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition x:Name="PhoneColumn" Width="300">
                     <!-- The splitter sets Width locally, so hiding the panel clamps it with MaxWidth instead;
@@ -508,6 +512,8 @@
 
                         <!-- Overview -->
                         <TabItem Header="Overview">
+                            <!-- Scrolls when the window is too short for it all, so the buttons at the bottom can still be reached -->
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
                             <StackPanel Margin="4,0">
                                 <TextBlock Text="{Binding Name}" FontSize="22" FontWeight="Bold"/>
                                 <TextBlock Text="{Binding Path}" Foreground="{DynamicResource Text.Muted}" FontFamily="{StaticResource Font.Mono}"
@@ -527,20 +533,21 @@
                                     </Grid.RowDefinitions>
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="KIND" Style="{StaticResource SectionLabel}"
                                                VerticalAlignment="Center" Margin="0,0,10,10"/>
-                                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,10">
+                                    <controls:WrapToolbar Grid.Row="0" Grid.Column="1" Margin="0,0,0,10">
                                         <ComboBox Width="140" Height="30" ItemsSource="{x:Static vm:ProjectViewModel.AllKinds}"
                                                   SelectedItem="{Binding Kind, Mode=TwoWay}"
                                                   ToolTip="Change this if the project type was detected wrong"/>
                                         <TextBlock Text="{Binding DetectedKindNote}" Foreground="{DynamicResource Text.Muted}" FontSize="11.5"
-                                                   VerticalAlignment="Center" Margin="10,0,0,0"/>
-                                    </StackPanel>
+                                                   VerticalAlignment="Center" Margin="10,0,0,0" TextWrapping="Wrap"/>
+                                    </controls:WrapToolbar>
                                     <!-- The branch checked out now -->
                                     <TextBlock Grid.Row="1" Grid.Column="0" Text="BRANCH" Style="{StaticResource SectionLabel}"
                                                VerticalAlignment="Center" Margin="0,0,10,10"/>
-                                    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,10">
+                                    <controls:WrapToolbar Grid.Row="1" Grid.Column="1" Margin="0,0,0,10">
                                         <Border Background="{DynamicResource Accent.Muted}" CornerRadius="0" Padding="10,4" VerticalAlignment="Center"
                                                 ToolTip="The branch checked out now">
-                                            <TextBlock Text="{Binding Branch}" FontFamily="{StaticResource Font.Mono}" FontWeight="SemiBold" FontSize="13"/>
+                                            <TextBlock Text="{Binding Branch}" FontFamily="{StaticResource Font.Mono}" FontWeight="SemiBold" FontSize="13"
+                                                       TextTrimming="CharacterEllipsis"/>
                                         </Border>
                                         <TextBlock Text="current" Foreground="{DynamicResource Text.Muted}" FontSize="11.5"
                                                    VerticalAlignment="Center" Margin="8,0,0,0"/>
@@ -589,11 +596,11 @@
                                                 <TextBlock Text="Publish branch" Foreground="{DynamicResource Text.OnAccent}" FontWeight="SemiBold"/>
                                             </StackPanel>
                                         </Button>
-                                    </StackPanel>
+                                    </controls:WrapToolbar>
                                     <!-- Picking only chooses; Switch does it. One only the remote has gets a local copy first. -->
                                     <TextBlock Grid.Row="2" Grid.Column="0" Text="SWITCH TO" Style="{StaticResource SectionLabel}"
                                                VerticalAlignment="Center" Margin="0,0,10,10"/>
-                                    <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,10">
+                                    <controls:WrapToolbar Grid.Row="2" Grid.Column="1" Margin="0,0,0,10">
                                         <ComboBox Width="260" Height="30" ItemsSource="{Binding Branches}" SelectedItem="{Binding SelectedBranch}"
                                                   AutomationProperties.Name="Switch to branch">
                                             <ComboBox.ItemTemplate>
@@ -610,7 +617,7 @@
                                                 ToolTip="Switch to the picked branch. Uncommitted changes come along when they don't clash."/>
                                         <Button Content="New branch…" Style="{StaticResource Button.Secondary}" Margin="0"
                                                 Click="NewBranch_Click" ToolTip="Make a new branch, from this one or another"/>
-                                    </StackPanel>
+                                    </controls:WrapToolbar>
                                     <!-- The default is saved per branch and used by Fetch Latest; Merge now merges the pick just once -->
                                     <TextBlock Grid.Row="3" Grid.Column="0" Text="MERGE FROM" Style="{StaticResource SectionLabel}"
                                                VerticalAlignment="Top" Margin="0,2,10,10"/>
@@ -621,7 +628,7 @@
                                             <Run Text="·" Foreground="{DynamicResource Text.Muted}"/>
                                             <Run Text="{Binding MergeFromHint, Mode=OneWay}" Foreground="{DynamicResource Text.Muted}"/>
                                         </TextBlock>
-                                        <StackPanel Orientation="Horizontal">
+                                        <controls:WrapToolbar>
                                             <ComboBox Width="260" Height="30" ItemsSource="{Binding MergeSources}"
                                                       SelectedItem="{Binding SelectedMergeSource}" AutomationProperties.Name="Merge from"/>
                                             <Button Content="Update default" Style="{StaticResource Button.Secondary}" Margin="8,0,8,0"
@@ -630,7 +637,7 @@
                                             <Button Content="Merge now" Style="{StaticResource Button.Secondary}" Margin="0"
                                                     Command="{Binding MergeNowCommand}"
                                                     ToolTip="Merge the picked branch into this one just this once; the default stays as it is"/>
-                                        </StackPanel>
+                                        </controls:WrapToolbar>
                                         <TextBlock Foreground="{DynamicResource Warning}" FontSize="11.5" TextWrapping="Wrap" Margin="0,6,0,0"
                                                    Text="Not saved. Update default to have Fetch Latest use it every time, or Merge now to merge it just once."
                                                    Visibility="{Binding IsMergePickUnsaved, Converter={StaticResource BoolToVisibility}}"/>
@@ -640,7 +647,7 @@
                                                Margin="0,0,0,10" TextWrapping="Wrap"/>
                                 </Grid>
 
-                                <StackPanel Orientation="Horizontal">
+                                <controls:WrapToolbar>
                                     <Button Content="Fetch Latest" Style="{StaticResource Button.Primary}" Command="{Binding FetchLatestCommand}"/>
                                     <Button Style="{StaticResource Button.Secondary}" Click="CreatePullRequest_Click"
                                             AutomationProperties.Name="Create Pull Request"
@@ -657,7 +664,7 @@
                                             CommandParameter="{Binding}"/>
                                     <ProgressBar Width="80" IsIndeterminate="True" VerticalAlignment="Center" Margin="10,0,0,0"
                                                  Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}"/>
-                                </StackPanel>
+                                </controls:WrapToolbar>
 
                                 <!-- Built-in apps, then the user's own (shared by all projects), then the button to edit that list -->
                                 <DockPanel Margin="0,14,0,0">
@@ -701,6 +708,7 @@
                                     </WrapPanel>
                                 </DockPanel>
                             </StackPanel>
+                            </ScrollViewer>
                         </TabItem>
 
                         <!-- Changes -->
@@ -719,15 +727,17 @@
                                     </DockPanel>
                                 </Border>
 
-                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
+                                <controls:WrapToolbar DockPanel.Dock="Top" Margin="0,0,0,12">
                                     <Button Content="Refresh" Style="{StaticResource Button.Secondary}" Command="{Binding LoadChangesCommand}"/>
                                     <Button Content="Discard All" Style="{StaticResource Button.Danger}" Command="{Binding DiscardAllCommand}"/>
-                                    <Border Width="1" Background="{DynamicResource Border.Subtle}" Margin="4,4,12,4"/>
-                                    <TextBlock Text="Stash message" Style="{StaticResource SectionLabel}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBox Width="220" VerticalContentAlignment="Center" Margin="0,0,8,0"
-                                             Text="{Binding StashMessage, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <Border controls:WrapToolbar.IsSeparator="True" Width="1" Background="{DynamicResource Border.Subtle}" Margin="4,4,12,4"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Stash message" Style="{StaticResource SectionLabel}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBox Width="220" VerticalContentAlignment="Center" Margin="0,0,8,0"
+                                                 Text="{Binding StashMessage, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
                                     <Button Content="Stash Changes" Style="{StaticResource Button.Secondary}" Command="{Binding StashCommand}"/>
-                                </StackPanel>
+                                </controls:WrapToolbar>
 
                                 <Border DockPanel.Dock="Bottom" Margin="0,12,0,0" Padding="10,8" Background="{DynamicResource Bg.PanelAlt}"
                                         CornerRadius="0" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1">
@@ -764,9 +774,10 @@
                                 </Border>
 
                                 <Grid>
+                                    <!-- The file list keeps to 300 wide, but on a narrow window takes no more than its share -->
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="300"/>
-                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="2*" MinWidth="200" MaxWidth="300"/>
+                                        <ColumnDefinition Width="3*"/>
                                     </Grid.ColumnDefinitions>
 
                                     <DockPanel Grid.Column="0" Margin="0,0,12,0">
@@ -823,8 +834,8 @@
                                             <RowDefinition Height="*"/>
                                         </Grid.RowDefinitions>
 
-                                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10"
-                                                    Visibility="{Binding IsSelectedFileConflicted, Converter={StaticResource BoolToVisibility}}">
+                                        <controls:WrapToolbar Grid.Row="0" Margin="0,0,0,10"
+                                                              Visibility="{Binding IsSelectedFileConflicted, Converter={StaticResource BoolToVisibility}}">
                                             <TextBlock Text="CONFLICT" Foreground="{DynamicResource Danger}" FontWeight="Bold" FontSize="12"
                                                        VerticalAlignment="Center" Margin="0,0,12,0"/>
                                             <Button Content="Use Ours" Style="{StaticResource Button.Secondary}"
@@ -835,7 +846,7 @@
                                                     Command="{Binding OpenFileInEditorCommand}" CommandParameter="{Binding SelectedChangedFile}"/>
                                             <Button Content="Mark Resolved" Style="{StaticResource Button.Primary}"
                                                     Command="{Binding MarkResolvedCommand}" CommandParameter="{Binding SelectedChangedFile}"/>
-                                        </StackPanel>
+                                        </controls:WrapToolbar>
 
                                         <Border Grid.Row="1" Background="{DynamicResource Bg.Console}" CornerRadius="0"
                                                 BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1">
@@ -860,10 +871,19 @@
                                     <KeyBinding Key="F3" Command="{Binding NextCommitMatchCommand}"/>
                                     <KeyBinding Key="F3" Modifiers="Shift" Command="{Binding PreviousCommitMatchCommand}"/>
                                 </DockPanel.InputBindings>
-                                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
-                                    <Button DockPanel.Dock="Left" Content="Refresh Commits" Style="{StaticResource Button.Secondary}"
+                                <!-- The search box is 380 wide while there's room, narrower when there isn't, so the arrows
+                                     after it stay in view -->
+                                <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="3*" MinWidth="150" MaxWidth="392"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Content="Refresh Commits" Style="{StaticResource Button.Secondary}"
                                             Command="{Binding LoadCommitsCommand}"/>
-                                    <Grid DockPanel.Dock="Left" Width="380" Margin="12,0,0,0">
+                                    <Grid Grid.Column="1" Margin="12,0,0,0">
                                         <TextBox Text="{Binding CommitSearch, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"
                                                  AutomationProperties.Name="Search commits"
                                                  ToolTip="Shows the commits with this in their message, author or hash, a file's path, or a line they added or removed">
@@ -874,21 +894,23 @@
                                         </TextBox>
                                         <TextBlock Text="Search messages, authors, files and changed code" Foreground="{DynamicResource Text.Muted}"
                                                    FontSize="12.5" VerticalAlignment="Center" Margin="11,0,0,0" IsHitTestVisible="False"
+                                                   TextTrimming="CharacterEllipsis"
                                                    Visibility="{Binding CommitSearch, Converter={StaticResource StringNotEmptyToVisibility}, ConverterParameter=Invert}"/>
                                     </Grid>
-                                    <Button DockPanel.Dock="Left" Content="&#xE70E;" Style="{StaticResource Button.Ghost}" Margin="6,0,0,0"
+                                    <Button Grid.Column="2" Content="&#xE70E;" Style="{StaticResource Button.Ghost}" Margin="6,0,0,0"
                                             Command="{Binding PreviousCommitMatchCommand}" AutomationProperties.Name="Previous match"
                                             ToolTip="Previous match (Shift+Enter or Shift+F3)"/>
-                                    <Button DockPanel.Dock="Left" Content="&#xE70D;" Style="{StaticResource Button.Ghost}" Margin="2,0,0,0"
+                                    <Button Grid.Column="3" Content="&#xE70D;" Style="{StaticResource Button.Ghost}" Margin="2,0,0,0"
                                             Command="{Binding NextCommitMatchCommand}" AutomationProperties.Name="Next match"
                                             ToolTip="Next match (Enter or F3)"/>
-                                    <StackPanel Orientation="Horizontal" Margin="10,0,0,0" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding CommitSearchNote}" Foreground="{DynamicResource Text.Muted}" FontSize="12.5"/>
+                                    <DockPanel Grid.Column="4" Margin="10,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock DockPanel.Dock="Left" Text="{Binding CommitSearchNote}" Foreground="{DynamicResource Text.Muted}"
+                                                   FontSize="12.5" TextTrimming="CharacterEllipsis"/>
                                         <TextBlock Text="{Binding CommitMatchNote, StringFormat='  ·  Match {0}'}" FontSize="12.5"
-                                                   Foreground="{DynamicResource Text.Secondary}"
+                                                   Foreground="{DynamicResource Text.Secondary}" TextTrimming="CharacterEllipsis"
                                                    Visibility="{Binding CommitMatchNote, Converter={StaticResource StringNotEmptyToVisibility}}"/>
-                                    </StackPanel>
-                                </DockPanel>
+                                    </DockPanel>
+                                </Grid>
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="*" MinHeight="90"/>
@@ -960,8 +982,8 @@
 
                                         <Grid>
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="300"/>
-                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="2*" MinWidth="170" MaxWidth="300"/>
+                                                <ColumnDefinition Width="3*"/>
                                             </Grid.ColumnDefinitions>
 
                                             <Border Grid.Column="0" Margin="0,0,12,0" Padding="4" Background="{DynamicResource Bg.PanelAlt}"
@@ -1103,34 +1125,35 @@
                                     </ItemsControl>
                                 </DockPanel>
 
-                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
-                                    <StackPanel Orientation="Horizontal"
-                                                Visibility="{Binding Kind, Converter={StaticResource EnumToVisibility}, ConverterParameter=Flutter}">
-                                        <!-- The device Run starts the app on. Pick another and Run again to run on it too: each device's run gets a tab over the console. -->
-                                        <ComboBox Width="240" Height="32" ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" Margin="0,0,8,0"
-                                                  AutomationProperties.Name="Device to run on"
-                                                  ToolTip="The device Run starts the app on. While it runs, pick another and press Run to run it there too."/>
-                                        <Button Content="Refresh Devices" Style="{StaticResource Button.Secondary}" Command="{Binding LoadDevicesCommand}"/>
-                                        <Button Content="Emulators…" Style="{StaticResource Button.Secondary}" Margin="8,0,0,0"
-                                                ToolTip="Start an Android emulator to run on, or create one" Click="OpenEmulators_Click"/>
-                                    </StackPanel>
+                                <controls:WrapToolbar DockPanel.Dock="Top" Margin="0,0,0,12">
+                                    <!-- The device Run starts the app on. Pick another and Run again to run on it too: each device's run gets a tab over the console. -->
+                                    <ComboBox Width="240" Height="32" ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" Margin="0,0,8,0"
+                                              AutomationProperties.Name="Device to run on"
+                                              ToolTip="The device Run starts the app on. While it runs, pick another and press Run to run it there too."
+                                              Visibility="{Binding Kind, Converter={StaticResource EnumToVisibility}, ConverterParameter=Flutter}"/>
+                                    <Button Content="Refresh Devices" Style="{StaticResource Button.Secondary}" Command="{Binding LoadDevicesCommand}"
+                                            Visibility="{Binding Kind, Converter={StaticResource EnumToVisibility}, ConverterParameter=Flutter}"/>
+                                    <Button Content="Emulators…" Style="{StaticResource Button.Secondary}" Margin="8,0,0,0"
+                                            ToolTip="Start an Android emulator to run on, or create one" Click="OpenEmulators_Click"
+                                            Visibility="{Binding Kind, Converter={StaticResource EnumToVisibility}, ConverterParameter=Flutter}"/>
 
-                                    <!-- Addresses the running server printed (dotnet, or any dev server's localhost URL) -->
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <StackPanel.Style>
-                                            <Style TargetType="StackPanel">
+                                    <!-- Addresses the running server printed (dotnet, or any dev server's localhost URL); several go onto
+                                         more lines when they don't fit on one -->
+                                    <DockPanel VerticalAlignment="Center">
+                                        <DockPanel.Style>
+                                            <Style TargetType="DockPanel">
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding DetectedUrls.Count}" Value="0">
                                                         <Setter Property="Visibility" Value="Collapsed"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
-                                        </StackPanel.Style>
-                                        <TextBlock Text="URL" Style="{StaticResource SectionLabel}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        </DockPanel.Style>
+                                        <TextBlock DockPanel.Dock="Left" Text="URL" Style="{StaticResource SectionLabel}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                         <ItemsControl ItemsSource="{Binding DetectedUrls}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
-                                                    <StackPanel Orientation="Horizontal"/>
+                                                    <controls:WrapToolbar/>
                                                 </ItemsPanelTemplate>
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
@@ -1155,7 +1178,7 @@
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
-                                    </StackPanel>
+                                    </DockPanel>
 
                                     <Button Content="▶  Run" Style="{StaticResource Button.Primary}" Margin="16,0,8,0"
                                             Command="{Binding RunCommand}" IsEnabled="{Binding CanRun}"/>
@@ -1165,10 +1188,10 @@
                                     <Button Content="↻  Restart" Style="{StaticResource Button.Secondary}" Margin="0"
                                             Command="{Binding RestartCommand}"
                                             ToolTip="Stops the app whose console shows and runs it again: the same command, on the same device"/>
-                                </StackPanel>
+                                </controls:WrapToolbar>
 
                                 <!-- Where the site the app serves opens (the same for every project), and whether a run opens it by itself -->
-                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
+                                <controls:WrapToolbar DockPanel.Dock="Top" Margin="0,0,0,12">
                                     <TextBlock Text="SITE" Style="{StaticResource SectionLabel}" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                     <TextBlock Text="Open in" Foreground="{DynamicResource Text.Secondary}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                     <ComboBox Width="360" Height="32" AutomationProperties.Name="Open the site in"
@@ -1182,7 +1205,7 @@
                                     <Button Content="Open dashboard browser" Style="{StaticResource Button.Secondary}" Margin="16,0,0,0"
                                             Command="{Binding OpenBrowserCommand}"
                                             ToolTip="This project's dashboard browser window, without running it: type an address, or open a saved site"/>
-                                </StackPanel>
+                                </controls:WrapToolbar>
 
                                 <!-- The output (select, copy, search, open in its own window) and the line typed to the app -->
                                 <controls:RunConsole/>
@@ -1483,7 +1506,8 @@
                 </StackPanel>
                 <ProgressBar DockPanel.Dock="Right" IsIndeterminate="True" Width="110"
                              Visibility="{Binding IsFetchingAll, Converter={StaticResource BoolToVisibility}}"/>
-                <TextBlock Text="{Binding GlobalStatus}" Foreground="{DynamicResource Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding GlobalStatus}" Foreground="{DynamicResource Text.Secondary}" FontSize="12" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
             </DockPanel>
         </Border>
     </Grid>
